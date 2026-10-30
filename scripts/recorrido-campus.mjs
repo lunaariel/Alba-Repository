@@ -67,7 +67,8 @@ try {
 
   // 4. Certificado: se emite una vez; pedirlo de nuevo devuelve el mismo.
   await Promise.all([p.waitForURL((u) => u.pathname === curso3), p.getByRole('link', { name: 'Ir a mi certificado' }).click()]);
-  await Promise.all([p.waitForURL(/aviso=certificado-listo/), p.getByRole('button', { name: 'Obtener mi certificado' }).click()]);
+  await p.getByRole('button', { name: 'Obtener mi certificado' }).click({ noWaitAfter: true });
+  await p.getByText('Su certificado está listo').first().waitFor({ timeout: 20000 });
   const enlace = p.getByRole('link', { name: 'Descargar PDF' });
   const href = await enlace.getAttribute('href');
   const codigo = (await p.locator('text=Código de verificación').locator('span').first().textContent())?.trim();
@@ -96,7 +97,7 @@ try {
   comprobar(otroCurso.status() === 404, `curso sin acceso: ${otroCurso.status()}`);
 } catch (e) {
   // Si un paso se cuelga, deja la captura y la dirección para diagnosticar.
-  comprobar(false, `${String(e.message).split('\n')[0]} (en ${p.url()})`);
+  comprobar(false, `${String(e.message).split('\n').slice(0, 8).join(' | ')} (en ${p.url()})`);
   await p.screenshot({ path: `${SALIDA}/recorrido-error.png`, fullPage: true }).catch(() => {});
 }
 
