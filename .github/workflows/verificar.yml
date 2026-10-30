@@ -41,4 +41,10 @@ jobs:
       - run: npm install
       - run: npm run tipos
       - run: npm run probar
-      - run: npm run build
+      - name: Compilar
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log
+      - name: Mostrar errores de compilación
+        if: failure()
+        run: grep -iE "error|failed|cannot|unexpected" build.log | grep -v "^ *at " | head -10 | while IFS= read -r l; do echo "::error::$l"; done
