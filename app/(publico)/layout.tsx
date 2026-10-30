@@ -5,10 +5,10 @@ export const dynamic = 'force-dynamic';
 
 export default function LayoutPublico({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <Encabezado />
-      <main id="contenido">{children}</main>
+      <main id="contenido" className="flex-1">{children}</main>
       <Pie />
-    </>
+    </div>
   );
 }

@@ -44,7 +44,7 @@ export default async function Evaluacion({ params }: Props) {
         volver={{ href: `/campus/cursos/${slug}`, texto: curso.titulo }}
         bajada={
           <>
-            {preguntas.length} preguntas. Necesita {ev.puntajeMinimo} puntos sobre 100 para aprobar
+            {preguntas.length === 1 ? '1 pregunta' : `${preguntas.length} preguntas`}. Necesita {ev.puntajeMinimo} puntos sobre 100 para aprobar
             {restantes !== null ? ` y le quedan ${restantes} ${restantes === 1 ? 'intento' : 'intentos'}` : ''}.
           </>
         }

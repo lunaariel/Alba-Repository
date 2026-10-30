@@ -15,7 +15,7 @@ export default async function LayoutCampus({ children }: { children: React.React
   await exigirSesion('/campus');
   const config = await configuracion();
   return (
-    <>
+    <div className="flex min-h-screen flex-col">
       <header className="bg-arena">
         <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:bg-marfil focus:p-3">
           Ir al contenido
@@ -43,7 +43,7 @@ export default async function LayoutCampus({ children }: { children: React.React
           />
         </Contenedor>
       </header>
-      <main id="contenido" className="min-h-[70vh]">{children}</main>
+      <main id="contenido" className="flex-1">{children}</main>
       <footer className="bg-marron text-marfil">
         <Contenedor className="flex flex-wrap justify-between gap-x-10 gap-y-4 py-8 text-base">
           <Link href="/" className="text-marfil">Volver al sitio</Link>
@@ -54,6 +54,6 @@ export default async function LayoutCampus({ children }: { children: React.React
           </nav>
         </Contenedor>
       </footer>
-    </>
+    </div>
   );
 }
