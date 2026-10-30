@@ -81,6 +81,7 @@ jobs:
       - name: Capturas
         run: |
           npx playwright install --with-deps chromium
+          set -o pipefail
           mkdir -p capturas
           set -a; . ./campus.env; set +a
           fallo=0
