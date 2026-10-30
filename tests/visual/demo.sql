@@ -29,6 +29,6 @@ end $$;
 
 insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, cupo, precio_centavos, estado) values
   ('demo-taller-limites', '[Ejemplo] Límites con respeto', 'Encuentro de ejemplo para las capturas.',
-   now() + interval '10 days', now() + interval '10 days 90 minutes', 20, 1500, 'publicado'),
+   date_trunc('hour', now()) + interval '10 days 2 hours', date_trunc('hour', now()) + interval '10 days 3 hours 30 minutes', 20, 1500, 'publicado'),
   ('demo-taller-ambiente', '[Ejemplo] Preparar el ambiente en casa', 'Encuentro de ejemplo para las capturas.',
-   now() + interval '20 days', now() + interval '20 days 90 minutes', 2, 1500, 'publicado');
+   date_trunc('hour', now()) + interval '20 days 2 hours', date_trunc('hour', now()) + interval '20 days 3 hours 30 minutes', 2, 1500, 'publicado');

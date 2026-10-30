@@ -79,7 +79,11 @@ jobs:
       - name: Capturas
         run: |
           npx playwright install --with-deps chromium
+          mkdir -p capturas
           npm run capturas -- / /cursos /cursos/demo-montessori-en-casa /talleres /talleres/demo-taller-ambiente /la-maestra /contacto /ingresar /registro 2>&1 | tee capturas/informe.txt
+      - name: Señalar problemas de capturas
+        if: failure()
+        run: grep -E "DESBORDE|error en consola|^[45][0-9][0-9] " capturas/informe.txt | head -20 | while IFS= read -r l; do echo "::error::$l"; done
       - name: Guardar en la rama capturas
         if: always()
         run: |
