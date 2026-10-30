@@ -34,15 +34,15 @@ p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
 const foto = (nombre) => p.screenshot({ path: `${SALIDA}/recorrido-${nombre}.png`, fullPage: true });
 
 try {
-  await p.goto(`${BASE}/ingresar?siguiente=/campus`);
+  await p.goto(`${BASE}/ingresar`, { waitUntil: 'networkidle' });
   await p.fill('#correo', CORREO);
   await p.fill('#contrasena', CLAVE);
-  await Promise.all([p.waitForURL(/\/campus$/), p.click('button[type=submit]')]);
+  await Promise.all([p.waitForURL((u) => u.pathname === '/campus'), p.click('button[type=submit]')]);
   comprobar(true, 'ingreso con la alumna de ejemplo');
 
   // 2. Progreso manual: completar la segunda lección lleva a la tercera y sube el avance.
   const curso1 = '/campus/cursos/demo-montessori-en-casa';
-  await p.goto(`${BASE}${curso1}/lecciones/${LECCION}`);
+  await p.goto(`${BASE}${curso1}/lecciones/${LECCION}`, { waitUntil: 'networkidle' });
   await Promise.all([p.waitForURL((u) => !u.pathname.endsWith(LECCION)), p.getByRole('button', { name: 'Completar y seguir' }).click()]);
   comprobar(/\/lecciones\//.test(p.url()), 'completar y seguir abre la lección siguiente');
   await p.goto(`${BASE}${curso1}`);
@@ -51,7 +51,7 @@ try {
 
   // 3. Evaluación: el HTML no trae las respuestas; se corrige en el servidor.
   const curso3 = '/campus/cursos/demo-ambiente-3-6';
-  const html = await (await p.goto(`${BASE}${curso3}/evaluacion`)).text();
+  const html = await (await p.goto(`${BASE}${curso3}/evaluacion`, { waitUntil: 'networkidle' })).text();
   comprobar(!/es_correcta|"correcta"\s*:/i.test(html), 'la página de evaluación no contiene la respuesta correcta');
   for (const op of await p.getByLabel('Incorrecta', { exact: true }).all()) await op.check();
   await p.getByRole('button', { name: 'Enviar respuestas' }).click();
@@ -66,7 +66,7 @@ try {
   await foto('3-evaluacion-aprobada');
 
   // 4. Certificado: se emite una vez; pedirlo de nuevo devuelve el mismo.
-  await Promise.all([p.waitForURL(new RegExp(`${curso3}$`)), p.getByRole('link', { name: 'Ir a mi certificado' }).click()]);
+  await Promise.all([p.waitForURL((u) => u.pathname === curso3), p.getByRole('link', { name: 'Ir a mi certificado' }).click()]);
   await Promise.all([p.waitForURL(/aviso=certificado-listo/), p.getByRole('button', { name: 'Obtener mi certificado' }).click()]);
   const enlace = p.getByRole('link', { name: 'Descargar PDF' });
   const href = await enlace.getAttribute('href');
