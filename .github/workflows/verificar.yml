@@ -48,3 +48,43 @@ jobs:
       - name: Mostrar errores de compilación
         if: failure()
         run: grep -iE "error|failed|cannot|unexpected" build.log | grep -v "^ *at " | head -10 | while IFS= read -r l; do echo "::error::$l"; done
+
+  capturas:
+    # Levanta Supabase con datos de ejemplo, inicia el sitio y guarda capturas en la rama "capturas".
+    if: github.event_name == 'push'
+    needs: [base-de-datos, aplicacion]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Supabase local
+        run: |
+          npx supabase init --force >/dev/null
+          npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
+          npx supabase status -o env > supabase.env
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f tests/visual/demo.sql
+      - name: Compilar e iniciar
+        run: |
+          set -a; . ./supabase.env; set +a
+          export NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+          export NEXT_PUBLIC_URL_SITIO=http://localhost:3000
+          npm run build
+          (npm start > servidor.log 2>&1 &)
+          npx wait-on -t 60000 http://localhost:3000
+      - name: Capturas
+        run: |
+          npx playwright install --with-deps chromium
+          npm run capturas -- / /cursos /cursos/demo-montessori-en-casa /talleres /talleres/demo-taller-ambiente /la-maestra /contacto /ingresar /registro 2>&1 | tee capturas/informe.txt
+      - name: Guardar en la rama capturas
+        if: always()
+        run: |
+          mkdir -p /tmp/salida && cp -r capturas/. /tmp/salida/ 2>/dev/null || true
+          cd /tmp/salida && git init -q && git checkout -q -b capturas
+          git config user.name "verificacion-albor" && git config user.email "verificacion@albor.invalid"
+          git add -A && git commit -qm "Capturas de ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" capturas
