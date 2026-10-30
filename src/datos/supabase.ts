@@ -1,5 +1,5 @@
 import 'server-only';
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { entornoPublico, entornoServidor } from '@/config/entorno';
@@ -10,7 +10,7 @@ export async function clienteSesion() {
   return createServerClient(entornoPublico.NEXT_PUBLIC_SUPABASE_URL, entornoPublico.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       getAll: () => almacen.getAll(),
-      setAll: (lista) => {
+      setAll: (lista: { name: string; value: string; options: CookieOptions }[]) => {
         try {
           lista.forEach(({ name, value, options }) => almacen.set(name, value, options));
         } catch {

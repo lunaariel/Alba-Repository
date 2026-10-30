@@ -74,7 +74,7 @@ export async function pedirRecuperacion(_: EstadoFormulario, datos: FormData): P
 
 export async function restablecer(_: EstadoFormulario, datos: FormData): Promise<EstadoFormulario> {
   const r = z.object({ contrasena, repetir: z.string() })
-    .refine((d) => d.contrasena === d.repetir, { message: 'Las dos contraseñas no coinciden.', path: ['repetir'] })
+    .refine((d: { contrasena: string; repetir: string }) => d.contrasena === d.repetir, { message: 'Las dos contraseñas no coinciden.', path: ['repetir'] })
     .safeParse({ contrasena: datos.get('contrasena'), repetir: datos.get('repetir') });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const supabase = await clienteSesion();

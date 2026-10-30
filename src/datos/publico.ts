@@ -137,7 +137,8 @@ export const articulosPublicados = cache(async (): Promise<ArticuloPublico[]> =>
   const { data } = await clientePublico()
     .from('articulos').select('slug, titulo, resumen, cuerpo_markdown, publicado_en, categoria')
     .eq('estado', 'publicado').order('publicado_en', { ascending: false });
-  return (data ?? []).map((a) => ({
+  type FilaArticulo = { slug: string; titulo: string; resumen: string | null; cuerpo_markdown: string; publicado_en: string | null; categoria: string | null };
+  return ((data ?? []) as FilaArticulo[]).map((a) => ({
     slug: a.slug, titulo: a.titulo, resumen: a.resumen, cuerpo: a.cuerpo_markdown,
     publicadoEn: new Date(a.publicado_en ?? Date.now()), categoria: a.categoria,
   }));

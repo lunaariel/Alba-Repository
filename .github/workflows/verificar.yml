@@ -22,7 +22,7 @@ jobs:
       PGUSER: postgres
       PGPASSWORD: postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Migraciones desde cero y pruebas de acceso, compras, evaluación, talleres y concurrencia
         run: ./scripts/probar-db.sh
 
@@ -34,8 +34,8 @@ jobs:
       NEXT_PUBLIC_URL_SITIO: http://localhost:3000
       SUPABASE_SERVICE_ROLE_KEY: clave-de-servicio-solo-para-compilar
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm install
