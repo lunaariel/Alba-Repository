@@ -19,7 +19,7 @@ export function porcentajeAvance(lecciones: LeccionConProgreso[]): number {
 }
 
 /** Lección para el botón "Continuar": la última visitada sin completar, o la primera pendiente. */
-export function leccionParaContinuar(lecciones: LeccionConProgreso[]): LeccionConProgreso | null {
+export function leccionParaContinuar<T extends LeccionConProgreso>(lecciones: T[]): T | null {
   const ordenadas = [...lecciones].sort((a, b) => a.moduloOrden - b.moduloOrden || a.orden - b.orden);
   const visitadasPendientes = ordenadas
     .filter((l) => !l.completada && l.ultimaVisita)
