@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 import { articulosPublicados, configuracion, cursosPublicados, proximosTalleres } from '@/datos/publico';
 import { esPendiente } from '@/contenido/textos';
 
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_URL_SITIO ?? 'http://localhost:3000';

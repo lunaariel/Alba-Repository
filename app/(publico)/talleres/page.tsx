@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/talleres' },
 };
 
-export const revalidate = 60;
 
 export default async function Talleres() {
   const talleres = await proximosTalleres(24);

@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   alternates: { canonical: '/recursos' },
 };
 
-export const revalidate = 300;
 
 // Oculta hasta que haya artículos publicados: sin artículos, la página no existe.
 export default async function Recursos() {

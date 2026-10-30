@@ -20,3 +20,4 @@ Registro breve de decisiones técnicas. La fuente completa es el documento «Alb
 | 2026-10-30 | Recursos y biografía sin contenido real no se indexan; Recursos no aparece en el menú sin artículos | No mostrar secciones vacías ni marcadores a buscadores |
 | 2026-10-30 | Artículos en Markdown reducido, dibujados como elementos de React | Ningún texto del panel puede inyectar HTML o scripts |
 | 2026-10-30 | Contacto con campo trampa y límite de 5 mensajes por hora por hash de IP | Protección contra spam sin guardar IPs |
+| 2026-10-30 | Páginas públicas renderizadas por solicitud (`force-dynamic`) | Los textos, cursos y cupos cambian desde el panel; la compilación no depende de la base. Si el tráfico lo pide, se agrega caché por datos |

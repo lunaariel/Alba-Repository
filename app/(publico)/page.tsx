@@ -7,7 +7,6 @@ import { ChipsFiltro, GrillaCursos } from '@/ui/cursos';
 import { ListaTalleres } from '@/ui/talleres';
 import { PreguntasFrecuentes } from '@/ui/contenido';
 
-export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: { absolute: 'Albor · Cursos Montessori para acompañar la primera infancia' },

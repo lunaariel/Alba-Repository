@@ -13,10 +13,6 @@ const PAGINAS = {
 type Slug = keyof typeof PAGINAS;
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return Object.keys(PAGINAS).map((slug) => ({ slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const pagina = PAGINAS[(await params).slug as Slug];
   if (!pagina) return { title: 'Página no encontrada' };

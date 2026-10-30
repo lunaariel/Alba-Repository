@@ -21,7 +21,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export const revalidate = 300;
 
 export default async function Articulo({ params }: Props) {
   const a = await articulo((await params).slug);

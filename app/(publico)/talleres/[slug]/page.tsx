@@ -17,7 +17,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return { title: t.titulo, description: t.descripcion?.slice(0, 160), alternates: { canonical: `/talleres/${t.slug}` } };
 }
 
-export const revalidate = 60;
 
 export default async function DetalleTaller({ params }: Props) {
   const taller = await tallerPorSlug((await params).slug);
