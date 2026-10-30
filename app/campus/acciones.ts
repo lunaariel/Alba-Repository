@@ -59,7 +59,8 @@ export async function rendirEvaluacion(_: ResultadoEvaluacion, datos: FormData):
     const clave = Object.keys(ERRORES_EVALUACION).find((k) => error.message.startsWith(k));
     return { error: clave ? ERRORES_EVALUACION[clave]! : 'No pudimos registrar sus respuestas. Intente de nuevo en unos minutos.' };
   }
-  revalidatePath(`/campus/cursos/${cursoSlug.data}`);
+  // Sin revalidatePath: el campus se arma en cada solicitud, y refrescar esta página
+  // reemplazaría el resultado que el alumno está leyendo.
   const d = data as { puntaje: number; aprobado: boolean; mensaje: string; intentos_restantes: number | null };
   return { puntaje: d.puntaje, aprobado: d.aprobado, mensaje: d.mensaje, intentosRestantes: d.intentos_restantes };
 }
