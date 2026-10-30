@@ -2,7 +2,7 @@
 
 Academia de primera infancia creada por una maestra en Guatemala: sitio público, campus de cursos grabados con evaluación y certificado, talleres en vivo y panel de administración.
 
-**Estado: Fase 2 (base técnica).** Hay base de datos completa con permisos y pruebas, cuentas y protección de rutas. Todavía no hay páginas públicas (Fase 3), campus (Fase 4), panel (Fase 5) ni pagos reales (Fase 6).
+**Estado: Fase 3 (sitio público).** Hay base de datos completa con permisos y pruebas, cuentas, protección de rutas y el sitio público: inicio, cursos, ficha de curso, la maestra, talleres, contacto, recursos (oculto hasta tener artículos) y legales. Todavía no hay campus (Fase 4), panel (Fase 5) ni pagos reales (Fase 6): la venta está apagada en `src/config/comercio.ts`.
 
 ## Requisitos
 
@@ -41,8 +41,9 @@ La verificación automática de GitHub (`.github/workflows/verificar.yml`) corre
 ## Estructura
 
 ```text
-app/                 rutas: (auth) ingreso y registro, campus, admin
-src/dominio/         reglas puras (dinero, progreso, certificado, talleres)
+app/                 rutas: (publico) sitio, (auth) ingreso y registro, campus, admin
+src/dominio/         reglas puras (dinero, catálogo, artículos, progreso, certificado, talleres)
+src/contenido/       textos editables del sitio con sus valores por defecto
 src/datos/           clientes de Supabase y sesión
 src/servicios/       pagos, facturación, reuniones, video y correo detrás de interfaces
 src/ui/              componentes del sistema de diseño Albor

@@ -15,3 +15,8 @@ Registro breve de decisiones técnicas. La fuente completa es el documento «Alb
 | 2026-10-30 | Recibo comercial hasta conectar FEL | No se emiten documentos que parezcan factura fiscal sin certificador autorizado |
 | 2026-10-30 | Ingreso con Google: pospuesto | Sin respuesta de la titular; se puede sumar sin migrar datos |
 | 2026-10-30 | Integraciones (pagos, FEL, Zoom/Meet, video, correo) detrás de interfaces con adaptadores simulados | Se eligen en la Fase 6 según Guatemala |
+| 2026-10-30 | Filtros del catálogo como enlaces (`?para=`), no botones | Funcionan sin JavaScript y se pueden compartir; ajuste respecto del prototipo B, que filtraba en memoria |
+| 2026-10-30 | Venta apagada (`INSCRIPCIONES_ABIERTAS = false`) hasta la Fase 6 | Sin pasarela, FEL ni política de reembolsos aprobadas no se vende |
+| 2026-10-30 | Recursos y biografía sin contenido real no se indexan; Recursos no aparece en el menú sin artículos | No mostrar secciones vacías ni marcadores a buscadores |
+| 2026-10-30 | Artículos en Markdown reducido, dibujados como elementos de React | Ningún texto del panel puede inyectar HTML o scripts |
+| 2026-10-30 | Contacto con campo trampa y límite de 5 mensajes por hora por hash de IP | Protección contra spam sin guardar IPs |

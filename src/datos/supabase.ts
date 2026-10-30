@@ -22,6 +22,16 @@ export async function clienteSesion() {
 }
 
 /**
+ * Cliente anónimo sin cookies, para páginas públicas que se pueden guardar en caché.
+ * Ve exactamente lo que RLS permite a un visitante: contenido publicado.
+ */
+export function clientePublico() {
+  return createClient(entornoPublico.NEXT_PUBLIC_SUPABASE_URL, entornoPublico.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+/**
  * Cliente con la clave de servicio: salta RLS. Solo para operaciones del servidor ya autorizadas
  * (webhooks, funciones de crear_orden, emitir_certificado, etc.). Nunca llega al navegador.
  */
