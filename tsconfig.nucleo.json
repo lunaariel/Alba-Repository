@@ -1,0 +1,14 @@
+{
+  "//": "Revisión de tipos del núcleo (dominio, servicios y pruebas unitarias), sin depender de Next.js.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src/dominio/**/*.ts", "src/servicios/**/*.ts", "tests/unit/**/*.ts"]
+}

@@ -1,0 +1,37 @@
+{
+  "name": "albor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Albor, academia de primera infancia: sitio, campus y panel de administración.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "tipos": "tsc --noEmit",
+    "tipos:nucleo": "tsc -p tsconfig.nucleo.json",
+    "probar": "tsx --test tests/unit/*.test.ts",
+    "probar:db": "./scripts/probar-db.sh",
+    "db:reiniciar": "supabase db reset"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@supabase/ssr": "^0.5.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "supabase": "^2.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

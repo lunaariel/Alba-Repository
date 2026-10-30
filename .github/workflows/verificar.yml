@@ -1,0 +1,44 @@
+name: Verificar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  base-de-datos:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migraciones desde cero y pruebas de acceso, compras, evaluación, talleres y concurrencia
+        run: ./scripts/probar-db.sh
+
+  aplicacion:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: clave-anonima-solo-para-compilar
+      NEXT_PUBLIC_URL_SITIO: http://localhost:3000
+      SUPABASE_SERVICE_ROLE_KEY: clave-de-servicio-solo-para-compilar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run tipos
+      - run: npm run probar
+      - run: npm run build

@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+ * Tokens del sistema de diseño Albor (fuente: artefacto "Albor — Sistema de diseño", tokens.json).
+ * Cualquier cambio de valor se hace primero en el sistema de diseño y después aquí.
+ */
+@theme {
+  --color-marfil: #F8F5EE;
+  --color-arena: #E9DFC9;
+  --color-blanco-calido: #FFFDF8;
+  --color-salvia: #A7B79E;
+  --color-salvia-claro: #C2CDB9;
+  --color-oliva: #6F856A;
+  --color-oliva-medio: #5D7358;
+  --color-oliva-profundo: #4E6049;
+  --color-marron: #443D34;
+  --color-tinta-suave: #5E564C;
+  --color-tinta-foto: #2F2A24;
+  --color-borde-bandeja: #CDBE9E;
+  --color-borde-control: #8C7F66;
+  --color-error: #9A3B22;
+
+  --font-display: var(--fuente-fraunces), Georgia, serif;
+  --font-texto: var(--fuente-atkinson), system-ui, sans-serif;
+
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-2xl: 22px;
+  --radius-3xl: 28px;
+
+  --shadow-flotante: 0 8px 24px rgba(68, 61, 52, 0.14);
+
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1240px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  background: var(--color-marfil);
+  color: var(--color-marron);
+  font-family: var(--font-texto);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-variation-settings: "SOFT" 100;
+}
+
+/* Foco visible en todos los controles (sistema de diseño: estados interactivos). */
+:focus-visible {
+  outline: 3px solid var(--color-oliva-profundo);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
