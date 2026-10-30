@@ -21,3 +21,12 @@ Registro breve de decisiones técnicas. La fuente completa es el documento «Alb
 | 2026-10-30 | Artículos en Markdown reducido, dibujados como elementos de React | Ningún texto del panel puede inyectar HTML o scripts |
 | 2026-10-30 | Contacto con campo trampa y límite de 5 mensajes por hora por hash de IP | Protección contra spam sin guardar IPs |
 | 2026-10-30 | Páginas públicas renderizadas por solicitud (`force-dynamic`) | Los textos, cursos y cupos cambian desde el panel; la compilación no depende de la base. Si el tráfico lo pide, se agrega caché por datos |
+| 2026-10-30 | Quien compró un curso lo sigue viendo aunque se archive (políticas `*_alumno` en 0011) | El acceso no vence |
+| 2026-10-30 | La evaluación final se rinde y se lee solo con todas las lecciones completas | Coincide con la regla del certificado y evita adelantar preguntas |
+| 2026-10-30 | Tras corregir, el alumno ve su puntaje y el mensaje, no qué preguntas falló | Con intentos ilimitados, mostrar aciertos por pregunta permitiría deducir las respuestas |
+| 2026-10-30 | PDF del certificado generado en cada descarga desde el registro congelado (pdf-lib, fuentes estándar) | Regenerar no duplica; no hace falta guardar archivos. Las fuentes de marca (Fraunces) se pueden incrustar más adelante |
+| 2026-10-30 | Verificación pública por código de 12 caracteres (`/verificar`) que muestra solo lo impreso en el certificado | Terceros comprueban sin ver otros datos |
+| 2026-10-30 | Materiales: URL firmada de Storage de 5 minutos, después de que RLS confirma el acceso | Un enlace compartido deja de funcionar enseguida |
+| 2026-10-30 | Video de lecciones: Bunny Stream con token del reproductor (2 horas); sin credenciales, aviso de "video pendiente" | El id del video nunca llega al navegador sin firma |
+| 2026-10-30 | Cambio de contraseña pide la actual; cambio de correo y baja de cuenta por contacto | Evita cambios desde una sesión olvidada abierta; la baja necesita revisar compras y certificados |
+| 2026-10-30 | Menú del encabezado en móvil como botón "Menú" (`<details>`) | Cinco enlaces no entran en una línea a 390 px; funciona sin JavaScript |

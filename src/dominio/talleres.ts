@@ -18,6 +18,10 @@ const NOMBRES_ZONA: Record<string, string> = {
  * "martes 10 de noviembre, 18:00 (hora de Guatemala)".
  * Si la persona está en otra zona, se agrega su hora local entre paréntesis.
  */
+export function nombreZona(zona: string): string {
+  return NOMBRES_ZONA[zona] ?? `hora de ${zona.split('/').pop()!.replace(/_/g, ' ')}`;
+}
+
 export function formatearHorario(inicio: Date, zonaTaller: string, zonaPersona?: string | null): string {
   const fmt = (zona: string) =>
     new Intl.DateTimeFormat('es-GT', {
@@ -32,7 +36,7 @@ export function formatearHorario(inicio: Date, zonaTaller: string, zonaPersona?:
   const hora = (zona: string) =>
     new Intl.DateTimeFormat('es-GT', { timeZone: zona, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(inicio);
 
-  const base = `${fmt(zonaTaller)} (${NOMBRES_ZONA[zonaTaller] ?? zonaTaller})`;
+  const base = `${fmt(zonaTaller)} (${nombreZona(zonaTaller)})`;
   if (!zonaPersona || zonaPersona === zonaTaller) return base;
   return `${base}; ${hora(zonaPersona)} en su zona horaria`;
 }

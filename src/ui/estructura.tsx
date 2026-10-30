@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { IconoAlbor } from './marca';
 import { configuracion, hayRecursos } from '@/datos/publico';
 import { enlaceWhatsApp } from '@/contenido/textos';
+import { usuarioActual } from '@/datos/sesion';
+import { Navegacion } from './menu';
 
 /** Contenedor de sección: 1240px, margen lateral fluido (sistema de diseño: layout). */
 export function Contenedor({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -9,7 +11,7 @@ export function Contenedor({ children, className = '' }: { children: React.React
 }
 
 export async function Encabezado() {
-  const [config, recursos] = await Promise.all([configuracion(), hayRecursos()]);
+  const [config, recursos, sesion] = await Promise.all([configuracion(), hayRecursos(), usuarioActual()]);
   const enlaces = [
     { href: '/cursos', texto: 'Cursos' },
     { href: '/la-maestra', texto: 'La maestra' },
@@ -22,21 +24,20 @@ export async function Encabezado() {
       <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:bg-marfil focus:p-3">
         Ir al contenido
       </a>
-      <Contenedor className="flex flex-wrap items-center justify-between gap-x-8 gap-y-3 py-[18px]">
+      <Contenedor className="flex items-center justify-between gap-x-8 gap-y-3 py-[18px]">
         <Link href="/" className="flex items-center gap-3 font-display text-[22px] font-semibold text-marron no-underline">
           <IconoAlbor />
           {config.nombre}
         </Link>
-        <nav aria-label="Principal" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[17px]">
-          {enlaces.map((e) => (
-            <Link key={e.href} href={e.href} className="rounded-sm px-3.5 py-2.5 text-marron no-underline hover:underline">
-              {e.texto}
+        <Navegacion
+          etiqueta="Principal"
+          enlaces={enlaces}
+          accion={
+            <Link href={sesion ? '/campus' : '/ingresar'} className="inline-flex min-h-[44px] items-center rounded-md border-2 border-oliva-profundo bg-marfil px-5 font-bold text-oliva-profundo no-underline">
+              {sesion ? 'Mi campus' : 'Ingresar'}
             </Link>
-          ))}
-          <Link href="/ingresar" className="ml-2 inline-flex min-h-[44px] items-center rounded-md border-2 border-oliva-profundo bg-marfil px-5 font-bold text-oliva-profundo no-underline">
-            Ingresar
-          </Link>
-        </nav>
+          }
+        />
       </Contenedor>
     </header>
   );

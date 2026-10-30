@@ -58,3 +58,39 @@ test('formatearHorario muestra la hora de Guatemala y la del visitante', () => {
   const ar = formatearHorario(inicio, 'America/Guatemala', 'America/Argentina/Buenos_Aires');
   assert.match(ar, /21:00 en su zona horaria/);
 });
+
+test('vecinas cruza módulos y respeta el orden', async () => {
+  const { vecinas, ordenarLecciones } = await import('../../src/dominio/aprendizaje');
+  const l = [
+    { id: 'c', moduloOrden: 1, orden: 0 },
+    { id: 'a', moduloOrden: 0, orden: 0 },
+    { id: 'b', moduloOrden: 0, orden: 1 },
+  ];
+  assert.deepEqual(ordenarLecciones(l).map((x) => x.id), ['a', 'b', 'c']);
+  const v = vecinas(l, 'b');
+  assert.equal(v.anterior?.id, 'a');
+  assert.equal(v.siguiente?.id, 'c');
+  assert.equal(v.posicion, 2);
+  assert.equal(vecinas(l, 'a').anterior, null);
+  assert.equal(vecinas(l, 'c').siguiente, null);
+  assert.equal(vecinas(l, 'x').posicion, 0);
+});
+
+test('textoAvance', async () => {
+  const { textoAvance } = await import('../../src/dominio/aprendizaje');
+  assert.equal(textoAvance(0, 0), 'Este curso todavía no tiene lecciones.');
+  assert.equal(textoAvance(0, 3), '3 lecciones por delante');
+  assert.equal(textoAvance(2, 3), '2 de 3 lecciones completadas');
+  assert.equal(textoAvance(3, 3), 'Completó todas las lecciones');
+});
+
+test('respuestasDesdeFormulario solo acepta pares de uuid y sin duplicados', async () => {
+  const { respuestasDesdeFormulario } = await import('../../src/dominio/aprendizaje');
+  const p = '11111111-1111-1111-1111-111111111111';
+  const o1 = '22222222-2222-2222-2222-222222222222';
+  const o2 = '33333333-3333-3333-3333-333333333333';
+  const r = respuestasDesdeFormulario([
+    [`p:${p}`, o1], [`p:${p}`, o1], [`p:${p}`, o2], ['p:no-uuid', o1], [`p:${p}`, 'x'], ['otro', o1],
+  ]);
+  assert.deepEqual(r, { [p]: [o1, o2] });
+});

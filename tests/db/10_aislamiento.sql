@@ -81,7 +81,7 @@ end $$;
 set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
 select pruebas.afirmar((select count(*) from public.accesos_curso) = 1, 'A ve su acceso');
 select pruebas.afirmar((select count(*) from public.recursos_leccion) = 1, 'A ve los PDF de su curso');
-select pruebas.afirmar((select count(*) from public.opciones) = 5, 'A ve las opciones de su evaluación');
+select pruebas.afirmar((select count(*) from public.opciones) = 0, 'A no ve las opciones hasta completar las lecciones (ver 80_campus)');
 select pruebas.afirmar((select count(*) from public.roles_usuario where rol = 'admin') = 0, 'A no ve roles de otros');
 insert into public.progreso_leccion (perfil_id, leccion_id, completada_en)
 values ('aaaaaaaa-0000-0000-0000-000000000001', 'e0000000-0000-0000-0000-000000000001', now());

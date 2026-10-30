@@ -1,16 +1,33 @@
-import { exigirSesion } from '@/datos/sesion';
-import { salir } from '../(auth)/acciones';
+import type { Metadata } from 'next';
+import { miPerfil, misCursos } from '@/datos/campus';
+import { Contenedor } from '@/ui/estructura';
+import { EncabezadoCampus, TarjetaCursoCampus } from '@/ui/campus';
+import { EnlaceBoton } from '@/ui/acciones';
 
-// Fase 4 construye el campus. Por ahora solo comprueba que la sesión y la protección funcionan.
-export default async function Campus() {
-  const usuario = await exigirSesion('/campus');
+export const metadata: Metadata = { title: 'Mis cursos' };
+
+export default async function MisCursos() {
+  const [perfil, cursos] = await Promise.all([miPerfil(), misCursos()]);
+  const nombre = perfil.nombre.split(' ')[0];
   return (
-    <main className="mx-auto flex max-w-[860px] flex-col gap-6 px-5 py-16">
-      <h1 className="m-0 text-[40px]">Mis cursos</h1>
-      <p className="m-0">Ingresó como {usuario.email}. El campus se construye en la Fase 4.</p>
-      <form action={salir}>
-        <button type="submit" className="min-h-[44px] rounded-md border-2 border-oliva-profundo px-5 font-bold text-oliva-profundo">Salir</button>
-      </form>
-    </main>
+    <>
+      <EncabezadoCampus
+        titulo="Mis cursos"
+        bajada={nombre ? `Hola, ${nombre}. Avance a su ritmo: el acceso a sus cursos no vence.` : 'El acceso a sus cursos no vence.'}
+      />
+      <Contenedor className="pb-20 pt-4">
+        {cursos.length > 0 ? (
+          <ul className="m-0 grid list-none gap-5 p-0 lg:grid-cols-2">
+            {cursos.map((c) => <TarjetaCursoCampus key={c.id} curso={c} />)}
+          </ul>
+        ) : (
+          <div className="max-w-[640px] rounded-2xl bg-arena p-8">
+            <p className="m-0 font-display text-2xl">Todavía no tiene cursos.</p>
+            <p className="m-0 mt-2">Cuando compre un curso, aparecerá aquí con su avance.</p>
+            <div className="mt-5"><EnlaceBoton href="/cursos" tamano="compacto">Ver los cursos</EnlaceBoton></div>
+          </div>
+        )}
+      </Contenedor>
+    </>
   );
 }

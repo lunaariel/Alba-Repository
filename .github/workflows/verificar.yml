@@ -68,6 +68,8 @@ jobs:
           npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
           npx supabase status -o env > supabase.env
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f tests/visual/demo.sql
+          set -a; . ./supabase.env; set +a
+          ./tests/visual/campus.sh
       - name: Compilar e iniciar
         run: |
           set -a; . ./supabase.env; set +a
@@ -80,10 +82,16 @@ jobs:
         run: |
           npx playwright install --with-deps chromium
           mkdir -p capturas
-          npm run capturas -- / /cursos /cursos/demo-montessori-en-casa /talleres /talleres/demo-taller-ambiente /la-maestra /contacto /ingresar /registro 2>&1 | tee capturas/informe.txt
+          set -a; . ./campus.env; set +a
+          fallo=0
+          env -u CORREO -u CLAVE npm run -s capturas -- / /cursos /cursos/demo-montessori-en-casa /talleres /talleres/demo-taller-ambiente /la-maestra /contacto /ingresar /registro $RUTAS_VERIFICAR 2>&1 | tee capturas/informe.txt || fallo=1
+          DESCARGAR="$CERTIFICADO" npm run -s capturas -- $RUTAS_CAMPUS 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- recorrido del campus" | tee -a capturas/informe.txt
+          node scripts/recorrido-campus.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          exit $fallo
       - name: Señalar problemas de capturas
         if: failure()
-        run: grep -E "DESBORDE|error en consola|^[45][0-9][0-9] " capturas/informe.txt | head -20 | while IFS= read -r l; do echo "::error::$l"; done
+        run: grep -E "DESBORDE|error en consola|FALLA|^[45][0-9][0-9] |→ /ingresar" capturas/informe.txt | head -20 | while IFS= read -r l; do echo "::error::$l"; done
       - name: Guardar en la rama capturas
         if: always()
         run: |

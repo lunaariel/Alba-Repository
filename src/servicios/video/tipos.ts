@@ -1,6 +1,6 @@
 /**
  * Contrato para entregar videos privados. El adaptador de Bunny Stream (URL firmada por token)
- * se implementa y verifica en la Fase 4, contra la documentación vigente de Bunny.
+ * está en bunny.ts.
  * El servidor solo firma una URL después de comprobar que la persona tiene acceso al curso.
  */
 export interface ProveedorVideo {
