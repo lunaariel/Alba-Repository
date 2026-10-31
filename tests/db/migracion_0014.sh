@@ -10,7 +10,7 @@ DB="${DB_MIGRACION:-albor_migracion}"
 PSQL=(psql -X -q -v ON_ERROR_STOP=1 -U "${PGUSER:-postgres}")
 q() { "${PSQL[@]}" -d "$DB" -tA -c "$1"; }
 
-"${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB" >/dev/null
+"${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB encoding 'UTF8' template template0" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/supabase_stub.sql" >/dev/null
 for m in "$RAIZ"/supabase/migrations/*.sql; do
   case "$(basename "$m")" in 20261031000014_*|2026103100001[5-9]_*) continue;; esac
@@ -43,7 +43,7 @@ begin
   insert into public.lecciones (modulo_id, titulo, orden) values (m, 'L1', 0) returning id into l;
   insert into public.lecciones (modulo_id, titulo, orden) values (m, 'L2', 1);
   insert into public.evaluaciones (curso_id) values (c2) returning id into e;
-  perform public.guardar_pregunta(e, null, '¿?', 'unica', null, '[{"texto":"a","es_correcta":true},{"texto":"b","es_correcta":false}]');
+  perform public.guardar_pregunta(e, null, '¿Pregunta?', 'unica', null, '[{"texto":"a","es_correcta":true},{"texto":"b","es_correcta":false}]');
   update public.cursos set estado = 'publicado' where id = c2;
   insert into public.accesos_curso (perfil_id, curso_id, origen, motivo) values (B, c2, 'concesion', 'Beca de prueba');
   insert into public.progreso_leccion (perfil_id, leccion_id, completada_en) values (B, l, now());

@@ -7,7 +7,7 @@ DB="${DB_PRUEBAS:-albor_pruebas}"
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 PSQL=(psql -X -q -v ON_ERROR_STOP=1 -U "${PGUSER:-postgres}")
 
-"${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB" >/dev/null
+"${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB encoding 'UTF8' template template0" >/dev/null
 
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/supabase_stub.sql" >/dev/null
 for m in "$RAIZ"/supabase/migrations/*.sql; do
