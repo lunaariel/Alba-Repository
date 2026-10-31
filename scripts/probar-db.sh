@@ -27,6 +27,7 @@ for t in "$RAIZ"/tests/db/[0-9]*.sql; do
 done
 
 DB_PRUEBAS="$DB" "$RAIZ/tests/db/concurrencia.sh" || fallos=$((fallos + 1))
+"$RAIZ/tests/db/migracion_0014.sh" || fallos=$((fallos + 1))
 
 if [ "$fallos" -gt 0 ]; then echo "$fallos archivo(s) de prueba fallaron"; exit 1; fi
 echo "todas las pruebas de base de datos pasaron"

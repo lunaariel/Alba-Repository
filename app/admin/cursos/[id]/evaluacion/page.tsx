@@ -22,10 +22,17 @@ export default async function Evaluacion({ params, searchParams }: Props) {
   const preguntas = ev?.preguntas ?? [];
   const volver = `/admin/cursos/${c.id}/evaluacion`;
   const temasSolos = temasConUnaPregunta(preguntas);
+  const versionado = c.versiones.length > 0;
   return (
     <>
       <AvisoAccion ok={aviso.ok} error={aviso.error} />
-      {ev && ev.intentos > 0 && (
+      {versionado ? (
+        <p className="m-0 mb-5 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">
+          Está editando el <b>borrador</b> de la evaluación. Las preguntas y los criterios de cada versión publicada quedan fijos:
+          los cambios rigen desde la próxima versión que publique en <Link href={`/admin/cursos/${c.id}/publicacion`} className="font-bold text-oliva-profundo">Publicación</Link>.
+          Si una pregunta publicada tiene un error en la clave, use «Revisión favorable» en esa pregunta.
+        </p>
+      ) : ev && ev.intentos > 0 && (
         <p className="m-0 mb-5 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">
           Esta evaluación ya tiene {ev.intentos === 1 ? '1 intento' : `${ev.intentos} intentos`}. Los cambios valen para los intentos futuros:
           los puntajes y certificados anteriores no se recalculan. Las preguntas respondidas se pueden retirar, no eliminar.
@@ -55,7 +62,10 @@ export default async function Evaluacion({ params, searchParams }: Props) {
                     <div className="min-w-0 flex-[1_1_300px]">
                       <p className={`m-0 font-bold ${p.retirada ? 'text-tinta-suave line-through decoration-1' : ''}`}>{i + 1}. {p.enunciado}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[13.5px] text-tinta-suave">
-                        {p.retirada && <EstadoChip estado="archivado" texto="Retirada" />}
+                        {p.retirada && <EstadoChip estado="archivado" texto={versionado ? 'Retirada del borrador' : 'Retirada'} />}
+                        {p.marca.bloqueada && <EstadoChip estado="pendiente" texto="Bloqueada" />}
+                        {versionado && !p.retirada && !p.marca.enVigente && <EstadoChip estado="pendiente" texto="Nueva en el borrador" />}
+                        {p.versiones.length > 0 && <span>· en {p.versiones.length === 1 ? 'la versión' : 'las versiones'} {p.versiones.join(', ')}</span>}
                         {sinCorrecta && !p.retirada && <EstadoChip estado="error" texto="Sin respuesta correcta" />}
                         <span>{p.tipo === 'unica' ? 'Opción única' : 'Opción múltiple'} · {p.opciones.length} opciones</span>
                         {p.tema && <span>· tema: {p.tema}</span>}
@@ -66,14 +76,16 @@ export default async function Evaluacion({ params, searchParams }: Props) {
                       <Link href={`${volver}/${p.id}`} className="inline-flex min-h-[40px] items-center px-1 font-bold text-oliva-profundo underline underline-offset-4">Editar</Link>
                       {p.retirada ? (
                         <ConfirmarAccion accion={retirarElemento} campos={{ tabla: 'preguntas', id: p.id, curso: c.id, volver, retirar: 'no' }} textoBoton="Restaurar" titulo="¿Restaurar la pregunta?" estilo="enlace">
-                          <p className="m-0">Vuelve a formar parte de la evaluación en los intentos futuros.</p>
+                          <p className="m-0">{versionado ? 'Vuelve al borrador: formará parte de la próxima versión que publique.' : 'Vuelve a formar parte de la evaluación en los intentos futuros.'}</p>
                         </ConfirmarAccion>
                       ) : (
                         <ConfirmarAccion accion={retirarElemento} campos={{ tabla: 'preguntas', id: p.id, curso: c.id, volver, retirar: 'si' }} textoBoton="Retirar" titulo="¿Retirar la pregunta?" estilo="enlace">
-                          <p className="m-0">Deja de aparecer y de contar en los intentos futuros. Los intentos anteriores conservan su puntaje.</p>
+                          <p className="m-0">{versionado
+                            ? 'Sale del borrador: no formará parte de la próxima versión. Quienes siguen una versión publicada que la incluye la siguen respondiendo.'
+                            : 'Deja de aparecer y de contar en los intentos futuros. Los intentos anteriores conservan su puntaje.'}</p>
                         </ConfirmarAccion>
                       )}
-                      {p.respuestas === 0 && (
+                      {p.respuestas === 0 && !p.marca.enAlgunaVersion && (
                         <ConfirmarAccion accion={eliminarElemento} campos={{ tabla: 'preguntas', id: p.id, curso: c.id, volver }} textoBoton="Eliminar" titulo="¿Eliminar la pregunta?" palabra="ELIMINAR" peligro estilo="enlacePeligro">
                           <p className="m-0">Nadie la respondió todavía: se borra con sus opciones.</p>
                         </ConfirmarAccion>
@@ -88,7 +100,7 @@ export default async function Evaluacion({ params, searchParams }: Props) {
         <FormCriterios curso={c.id} criterios={{
           puntaje: String(ev?.puntajeMinimo ?? 70), intentos: ev?.intentosPermitidos ? String(ev.intentosPermitidos) : '',
           aprobado: ev?.mensajeAprobado ?? 'Aprobó la evaluación.', desaprobado: ev?.mensajeDesaprobado ?? 'Todavía no alcanzó el puntaje mínimo.',
-        }} conIntentos={(ev?.intentos ?? 0) > 0} />
+        }} conIntentos={(ev?.intentos ?? 0) > 0} versionado={versionado} />
       </div>
     </>
   );

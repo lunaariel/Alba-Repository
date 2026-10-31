@@ -14,24 +14,36 @@ type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: str
 
 const chip = 'inline-flex items-center rounded-full border border-borde-bandeja bg-marfil px-2.5 text-[12.5px]';
 
-function AccionesRetiro({ tabla, id, curso, volver, nombre, retirado, historial, tipo }: {
+function AccionesRetiro({ tabla, id, curso, volver, nombre, retirado, historial, tipo, versionado, enVersion }: {
   tabla: 'modulos' | 'lecciones'; id: string; curso: string; volver: string; nombre: string; retirado: boolean; historial: number; tipo: string;
+  versionado: boolean; enVersion: boolean;
 }) {
   const campos = { tabla, id, curso, volver };
   if (retirado) {
     return (
       <ConfirmarAccion accion={retirarElemento} campos={{ ...campos, retirar: 'no' }} textoBoton="Restaurar" titulo={`¿Restaurar ${tipo}?`} estilo="enlace">
-        <p className="m-0">«{nombre}» vuelve a verse en el sitio y en el campus, y vuelve a contar para terminar el curso.</p>
+        <p className="m-0">{versionado
+          ? `«${nombre}» vuelve al borrador: formará parte de la próxima versión que publique.`
+          : `«${nombre}» vuelve a verse en el sitio y en el campus, y vuelve a contar para terminar el curso.`}</p>
       </ConfirmarAccion>
     );
   }
   return (
     <>
       <ConfirmarAccion accion={retirarElemento} campos={{ ...campos, retirar: 'si' }} textoBoton="Retirar" titulo={`¿Retirar ${tipo}?`} estilo="enlace">
-        <p className="m-0">«{nombre}» deja de verse en el sitio y en el campus y deja de contar para terminar el curso.</p>
-        <p className="m-0">El avance de los alumnos se conserva y los certificados emitidos no cambian. Puede restaurarlo cuando quiera.</p>
+        {versionado ? (
+          <>
+            <p className="m-0">«{nombre}» sale del borrador: no formará parte de la próxima versión que publique.</p>
+            <p className="m-0">Quienes siguen una versión publicada que lo incluye lo siguen viendo. El avance y los certificados no cambian. Puede restaurarlo cuando quiera.</p>
+          </>
+        ) : (
+          <>
+            <p className="m-0">«{nombre}» deja de verse en el sitio y en el campus y deja de contar para terminar el curso.</p>
+            <p className="m-0">El avance de los alumnos se conserva y los certificados emitidos no cambian. Puede restaurarlo cuando quiera.</p>
+          </>
+        )}
       </ConfirmarAccion>
-      {historial === 0 && (
+      {historial === 0 && !enVersion && (
         <ConfirmarAccion accion={eliminarElemento} campos={campos} textoBoton="Eliminar" titulo={`¿Eliminar ${tipo}?`} palabra="ELIMINAR" peligro estilo="enlacePeligro">
           <p className="m-0">«{nombre}» se borra definitivamente{tabla === 'modulos' ? ', con sus lecciones y materiales' : ', con sus materiales'}. Nadie lo había visto todavía.</p>
         </ConfirmarAccion>
@@ -40,14 +52,16 @@ function AccionesRetiro({ tabla, id, curso, volver, nombre, retirado, historial,
   );
 }
 
-function FilaLeccion({ l, curso, volver, primero, ultimo, numero }: { l: LeccionAdmin; curso: string; volver: string; primero: boolean; ultimo: boolean; numero: number }) {
+function FilaLeccion({ l, curso, volver, primero, ultimo, numero, versionado }: { l: LeccionAdmin; curso: string; volver: string; primero: boolean; ultimo: boolean; numero: number; versionado: boolean }) {
   return (
     <li className={`flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 ${l.retirada ? 'bg-[#F1EEE8]' : ''}`}>
       <BotonesOrden tabla="lecciones" id={l.id} curso={curso} volver={volver} nombre={l.titulo} primero={primero} ultimo={ultimo} />
       <div className="min-w-0 flex-[1_1_260px]">
         <p className={`m-0 font-bold ${l.retirada ? 'text-tinta-suave line-through decoration-1' : ''}`}>{numero}. {l.titulo}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[13.5px] text-tinta-suave">
-          {l.retirada && <EstadoChip estado="archivado" texto="Retirada" />}
+          {l.retirada && <EstadoChip estado="archivado" texto={versionado ? 'Retirada del borrador' : 'Retirada'} />}
+          {l.marca.bloqueada && <EstadoChip estado="pendiente" texto="Bloqueada" />}
+          {versionado && !l.retirada && !l.marca.enVigente && <span className={chip}>Nueva en el borrador</span>}
           {l.duracionMinutos && <span>{l.duracionMinutos} min ·</span>}
           {l.videoId ? <span className={chip}>Video cargado</span> : <EstadoChip estado="pendiente" texto="Video pendiente" />}
           <span className={chip}>{l.materiales.length === 0 ? 'Sin PDF' : l.materiales.length === 1 ? '1 PDF' : `${l.materiales.length} PDF`}</span>
@@ -56,13 +70,14 @@ function FilaLeccion({ l, curso, volver, primero, ultimo, numero }: { l: Leccion
       </div>
       <div className="flex flex-wrap items-center gap-x-3">
         <Link href={`/admin/cursos/${curso}/temario/${l.id}`} className="inline-flex min-h-[40px] items-center px-1 font-bold text-oliva-profundo underline underline-offset-4">Editar</Link>
-        <AccionesRetiro tabla="lecciones" id={l.id} curso={curso} volver={volver} nombre={l.titulo} retirado={l.retirada} historial={l.vistas} tipo="la lección" />
+        <AccionesRetiro tabla="lecciones" id={l.id} curso={curso} volver={volver} nombre={l.titulo} retirado={l.retirada} historial={l.vistas} tipo="la lección"
+          versionado={versionado} enVersion={l.marca.enAlgunaVersion} />
       </div>
     </li>
   );
 }
 
-function TarjetaModulo({ m, i, total, curso, volver, avisoNueva }: { m: ModuloAdmin; i: number; total: number; curso: string; volver: string; avisoNueva: string | null }) {
+function TarjetaModulo({ m, i, total, curso, volver, avisoNueva, versionado }: { m: ModuloAdmin; i: number; total: number; curso: string; volver: string; avisoNueva: string | null; versionado: boolean }) {
   const historial = m.lecciones.reduce((t, l) => t + l.vistas, 0);
   return (
     <section aria-label={`Módulo ${i + 1}: ${m.titulo}`} className={`rounded-2xl border-[1.5px] border-borde-bandeja p-3 sm:p-4 ${m.retirado ? 'bg-[#F1EEE8]' : 'bg-blanco-calido'}`}>
@@ -78,13 +93,14 @@ function TarjetaModulo({ m, i, total, curso, volver, avisoNueva }: { m: ModuloAd
         </form>
         <div className="flex items-center gap-x-3">
           {m.retirado && <EstadoChip estado="archivado" texto="Retirado" />}
-          <AccionesRetiro tabla="modulos" id={m.id} curso={curso} volver={volver} nombre={m.titulo} retirado={m.retirado} historial={historial} tipo="el módulo" />
+          <AccionesRetiro tabla="modulos" id={m.id} curso={curso} volver={volver} nombre={m.titulo} retirado={m.retirado} historial={historial} tipo="el módulo"
+            versionado={versionado} enVersion={m.lecciones.some((l) => l.marca.enAlgunaVersion)} />
         </div>
       </div>
       {m.lecciones.length > 0 && (
         <ol className="m-0 flex list-none flex-col divide-y divide-[#EFE7D6] p-0 sm:pl-10">
           {m.lecciones.map((l, j) => (
-            <FilaLeccion key={l.id} l={l} curso={curso} volver={volver} primero={j === 0} ultimo={j === m.lecciones.length - 1} numero={j + 1} />
+            <FilaLeccion key={l.id} l={l} curso={curso} volver={volver} primero={j === 0} ultimo={j === m.lecciones.length - 1} numero={j + 1} versionado={versionado} />
           ))}
         </ol>
       )}
@@ -111,20 +127,27 @@ export default async function Temario({ params, searchParams }: Props) {
   if (!c) notFound();
   const volver = `/admin/cursos/${c.id}/temario`;
   const pendientes = c.historial.alumnosSinCertificado;
-  const avisoNueva = pendientes > 0
+  const versionado = c.versiones.length > 0;
+  const avisoNueva = !versionado && pendientes > 0
     ? `Atención: ${pendientes === 1 ? '1 alumno sin certificado deberá' : `${pendientes} alumnos sin certificado deberán`} completar también la lección nueva para terminar el curso. Los certificados emitidos no cambian.`
     : null;
   return (
     <>
       <AvisoAccion ok={aviso.ok} error={aviso.error} />
-      {c.historial.alumnos > 0 && (
+      {versionado ? (
+        <p className="m-0 mb-5 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">
+          Está editando el <b>borrador</b>. Agregar, retirar o reordenar lecciones no cambia nada para los alumnos hasta que publique una
+          versión nueva en <Link href={`/admin/cursos/${c.id}/publicacion`} className="font-bold text-oliva-profundo">Publicación</Link>.
+          Las correcciones de títulos y descripciones se ven enseguida en todas las versiones.
+        </p>
+      ) : c.historial.alumnos > 0 && (
         <p className="m-0 mb-5 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">
           Este curso tiene alumnos. Lo que alguien ya vio no se puede eliminar: se <b>retira</b>, deja de contar y su historial se conserva.
         </p>
       )}
       <div className="flex max-w-[980px] flex-col gap-4">
         {c.modulos.map((m, i) => (
-          <TarjetaModulo key={m.id} m={m} i={i} total={c.modulos.length} curso={c.id} volver={volver} avisoNueva={avisoNueva} />
+          <TarjetaModulo key={m.id} m={m} i={i} total={c.modulos.length} curso={c.id} volver={volver} avisoNueva={avisoNueva} versionado={versionado} />
         ))}
         {c.modulos.length === 0 && (
           <div className="rounded-2xl bg-arena p-6"><p className="m-0">Todavía no hay módulos. Un módulo agrupa lecciones sobre un mismo tema.</p></div>

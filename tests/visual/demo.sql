@@ -23,6 +23,12 @@ begin
     insert into public.evaluaciones (curso_id) values (c) returning id into e;
     insert into public.preguntas (evaluacion_id, enunciado, tipo, orden) values (e, 'Pregunta de ejemplo', 'unica', 0) returning id into p;
     insert into public.opciones (pregunta_id, texto, es_correcta, orden) values (p, 'Correcta', true, 0), (p, 'Incorrecta', false, 1);
+    -- El material de ejemplo se agrega antes de publicar para que forme parte de la versión 1.
+    if c = 'c1000000-0000-0000-0000-000000000001' then
+      insert into public.recursos_leccion (leccion_id, titulo, ruta_almacenamiento, tipo_mime, tamano_bytes)
+      select l.id, 'Guía para observar en casa', 'demo/guia.pdf', 'application/pdf', 480000
+        from public.lecciones l join public.modulos m2 on m2.id = l.modulo_id where m2.curso_id = c and m2.orden = 0 and l.orden = 0;
+    end if;
     update public.cursos set estado = 'publicado' where id = c;
   end loop;
 end $$;

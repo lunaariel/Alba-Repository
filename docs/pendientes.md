@@ -27,19 +27,29 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 | Pendiente | Estado | Qué falta | Entrega prevista |
 | --- | --- | --- | --- |
 | Lectura de `opciones.es_correcta` desde el panel | La columna no es legible por clientes, tampoco por la admin | El editor de evaluaciones la leerá por el servidor (clave de servicio) después de `exigirAdmin()` | 2 |
-| Acciones de servidor del panel | `exigirAdminAccion()` lista; todavía no hay acciones | Probar cada acción con una alumna (debe ser rechazada) | 2 a 6 |
+| Acciones de servidor del panel | Prueba estática: cada acción empieza con `exigirAdminAccion()`. Prueba directa en CI (`scripts/acciones-protegidas.mjs`): los formularios reales del panel reenviados con la sesión de una alumna y sin sesión no cambian la base (control positivo con la admin) | Repetir la prueba directa con las acciones de cada entrega nueva | 3 a 6 |
 | Nombre de la persona en "Asignó el rol de administración" | El registro guarda el id, no lo muestra | Mostrar el nombre en la ficha del registro | 4 |
 
 ## Fase 5 · entrega 2 (cursos y evaluaciones)
 
 | Pendiente | Estado | Qué falta | Cuándo |
 | --- | --- | --- | --- |
-| Vista previa del curso "como alumno" desde el panel | No implementado (el plan lo incluía) | Página de vista previa para borradores; hoy se ve el curso publicado en el sitio | Entrega 4 o antes del lanzamiento |
-| Duplicar un curso | No implementado (no figuraba en el pedido de esta entrega) | Copiar curso, temario y evaluación como borrador, con copia de los PDF | A definir |
+| Vista previa del borrador "como alumno" desde el panel | Aprobada por la titular; **no implementada** (no es necesaria para la coherencia del versionado) | Página de vista previa del borrador; hoy la publicación muestra la lista de diferencias con la versión vigente | Bloque aparte, a autorizar |
+| Duplicar un curso | Aprobada por la titular; **no implementada** | Copiar curso, temario y evaluación como borrador nuevo, sin alumnos, versiones ni historial, con copia de los PDF | Bloque aparte, a autorizar |
 | Subir videos a Bunny desde el panel | Se pega el id del video subido a Bunny | Subida directa con la API de Bunny | Fase 6 |
 | Pestaña "Alumnos del curso" | No implementada; el editor muestra cuántos alumnos y certificados hay | Lista con avance por alumno | Entrega 4 |
 | Bucket `materiales` en el Supabase real | La migración lo crea si existe el esquema de Storage; la subida se probó en el Supabase local de CI | Confirmar en el proyecto real | Fase 7 |
 | Mover una lección a otro módulo | No implementado; se reordena dentro del módulo | Selector de módulo en la lección | A definir |
+
+## Versionado académico (31/10/2026)
+
+| Pendiente | Estado | Qué falta | Cuándo |
+| --- | --- | --- | --- |
+| Bloqueo excepcional de un material PDF desde el panel | La base lo permite (`bloquear_contenido('recursos_leccion', …)`); el panel ofrece el bloqueo de lecciones y preguntas | Botón en cada material de la lección | A definir |
+| Diferencias de orden y de textos entre borrador y versión vigente | La publicación lista lecciones y preguntas nuevas o quitadas y cambios de criterios | Mostrar también los cambios de orden | A definir |
+| Lista de alumnos por versión | El historial de versiones muestra cuántos alumnos y certificados tiene cada una | Detalle por alumno (con la pestaña «Alumnos del curso») | Entrega 4 |
+| Descartar una revisión calculada y no aplicada | Queda en estado «calculada» sin efecto | Botón para descartarla (hoy simplemente no se aplica) | A definir |
+| Migración 0014 en el Supabase real | Probada en local y en CI con datos de ejemplo, con conciliación y reversión | Respaldo verificable del proyecto real, aplicar, ejecutar `conciliar_versionado()` y guardar el informe | Antes del lanzamiento, con autorización |
 
 ## Seguridad requerida por la titular (30/10/2026)
 
@@ -84,8 +94,8 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 
 ## Planes presentados y en espera de aprobación (30/10/2026)
 
-- Versionado académico, vista previa de borradores y duplicación de cursos (documento «Albor · Versionado académico: diseño técnico»). No implementado.
-- Fase 5, entrega 3: talleres y eventos (documento «Albor · Fase 5, entrega 3: plan de talleres y eventos»). No implementado.
+- Versionado académico: **implementado** (31/10/2026, migración 0014), según la autorización de la titular. Vista previa de borradores y duplicación de cursos: aprobadas, sin implementar, como bloque aparte.
+- Fase 5, entrega 3: talleres y eventos (documento «Albor · Fase 5, entrega 3: plan de talleres y eventos»). Plan aprobado con ajustes (inscripción real a talleres gratuitos, visibilidad del enlace configurable con 24 h por defecto validada en el servidor, recordatorios configurables de 24 h y 1 h idempotentes ante reprogramaciones, estado «requiere reembolso»). **No implementado**: espera autorización para programarse.
 - Defecto detectado al planificar: un pago aprobado después del vencimiento de la reserva, sin lugar disponible, deja la orden pendiente sin aviso. Su corrección está prevista en la entrega 3.
 
 ## Decisiones de negocio abiertas

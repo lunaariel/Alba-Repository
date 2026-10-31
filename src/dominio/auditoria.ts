@@ -50,12 +50,19 @@ const ACCIONES: Record<string, string> = {
   orden_reembolsado: 'Se registró un reembolso',
   orden_contracargo: 'Se registró un contracargo',
   inscriptos_exportados: 'Exportó la lista de inscriptos',
+  version_publicada: 'Publicó una versión de un curso',
+  version_cambiada_por_alumno: 'Un alumno pasó a la versión vigente de un curso',
+  revision_calculada: 'Calculó una revisión favorable (sin aplicarla)',
+  revision_favorable_aplicada: 'Aplicó una revisión favorable',
+  contenido_bloqueado: 'Bloqueó contenido en todas las versiones',
+  contenido_desbloqueado: 'Desbloqueó contenido',
+  material_actualizado: 'Cambió un material PDF',
 };
 
 /** Grupos para filtrar el registro: cada uno reúne una o más tablas. */
 export const GRUPOS_ACTIVIDAD = {
-  cursos: { texto: 'Cursos y temario', entidades: ['cursos', 'modulos', 'lecciones', 'recursos_leccion'] },
-  evaluaciones: { texto: 'Evaluaciones', entidades: ['evaluaciones', 'preguntas', 'opciones'] },
+  cursos: { texto: 'Cursos y temario', entidades: ['cursos', 'modulos', 'lecciones', 'recursos_leccion', 'versiones_curso'] },
+  evaluaciones: { texto: 'Evaluaciones', entidades: ['evaluaciones', 'preguntas', 'opciones', 'revisiones_evaluacion'] },
   talleres: { texto: 'Talleres', entidades: ['talleres'] },
   accesos: { texto: 'Accesos y roles', entidades: ['accesos_curso', 'roles_usuario'] },
   ventas: { texto: 'Ventas y cupones', entidades: ['ordenes', 'cupones'] },
@@ -75,6 +82,7 @@ const CAMPOS: Record<string, string> = {
   nombre: 'Nombre', correo_contacto: 'Correo de contacto', whatsapp: 'WhatsApp', textos: 'Textos del sitio',
   asunto: 'Asunto', cuerpo: 'Texto', codigo: 'Código', tipo: 'Tipo', valor: 'Valor', activo: 'Activo',
   vigente_desde: 'Desde', vigente_hasta: 'Hasta', usos_maximos: 'Usos máximos', motivo: 'Motivo', retirada: 'Retirada', retirado: 'Retirado', enunciado: 'Pregunta',
+  numero: 'Versión', resumen: 'Qué cambió', ajustados: 'Intentos mejorados', beneficiados: 'Intentos que mejorarían',
 };
 
 const ESTADOS: Record<string, string> = {

@@ -65,23 +65,26 @@ export const cursoPorSlug = cache(async (slug: string): Promise<CursoDetalle | n
   const db = clientePublico();
   const { data: c } = await db
     .from('cursos')
-    .select(`id, descripcion, objetivos, requisitos, video_presentacion_id, ${COLUMNAS_CURSO},
-             modulos (titulo, orden, lecciones (titulo, duracion_minutos, orden))`)
+    .select(`id, descripcion, objetivos, requisitos, video_presentacion_id, version_vigente_id, ${COLUMNAS_CURSO}`)
     .eq('slug', slug).eq('estado', 'publicado').maybeSingle();
   if (!c) return null;
 
-  // Conteos públicos: cuántos materiales y si hay evaluación (el contenido sigue siendo privado).
-  const [{ data: resumen }] = await Promise.all([db.rpc('resumen_publico_curso', { p_curso: c.id })]);
+  // Temario de la versión vigente publicada (nunca el borrador) y conteos públicos.
+  const [{ data: resumen }, { data: temario }] = await Promise.all([
+    db.rpc('resumen_publico_curso', { p_curso: c.id }),
+    c.version_vigente_id ? db.rpc('temario_version', { p_version: c.version_vigente_id }) : Promise.resolve({ data: [] }),
+  ]);
   const r = (resumen ?? {}) as { materiales?: number; evaluacion?: boolean };
 
-  type FilaModulo = { titulo: string; orden: number; lecciones: { titulo: string; duracion_minutos: number | null; orden: number }[] };
-  const modulos = ((c.modulos ?? []) as FilaModulo[])
-    .sort((a, b) => a.orden - b.orden)
-    .map((m) => ({
-      titulo: m.titulo,
-      lecciones: [...(m.lecciones ?? [])].sort((a, b) => a.orden - b.orden)
-        .map((l) => ({ titulo: l.titulo, duracionMinutos: l.duracion_minutos })),
-    }));
+  type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: number; leccion_titulo: string; duracion_minutos: number | null; orden: number };
+  const filas = [...((temario ?? []) as FilaTemario[])].sort((a, b) => a.modulo_orden - b.modulo_orden || a.orden - b.orden);
+  const modulos: CursoDetalle['modulos'] = [];
+  const porModulo = new Map<string, CursoDetalle['modulos'][number]>();
+  for (const f of filas) {
+    let m = porModulo.get(f.modulo_id);
+    if (!m) { m = { titulo: f.modulo_titulo, lecciones: [] }; porModulo.set(f.modulo_id, m); modulos.push(m); }
+    m.lecciones.push({ titulo: f.leccion_titulo, duracionMinutos: f.duracion_minutos });
+  }
 
   return {
     ...aResumen(c as unknown as FilaCurso),

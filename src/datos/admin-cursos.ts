@@ -41,16 +41,22 @@ export async function listaCursos(): Promise<CursoListado[]> {
   }));
 }
 
-export interface MaterialAdmin { id: string; titulo: string; ruta: string; tamanoBytes: number }
+export interface MaterialAdmin { id: string; titulo: string; ruta: string; tamanoBytes: number; retirado: boolean; enVersion: boolean; bloqueado: boolean }
+/** Dónde está cada pieza respecto de la versión vigente (para los marcadores del editor). */
+export interface Marca { enVigente: boolean; enAlgunaVersion: boolean; bloqueada: boolean; bloqueoMotivo: string | null }
+export interface VersionAdmin {
+  id: string; numero: number; publicadaEn: Date; resumen: string | null; puntajeMinimo: number; intentosPermitidos: number | null;
+  alumnos: number; certificados: number; lecciones: number; preguntas: number; vigente: boolean;
+}
 export interface LeccionAdmin {
   id: string; titulo: string; descripcion: string | null; duracionMinutos: number | null; orden: number;
-  retirada: boolean; videoId: string | null; materiales: MaterialAdmin[]; vistas: number; completadas: number;
+  retirada: boolean; videoId: string | null; materiales: MaterialAdmin[]; vistas: number; completadas: number; marca: Marca;
 }
 export interface ModuloAdmin { id: string; titulo: string; orden: number; retirado: boolean; lecciones: LeccionAdmin[] }
 export interface OpcionAdmin { id: string; texto: string; orden: number; esCorrecta: boolean }
 export interface PreguntaAdmin {
   id: string; enunciado: string; tipo: 'unica' | 'multiple'; tema: string | null; orden: number; retirada: boolean;
-  opciones: OpcionAdmin[]; respuestas: number;
+  opciones: OpcionAdmin[]; respuestas: number; marca: Marca; versiones: number[];
 }
 export interface EvaluacionAdmin {
   id: string; puntajeMinimo: number; intentosPermitidos: number | null; mensajeAprobado: string; mensajeDesaprobado: string;
@@ -63,6 +69,9 @@ export interface CursoAdmin {
   estado: EstadoCurso; publicadoEn: Date | null;
   modulos: ModuloAdmin[]; evaluacion: EvaluacionAdmin | null;
   historial: { alumnos: number; alumnosSinCertificado: number; certificados: number; ordenes: number };
+  versiones: VersionAdmin[];
+  /** Lo que tiene la versión vigente y ya no está (o cambió) en el borrador. */
+  quitadoDelBorrador: { lecciones: { id: string; titulo: string }[]; preguntas: { id: string; enunciado: string }[] };
 }
 
 /** Todo el curso, con lo retirado y con lo que el editor necesita para avisar del impacto. */
@@ -72,16 +81,16 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
   const s = await clienteSesion();
   const { data: c } = await s.from('cursos')
     .select(`id, slug, titulo, resumen, descripcion, publico, edad_desde_meses, edad_hasta_meses, duracion_minutos, objetivos,
-             requisitos, precio_centavos, video_presentacion_id, estado, publicado_en,
+             requisitos, precio_centavos, video_presentacion_id, estado, publicado_en, version_vigente_id,
              modulos(id, titulo, orden, retirado, lecciones(id, titulo, descripcion, duracion_minutos, orden, retirada,
-               recursos_leccion(id, titulo, ruta_almacenamiento, tamano_bytes, orden))),
+               recursos_leccion(id, titulo, ruta_almacenamiento, tamano_bytes, orden, retirado))),
              evaluaciones(id, puntaje_minimo, intentos_permitidos, mensaje_aprobado, mensaje_desaprobado,
                preguntas(id, enunciado, tipo, tema, orden, retirada, opciones(id, texto, orden)))`)
     .eq('id', id).maybeSingle();
   if (!c) return null;
 
   type L = { id: string; titulo: string; descripcion: string | null; duracion_minutos: number | null; orden: number; retirada: boolean;
-    recursos_leccion: { id: string; titulo: string; ruta_almacenamiento: string; tamano_bytes: number; orden: number }[] };
+    recursos_leccion: { id: string; titulo: string; ruta_almacenamiento: string; tamano_bytes: number; orden: number; retirado: boolean }[] };
   type M = { id: string; titulo: string; orden: number; retirado: boolean; lecciones: L[] };
   type P = { id: string; enunciado: string; tipo: 'unica' | 'multiple'; tema: string | null; orden: number; retirada: boolean;
     opciones: { id: string; texto: string; orden: number }[] };
@@ -92,16 +101,38 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
   const preguntaIds = (evalFila?.preguntas ?? []).map((p) => p.id);
   const servicio = clienteServicio();
 
-  const [videos, correctas, progreso, respuestas, accesos, certs, items, intentos] = await Promise.all([
-    leccionIds.length ? servicio.from('lecciones').select('id, video_id').in('id', leccionIds) : Promise.resolve({ data: [] }),
+  const [videos, correctas, progreso, respuestas, accesos, certs, items, intentos, versiones, bloqueosPreguntas, bloqueosMateriales] = await Promise.all([
+    leccionIds.length ? servicio.from('lecciones').select('id, video_id, bloqueada, bloqueo_motivo').in('id', leccionIds) : Promise.resolve({ data: [] }),
     preguntaIds.length ? servicio.from('opciones').select('id, es_correcta').in('pregunta_id', preguntaIds) : Promise.resolve({ data: [] }),
     leccionIds.length ? s.from('progreso_leccion').select('leccion_id, completada_en').in('leccion_id', leccionIds) : Promise.resolve({ data: [] }),
     preguntaIds.length ? s.from('respuestas_intento').select('pregunta_id').in('pregunta_id', preguntaIds) : Promise.resolve({ data: [] }),
-    s.from('accesos_curso').select('perfil_id').eq('curso_id', id).eq('estado', 'activo'),
-    s.from('certificados').select('perfil_id').eq('curso_id', id),
+    s.from('accesos_curso').select('perfil_id, version_id').eq('curso_id', id).eq('estado', 'activo'),
+    s.from('certificados').select('perfil_id, version_id').eq('curso_id', id),
     s.from('items_orden').select('id', { count: 'exact', head: true }).eq('curso_id', id),
     evalFila ? s.from('intentos_evaluacion').select('id', { count: 'exact', head: true }).eq('evaluacion_id', evalFila.id) : Promise.resolve({ count: 0 }),
+    servicio.from('versiones_curso')
+      .select('id, numero, publicada_en, resumen, puntaje_minimo, intentos_permitidos, version_lecciones(leccion_id), version_materiales(recurso_id), version_preguntas(pregunta_id)')
+      .eq('curso_id', id).order('numero', { ascending: false }),
+    preguntaIds.length ? servicio.from('preguntas').select('id, bloqueada, bloqueo_motivo').in('id', preguntaIds) : Promise.resolve({ data: [] }),
+    leccionIds.length ? servicio.from('recursos_leccion').select('id, bloqueado').in('leccion_id', leccionIds) : Promise.resolve({ data: [] }),
   ]);
+  type FilaVersion = { id: string; numero: number; publicada_en: string; resumen: string | null; puntaje_minimo: number; intentos_permitidos: number | null;
+    version_lecciones: { leccion_id: string }[]; version_materiales: { recurso_id: string }[]; version_preguntas: { pregunta_id: string }[] };
+  const filasVersion = (versiones.data ?? []) as FilaVersion[];
+  const vigente = filasVersion.find((v) => v.id === c.version_vigente_id);
+  const enVigente = { lecciones: new Set(vigente?.version_lecciones.map((x) => x.leccion_id)), preguntas: new Set(vigente?.version_preguntas.map((x) => x.pregunta_id)) };
+  const enAlguna = {
+    lecciones: new Set(filasVersion.flatMap((v) => v.version_lecciones.map((x) => x.leccion_id))),
+    materiales: new Set(filasVersion.flatMap((v) => v.version_materiales.map((x) => x.recurso_id))),
+  };
+  const versionesDePregunta = new Map<string, number[]>();
+  for (const v of filasVersion) for (const x of v.version_preguntas) versionesDePregunta.set(x.pregunta_id, [...(versionesDePregunta.get(x.pregunta_id) ?? []), v.numero]);
+  const bloqueoLeccion = new Map(((videos.data ?? []) as { id: string; bloqueada: boolean; bloqueo_motivo: string | null }[]).map((v) => [v.id, v]));
+  const bloqueoPregunta = new Map(((bloqueosPreguntas.data ?? []) as { id: string; bloqueada: boolean; bloqueo_motivo: string | null }[]).map((v) => [v.id, v]));
+  const materialBloqueado = new Set(((bloqueosMateriales.data ?? []) as { id: string; bloqueado: boolean }[]).filter((m) => m.bloqueado).map((m) => m.id));
+  const alumnosPorVersion = new Map<string, number>(); const certsPorVersion = new Map<string, number>();
+  for (const a of (accesos.data ?? []) as { version_id: string }[]) alumnosPorVersion.set(a.version_id, (alumnosPorVersion.get(a.version_id) ?? 0) + 1);
+  for (const a of (certs.data ?? []) as { version_id: string }[]) certsPorVersion.set(a.version_id, (certsPorVersion.get(a.version_id) ?? 0) + 1);
   const video = new Map(((videos.data ?? []) as { id: string; video_id: string | null }[]).map((v) => [v.id, v.video_id]));
   const correcta = new Map(((correctas.data ?? []) as { id: string; es_correcta: boolean }[]).map((o) => [o.id, o.es_correcta]));
   const vistas = new Map<string, number>(); const completas = new Map<string, number>();
@@ -125,7 +156,12 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
       lecciones: [...m.lecciones].sort(porOrden).map((l) => ({
         id: l.id, titulo: l.titulo, descripcion: l.descripcion, duracionMinutos: l.duracion_minutos, orden: l.orden, retirada: l.retirada,
         videoId: video.get(l.id) ?? null, vistas: vistas.get(l.id) ?? 0, completadas: completas.get(l.id) ?? 0,
-        materiales: [...l.recursos_leccion].sort(porOrden).map((r) => ({ id: r.id, titulo: r.titulo, ruta: r.ruta_almacenamiento, tamanoBytes: r.tamano_bytes })),
+        marca: { enVigente: enVigente.lecciones.has(l.id), enAlgunaVersion: enAlguna.lecciones.has(l.id),
+          bloqueada: bloqueoLeccion.get(l.id)?.bloqueada ?? false, bloqueoMotivo: bloqueoLeccion.get(l.id)?.bloqueo_motivo ?? null },
+        materiales: [...l.recursos_leccion].sort(porOrden).map((r) => ({
+          id: r.id, titulo: r.titulo, ruta: r.ruta_almacenamiento, tamanoBytes: r.tamano_bytes, retirado: r.retirado,
+          enVersion: enAlguna.materiales.has(r.id), bloqueado: materialBloqueado.has(r.id),
+        })),
       })),
     })),
     evaluacion: evalFila ? {
@@ -135,6 +171,9 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
       preguntas: [...evalFila.preguntas].sort(porOrden).map((p) => ({
         id: p.id, enunciado: p.enunciado, tipo: p.tipo, tema: p.tema, orden: p.orden, retirada: p.retirada,
         respuestas: respondidas.get(p.id) ?? 0,
+        versiones: (versionesDePregunta.get(p.id) ?? []).sort((a, b) => a - b),
+        marca: { enVigente: enVigente.preguntas.has(p.id), enAlgunaVersion: versionesDePregunta.has(p.id),
+          bloqueada: bloqueoPregunta.get(p.id)?.bloqueada ?? false, bloqueoMotivo: bloqueoPregunta.get(p.id)?.bloqueo_motivo ?? null },
         opciones: [...p.opciones].sort(porOrden).map((o) => ({ id: o.id, texto: o.texto, orden: o.orden, esCorrecta: correcta.get(o.id) ?? false })),
       })),
     } : null,
@@ -144,8 +183,35 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
       certificados: conCertificado.size,
       ordenes: items.count ?? 0,
     },
+    versiones: filasVersion.map((v) => ({
+      id: v.id, numero: v.numero, publicadaEn: new Date(v.publicada_en), resumen: v.resumen, puntajeMinimo: v.puntaje_minimo,
+      intentosPermitidos: v.intentos_permitidos, alumnos: alumnosPorVersion.get(v.id) ?? 0, certificados: certsPorVersion.get(v.id) ?? 0,
+      lecciones: v.version_lecciones.length, preguntas: v.version_preguntas.length, vigente: v.id === c.version_vigente_id,
+    })),
+    quitadoDelBorrador: {
+      lecciones: modulos.flatMap((m) => m.lecciones.map((l) => ({ ...l, moduloRetirado: m.retirado })))
+        .filter((l) => enVigente.lecciones.has(l.id) && (l.retirada || l.moduloRetirado)).map((l) => ({ id: l.id, titulo: l.titulo })),
+      preguntas: (evalFila?.preguntas ?? []).filter((p) => enVigente.preguntas.has(p.id) && p.retirada).map((p) => ({ id: p.id, enunciado: p.enunciado })),
+    },
   };
 });
+
+/** Diferencias del borrador respecto de la versión vigente: lo que traería una versión nueva. */
+export function cambiosDelBorrador(c: CursoAdmin) {
+  const vigente = c.versiones.find((v) => v.vigente);
+  const lecciones = c.modulos.filter((m) => !m.retirado).flatMap((m) => m.lecciones).filter((l) => !l.retirada && !l.marca.bloqueada);
+  const preguntas = (c.evaluacion?.preguntas ?? []).filter((p) => !p.retirada && !p.marca.bloqueada);
+  return {
+    vigente,
+    leccionesNuevas: lecciones.filter((l) => !l.marca.enVigente).map((l) => l.titulo),
+    leccionesQuitadas: c.quitadoDelBorrador.lecciones.map((l) => l.titulo),
+    preguntasNuevas: preguntas.filter((p) => !p.marca.enVigente).length,
+    preguntasQuitadas: c.quitadoDelBorrador.preguntas.length,
+    criterios: vigente && c.evaluacion
+      ? { puntaje: [vigente.puntajeMinimo, c.evaluacion.puntajeMinimo] as const, intentos: [vigente.intentosPermitidos, c.evaluacion.intentosPermitidos] as const }
+      : null,
+  };
+}
 
 /** Cifras para la lista de publicación (misma regla que la base). */
 export function estadoContenido(c: CursoAdmin) {

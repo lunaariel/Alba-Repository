@@ -291,6 +291,14 @@ export async function quitarMaterial(datos: FormData) {
   if (!id.success) ir(ruta, { error: 'invalido' });
   const s = await clienteSesion();
   const { data: m } = await s.from('recursos_leccion').select('ruta_almacenamiento').eq('id', id.data).maybeSingle();
+  // Si el material está en alguna versión publicada, se retira del borrador y el archivo se conserva.
+  const { count } = await clienteServicio().from('version_materiales').select('recurso_id', { count: 'exact', head: true }).eq('recurso_id', id.data);
+  if ((count ?? 0) > 0) {
+    const r = await s.from('recursos_leccion').update({ retirado: true }).eq('id', id.data);
+    if (r.error) ir(ruta, { error: codigoError(r.error.message) });
+    refrescar();
+    ir(ruta, { ok: 'material_retirado' });
+  }
   const { error } = await s.from('recursos_leccion').delete().eq('id', id.data);
   if (error) ir(ruta, { error: codigoError(error.message) });
   if (m?.ruta_almacenamiento) await borrarArchivos([m.ruta_almacenamiento]);
@@ -373,5 +381,69 @@ export async function guardarPregunta(_: Estado, datos: FormData): Promise<Estad
   if (error) return { error: mensajeError(error.message) };
   refrescar(d.curso);
   if (!d.pregunta) redirect(`/admin/cursos/${d.curso}/evaluacion/${id as string}?ok=pregunta_creada`);
+  // Una pregunta que ya estaba en una versión publicada no se toca: la base crea una nueva para el borrador.
+  if (id !== d.pregunta) redirect(`/admin/cursos/${d.curso}/evaluacion/${id as string}?ok=pregunta_reemplazada`);
   return { ok: 'Pregunta guardada.' };
+}
+
+// ---------------------------------------------------------------- versiones
+
+/** Publica el borrador como una versión nueva. Los alumnos actuales no cambian de versión. */
+export async function publicarVersion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, resumen: texto(600), confirmacion: z.string() })
+    .safeParse({ id: datos.get('id'), resumen: datos.get('resumen') ?? '', confirmacion: datos.get('confirmacion') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.id}/publicacion`;
+  if (r.data.confirmacion.trim().toUpperCase() !== 'PUBLICAR') ir(ruta, { error: 'confirmacion' });
+  const { error } = await (await clienteSesion()).rpc('publicar_version', { p_curso: r.data.id, p_resumen: r.data.resumen });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.id);
+  ir(ruta, { ok: 'version_publicada' });
+}
+
+/** Paso 1 de la revisión favorable: calcula a quién beneficia. No cambia ningún resultado. */
+export async function calcularRevision(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, pregunta: uuid, version: uuid, opciones: z.array(uuid).min(1).max(10), motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), pregunta: datos.get('pregunta'), version: datos.get('version'),
+      opciones: datos.getAll('opciones'), motivo: datos.get('motivo') ?? '' });
+  const base = `/admin/cursos/${String(datos.get('curso') ?? '').replace(/[^0-9a-f-]/gi, '')}/evaluacion/${String(datos.get('pregunta') ?? '').replace(/[^0-9a-f-]/gi, '')}/revision`;
+  if (!r.success) ir(base, { error: datos.getAll('opciones').length ? 'invalido' : 'opciones_invalidas' });
+  const { data, error } = await (await clienteSesion()).rpc('calcular_revision', {
+    p_version: r.data.version, p_pregunta: r.data.pregunta, p_opciones: r.data.opciones, p_motivo: r.data.motivo,
+  });
+  if (error || !data) ir(base, { error: codigoError(error?.message) });
+  redirect(`${base}?calculo=${data as string}`);
+}
+
+/** Paso 2: confirmación diferenciada (escribir CORREGIR y la cantidad). Idempotente; solo sube resultados. */
+export async function aplicarRevision(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, pregunta: uuid, revision: uuid, confirmacion: texto(40) })
+    .safeParse({ curso: datos.get('curso'), pregunta: datos.get('pregunta'), revision: datos.get('revision'), confirmacion: datos.get('confirmacion') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const base = `/admin/cursos/${r.data.curso}/evaluacion/${r.data.pregunta}/revision`;
+  const { data, error } = await (await clienteSesion()).rpc('aplicar_revision', { p_revision: r.data.revision, p_confirmacion: r.data.confirmacion });
+  if (error) redirect(`${base}?calculo=${r.data.revision}&error=${codigoError(error.message)}`);
+  refrescar(r.data.curso);
+  const estado = (data as { estado?: string } | null)?.estado;
+  ir(base, { ok: estado === 'ya_aplicada' ? 'revision_ya_aplicada' : 'revision_aplicada' });
+}
+
+/** Bloqueo excepcional (contenido erróneo o dañino). Exige motivo; queda registrado. */
+export async function bloquearContenido(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ tabla: z.enum(['lecciones', 'recursos_leccion', 'preguntas']), id: uuid, bloquear: z.enum(['si', 'no']), motivo: texto(500) })
+    .safeParse({ tabla: datos.get('tabla'), id: datos.get('id'), bloquear: datos.get('bloquear'), motivo: datos.get('motivo') ?? '' });
+  const ruta = volverSeguro(datos.get('volver'), '/admin/cursos');
+  if (!r.success) ir(ruta, { error: 'invalido' });
+  const palabra = r.data.bloquear === 'si' ? 'BLOQUEAR' : 'DESBLOQUEAR';
+  if (String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== palabra) ir(ruta, { error: 'confirmacion' });
+  const { error } = await (await clienteSesion()).rpc('bloquear_contenido', {
+    p_tabla: r.data.tabla, p_id: r.data.id, p_bloquear: r.data.bloquear === 'si', p_motivo: r.data.motivo,
+  });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar();
+  ir(ruta, { ok: r.data.bloquear === 'si' ? 'bloqueado' : 'desbloqueado' });
 }

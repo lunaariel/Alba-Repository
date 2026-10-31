@@ -35,20 +35,25 @@ begin
   exception when others then perform pruebas.afirmar(sqlerrm = 'ultima_leccion_vigente', 'La última lección vigente no se retira (' || sqlerrm || ')');
   end;
 
-  -- Con la 1 retirada, a A solo le falta la 2 (y lo que ya hizo se conserva).
+  -- Retirar del borrador no cambia la versión de A (0014): completó la 1, le falta la 2.
   perform set_config('request.jwt.claim.sub', A::text, true);
   perform pruebas.afirmar(public.lecciones_pendientes(CURSO) = 1, 'Lo retirado no cuenta como pendiente');
   perform set_config('request.jwt.claim.sub', '', true);
 
   -- Completar la 2 habilita la evaluación. Primer intento: la 1 bien, la 2 mal.
   insert into public.progreso_leccion (perfil_id, leccion_id, completada_en) values (A, L2, now());
-  update public.preguntas set tema = 'Observación' where id = P2;
+  -- Una pregunta publicada ya no cambia (0014): ni su tema.
+  begin
+    update public.preguntas set tema = 'Observación' where id = P2;
+    raise exception 'NO_FALLÓ: cambió una pregunta publicada';
+  exception when others then perform pruebas.afirmar(sqlerrm = 'pregunta_publicada', 'Pregunta publicada inmutable (' || sqlerrm || ')');
+  end;
   r := public.corregir_evaluacion(A, EVAL, jsonb_build_object(
         P1::text, jsonb_build_array('a2000000-0000-0000-0000-000000000011'),
         P2::text, jsonb_build_array('a2000000-0000-0000-0000-000000000023')));
   puntaje1 := (r ->> 'puntaje')::int;
   perform pruebas.afirmar(puntaje1 = 50, 'Primer intento: 50 → ' || r::text);
-  perform pruebas.afirmar(r -> 'temas_a_reforzar' = '["Observación"]'::jsonb, 'Devuelve el tema a reforzar → ' || r::text);
+  perform pruebas.afirmar(r -> 'temas_a_reforzar' = '[]'::jsonb, 'Sin tema, no hay temas a reforzar → ' || r::text);
   perform pruebas.afirmar(r::text !~ 'a[12]000000-', 'La respuesta no revela preguntas ni opciones');
 
   -- Con respuestas guardadas: ni la pregunta ni sus opciones se borran.
@@ -63,20 +68,25 @@ begin
   exception when others then perform pruebas.afirmar(sqlerrm = 'opcion_con_historial', 'Opción con respuestas: no se borra (' || sqlerrm || ')');
   end;
 
-  -- Cambiar la respuesta correcta no recalcula intentos anteriores.
-  perform public.guardar_pregunta(EVAL, P1, '¿Pregunta única?', 'unica', null, jsonb_build_array(
+  -- "Editar" una pregunta publicada crea su reemplazo en el borrador; la original no cambia.
+  q := public.guardar_pregunta(EVAL, P1, '¿Pregunta única?', 'unica', null, jsonb_build_array(
     jsonb_build_object('id', 'a2000000-0000-0000-0000-000000000011', 'texto', 'Correcta', 'es_correcta', false),
     jsonb_build_object('id', 'a2000000-0000-0000-0000-000000000012', 'texto', 'Ahora es la correcta', 'es_correcta', true)));
+  perform pruebas.afirmar(q <> P1, 'Se creó una pregunta nueva');
+  perform pruebas.afirmar((select retirada from public.preguntas where id = P1), 'La original queda retirada del borrador');
+  perform pruebas.afirmar((select es_correcta from public.opciones where id = 'a2000000-0000-0000-0000-000000000011'), 'La clave original no cambió');
+  perform pruebas.afirmar((select es_correcta from public.opciones where pregunta_id = q and texto = 'Ahora es la correcta'), 'El reemplazo tiene la clave nueva');
   perform pruebas.afirmar((select puntaje from public.intentos_evaluacion where perfil_id = A and numero = 1) = puntaje1,
     'El puntaje del intento anterior no cambia');
-  perform pruebas.afirmar((select es_correcta from public.opciones where id = 'a2000000-0000-0000-0000-000000000012'), 'La nueva correcta quedó guardada');
 
-  -- Retirar una pregunta: deja de contar en los intentos siguientes.
+  -- Retirar una pregunta del borrador no cambia la evaluación de la versión de A.
   update public.preguntas set retirada = true where id = P2;
-  r := public.corregir_evaluacion(A, EVAL, jsonb_build_object(P1::text, jsonb_build_array('a2000000-0000-0000-0000-000000000012')));
-  perform pruebas.afirmar((r ->> 'puntaje')::int = 100 and r -> 'temas_a_reforzar' = '[]'::jsonb, 'Solo cuenta la pregunta vigente → ' || r::text);
+  r := public.corregir_evaluacion(A, EVAL, jsonb_build_object(
+        P1::text, jsonb_build_array('a2000000-0000-0000-0000-000000000011'),
+        P2::text, jsonb_build_array('a2000000-0000-0000-0000-000000000021', 'a2000000-0000-0000-0000-000000000022')));
+  perform pruebas.afirmar((r ->> 'puntaje')::int = 100, 'A rinde las preguntas y la clave de su versión → ' || r::text);
   begin
-    update public.preguntas set retirada = true where id = P1;
+    update public.preguntas set retirada = true where id = q;
     raise exception 'NO_FALLÓ: retiró la última pregunta';
   exception when others then perform pruebas.afirmar(sqlerrm = 'ultima_pregunta_vigente', 'La última pregunta vigente no se retira (' || sqlerrm || ')');
   end;
@@ -150,19 +160,20 @@ begin
   perform pruebas.afirmar(not exists (select 1 from public.cursos where id = c), 'Un curso sin historial se puede eliminar');
 end $$;
 
--- Lo retirado no se ve fuera del panel; la admin lo ve todo.
+-- Desde 0014, retirar es un cambio del borrador: el sitio y la alumna siguen viendo la versión publicada
+-- (el efecto de publicar una versión nueva se prueba en 97_versionado).
 set local role anon;
-select pruebas.afirmar((select count(*) from public.lecciones where modulo_id = 'd0000000-0000-0000-0000-000000000001') = 1, 'El sitio no muestra la lección retirada');
+select pruebas.afirmar((select count(*) from public.lecciones where modulo_id = 'd0000000-0000-0000-0000-000000000001') = 2, 'El sitio muestra la versión vigente, no el borrador');
 set local role authenticated;
 set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
-select pruebas.afirmar((select count(*) from public.lecciones) = 1, 'El campus no muestra la lección retirada');
-select pruebas.afirmar((select count(*) from public.preguntas) = 2, 'El campus no muestra la pregunta retirada');
+select pruebas.afirmar((select count(*) from public.lecciones) = 2, 'La alumna ve las lecciones de su versión');
+select pruebas.afirmar((select count(*) from public.preguntas) = 2, 'La alumna ve las preguntas de su versión, no las del borrador');
 -- Una alumna no reordena aunque vea el curso.
 do $$ begin
   begin
     perform public.mover_en_orden('modulos', 'd0000000-0000-0000-0000-000000000001', 1);
     -- con un solo módulo no hay vecino: probar con preguntas, que tiene vecinos visibles
-    perform public.mover_en_orden('preguntas', 'a1000000-0000-0000-0000-000000000001', 1);
+    perform public.mover_en_orden('preguntas', 'a1000000-0000-0000-0000-000000000001', -1);
     raise exception 'NO_FALLÓ: la alumna reordenó';
   exception when others then perform pruebas.afirmar(sqlerrm in ('no_autorizado', 'no_encontrado'), 'La alumna no reordena (' || sqlerrm || ')');
   end;
@@ -203,6 +214,6 @@ reset role;
 -- Todo quedó en el registro de actividad.
 select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'leccion_actualizado' and (despues ->> 'retirada')::boolean), 'Retiro de lección registrado');
 select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'pregunta_actualizado' and (despues ->> 'retirada')::boolean), 'Retiro de pregunta registrado');
-select pruebas.afirmar((select count(*) from public.auditoria where accion = 'opcion_actualizado') >= 2, 'Cambio de respuesta correcta registrado');
+select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'pregunta_creado' and despues ->> 'enunciado' = '¿Pregunta única?'), 'El reemplazo de una pregunta publicada queda registrado');
 
 rollback;

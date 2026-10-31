@@ -31,9 +31,7 @@ begin
   select a, l.id, case when l.orden = 0 and m.orden = 0 then now() end, now() - (l.orden || ' minutes')::interval
     from public.lecciones l join public.modulos m on m.id = l.modulo_id
    where m.curso_id = c1 and m.orden = 0;
-  insert into public.recursos_leccion (leccion_id, titulo, ruta_almacenamiento, tipo_mime, tamano_bytes)
-  select l.id, 'Guía para observar en casa', 'demo/guia.pdf', 'application/pdf', 480000
-    from public.lecciones l join public.modulos m on m.id = l.modulo_id where m.curso_id = c1 and m.orden = 0 and l.orden = 0;
+  -- (El material de ejemplo de c1 se crea en demo.sql, antes de publicar: forma parte de la versión 1.)
 
   -- c2 y c3: todas las lecciones completas.
   insert into public.progreso_leccion (perfil_id, leccion_id, completada_en)
@@ -80,6 +78,7 @@ ORDEN=$(q "select id from public.ordenes where estado = 'aprobada' limit 1")
 CERT=$(q "select id from public.certificados limit 1")
 CODIGO=$(q "select codigo_verificacion from public.certificados limit 1")
 PREGUNTA=$(q "select p.id from public.preguntas p join public.evaluaciones e on e.id = p.evaluacion_id where e.curso_id = 'c1000000-0000-0000-0000-000000000002' limit 1")
+PREGUNTA_C3=$(q "select p.id from public.preguntas p join public.evaluaciones e on e.id = p.evaluacion_id where e.curso_id = 'c1000000-0000-0000-0000-000000000003' limit 1")
 cat > campus.env <<EOF
 CORREO=$CORREO
 CLAVE=$CLAVE
@@ -87,6 +86,7 @@ ADMIN_CORREO=$ADMIN_CORREO
 ADMIN_CLAVE=$ADMIN_CLAVE
 LECCION=$LECCION
 PREGUNTA=$PREGUNTA
+PREGUNTA_C3=$PREGUNTA_C3
 CODIGO=$CODIGO
 RUTAS_CAMPUS="/campus /campus/cursos/demo-montessori-en-casa /campus/cursos/demo-montessori-en-casa/lecciones/$LECCION /campus/cursos/demo-autonomia-0-3 /campus/cursos/demo-ambiente-3-6/evaluacion /campus/talleres /campus/compras /campus/compras/$ORDEN /campus/cuenta"
 RUTAS_ADMIN="/admin /admin/cursos /admin/cursos/c1000000-0000-0000-0000-000000000001 /admin/cursos/c1000000-0000-0000-0000-000000000001/temario /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/$LECCION /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/$PREGUNTA /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion /admin/configuracion/actividad"

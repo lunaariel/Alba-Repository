@@ -6,8 +6,8 @@ import { AreaTexto, Entrada } from '@/ui/admin/campos';
 import { GuardiaCambios } from '@/ui/admin/GuardiaCambios';
 import { guardarCriterios, type Estado } from '../../acciones';
 
-export function FormCriterios({ curso, criterios, conIntentos }: {
-  curso: string; criterios: { puntaje: string; intentos: string; aprobado: string; desaprobado: string }; conIntentos: boolean;
+export function FormCriterios({ curso, criterios, conIntentos, versionado = false }: {
+  curso: string; criterios: { puntaje: string; intentos: string; aprobado: string; desaprobado: string }; conIntentos: boolean; versionado?: boolean;
 }) {
   const [estado, accion] = useActionState<Estado, FormData>(guardarCriterios, undefined);
   const err = (c: string) => (estado?.campo === c ? estado.error : undefined);
@@ -25,7 +25,9 @@ export function FormCriterios({ curso, criterios, conIntentos }: {
         </div>
         <AreaTexto nombre="aprobado" etiqueta="Mensaje al aprobar" defaultValue={criterios.aprobado} rows={2} maxLength={300} error={err('aprobado')} />
         <AreaTexto nombre="desaprobado" etiqueta="Mensaje al no aprobar" defaultValue={criterios.desaprobado} rows={2} maxLength={300} error={err('desaprobado')} />
-        {conIntentos && <p className="m-0 text-[14px] text-tinta-suave">Los cambios valen desde el próximo intento; los anteriores no se recalculan.</p>}
+        {versionado
+          ? <p className="m-0 text-[14px] text-tinta-suave">Criterios del borrador: rigen desde la próxima versión publicada. Cada versión conserva los suyos.</p>
+          : conIntentos && <p className="m-0 text-[14px] text-tinta-suave">Los cambios valen desde el próximo intento; los anteriores no se recalculan.</p>}
         <div><BotonEnviar>Guardar criterios</BotonEnviar></div>
       </form>
     </section>

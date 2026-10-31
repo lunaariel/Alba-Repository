@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { cursoCampus } from '@/datos/campus';
+import { cambioDeVersion, cursoCampus } from '@/datos/campus';
 import { estadoCertificado, textoAvance } from '@/dominio/aprendizaje';
 import { Contenedor } from '@/ui/estructura';
 import { BarraAvance, EncabezadoCampus, TemarioCampus } from '@/ui/campus';
@@ -35,16 +35,34 @@ export default async function CursoCampus({ params, searchParams }: Props) {
 
   const hechas = curso.lecciones.length - curso.pendientes;
   const ev = curso.evaluacion;
-  const aprobada = Boolean(ev?.intentos.some((i) => i.aprobado));
+  const aprobada = Boolean(ev?.aprobada);
+  const cambio = await cambioDeVersion(curso.id);
+  const fechaVersion = (d: Date) => new Intl.DateTimeFormat('es-GT', { month: 'long', year: 'numeric', timeZone: 'America/Guatemala' }).format(d);
   const sinIntentos = ev?.intentosPermitidos != null && ev.intentos.length >= ev.intentosPermitidos;
   const cert = estadoCertificado({ accesoActivo: true, leccionesPendientes: curso.pendientes, evaluacionAprobada: aprobada });
   const leccionesDeMaterial = new Map(curso.lecciones.map((l) => [l.id, l.titulo]));
 
   return (
     <>
-      <EncabezadoCampus titulo={curso.titulo} volver={{ href: '/campus', texto: 'Mis cursos' }} />
+      <EncabezadoCampus
+        titulo={curso.titulo}
+        volver={{ href: '/campus', texto: 'Mis cursos' }}
+        bajada={curso.version ? <span className="text-[15px]">Programa: versión {curso.version.numero}, publicada en {fechaVersion(curso.version.publicadaEn)}.</span> : undefined}
+      />
       <Contenedor className="flex flex-wrap gap-x-12 gap-y-8 pb-20 pt-2">
         <div className="min-w-0 flex-[1_1_520px]">
+          {aviso === 'version-cambiada' && (
+            <div className="mb-6"><Aviso tipo="ok">Listo: ahora sigue la versión {curso.version?.numero} del programa. Su avance y sus resultados anteriores se conservan.</Aviso></div>
+          )}
+          {cambio && (
+            <section aria-labelledby="version-nueva" className="mb-6 rounded-2xl border-[1.5px] border-borde-bandeja bg-arena p-5">
+              <h2 id="version-nueva" className="m-0 text-[20px]">Hay una versión más reciente de este curso</h2>
+              <p className="m-0 mt-1.5">
+                Puede seguir con la suya todo el tiempo que quiera. Si prefiere la versión {cambio.nueva.numero}, vea primero qué cambia.
+              </p>
+              <div className="mt-3"><EnlaceAccion href={`/campus/cursos/${curso.slug}/version`}>Ver qué cambia en la versión {cambio.nueva.numero}</EnlaceAccion></div>
+            </section>
+          )}
           {aviso === 'certificado-listo' && (
             <div className="mb-6"><Aviso tipo="ok">¡Felicitaciones! Su certificado está listo para descargar.</Aviso></div>
           )}
@@ -84,7 +102,9 @@ export default async function CursoCampus({ params, searchParams }: Props) {
           {ev && (
             <Tarjeta titulo="Evaluación final">
               {aprobada ? (
-                <p className="m-0">Aprobada con {Math.max(...ev.intentos.filter((i) => i.aprobado).map((i) => i.puntaje))} puntos.</p>
+                <p className="m-0">{ev.intentos.some((i) => i.aprobado)
+                  ? `Aprobada con ${Math.max(...ev.intentos.filter((i) => i.aprobado).map((i) => i.puntaje))} puntos${ev.intentos.some((i) => i.aprobado && i.revisado) ? ' (resultado revisado a su favor)' : ''}.`
+                  : 'Aprobada en la versión anterior del programa, con la misma evaluación.'}</p>
               ) : curso.pendientes > 0 ? (
                 <p className="m-0">Se habilita cuando complete todas las lecciones. {cert.disponible ? '' : cert.mensaje}</p>
               ) : sinIntentos ? (
@@ -125,6 +145,12 @@ export default async function CursoCampus({ params, searchParams }: Props) {
               </form>
             ) : (
               <p className="m-0">{cert.mensaje}</p>
+            )}
+            {curso.certificadoAnterior && (
+              <p className="m-0 mt-4 text-[15px]">
+                Certificado de una versión anterior: <a href={`/campus/certificados/${curso.certificadoAnterior.id}`} className="font-bold text-oliva-profundo">descargar</a>{' '}
+                (código {curso.certificadoAnterior.codigo}). Sigue siendo válido.
+              </p>
             )}
             <p className="m-0 mt-4 text-[14px] text-tinta-suave">
               Es un certificado de finalización emitido por Albor. No es una acreditación Montessori oficial.

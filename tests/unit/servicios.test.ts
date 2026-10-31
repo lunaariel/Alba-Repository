@@ -75,3 +75,11 @@ test('El certificado PDF se genera, dice que no es acreditación oficial y toler
   assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), '%PDF-');
   assert.match(LEYENDA_CERTIFICADO, /No constituye una acreditación Montessori oficial/);
 });
+
+test('el certificado indica la versión del programa cuando la tiene', async () => {
+  const { generarCertificadoPdf } = await import('../../src/servicios/certificados/pdf');
+  const datos = { nombre: 'Ana', curso: 'Curso', emitidoEn: new Date('2026-10-31T12:00:00Z'), codigo: 'ABCDEF123456', urlVerificacion: 'https://albor.example/verificar/ABCDEF123456' };
+  const [con, sin] = await Promise.all([generarCertificadoPdf({ ...datos, version: 2 }), generarCertificadoPdf(datos)]);
+  assert.equal(Buffer.from(con.slice(0, 5)).toString(), '%PDF-');
+  assert.ok(con.length > sin.length, 'la línea de versión agrega contenido');
+});

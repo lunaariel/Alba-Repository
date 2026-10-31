@@ -30,62 +30,70 @@ export interface CursoCampus {
   avance: number;
   continuar: LeccionCampus | null;
   certificado: { id: string; codigo: string } | null;
+  certificadoAnterior: { id: string; codigo: string } | null;
+  version: { id: string; numero: number; publicadaEn: Date } | null;
 }
 
-type FilaModulo = {
-  curso_id: string; titulo: string; orden: number;
-  lecciones: { id: string; titulo: string; orden: number; duracion_minutos: number | null }[];
-};
+type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: number; leccion_id: string; leccion_titulo: string; duracion_minutos: number | null; orden: number };
 type FilaProgreso = { leccion_id: string; completada_en: string | null; ultima_visita_en: string };
 
-async function leccionesConProgreso(cursoIds: string[]): Promise<Map<string, LeccionCampus[]>> {
+/** Lecciones de la versión de cada curso del alumno (versionado académico), con su avance. */
+async function leccionesConProgreso(versiones: { cursoId: string; versionId: string }[]): Promise<Map<string, LeccionCampus[]>> {
   const supabase = await clienteSesion();
-  const [{ data: modulos, error: e1 }, { data: progreso, error: e2 }] = await Promise.all([
-    supabase.from('modulos').select('curso_id, titulo, orden, lecciones(id, titulo, orden, duracion_minutos)').in('curso_id', cursoIds),
+  const [temarios, { data: progreso, error: e2 }] = await Promise.all([
+    Promise.all(versiones.map((v) => supabase.rpc('temario_version', { p_version: v.versionId }))),
     supabase.from('progreso_leccion').select('leccion_id, completada_en, ultima_visita_en'),
   ]);
+  const e1 = temarios.find((t) => t.error)?.error;
   if (e1 || e2) throw new Error(`No se pudo leer el avance: ${(e1 ?? e2)?.message}`);
   const porLeccion = new Map((progreso as FilaProgreso[]).map((p) => [p.leccion_id, p]));
   const resultado = new Map<string, LeccionCampus[]>();
-  for (const m of modulos as FilaModulo[]) {
-    const lista = resultado.get(m.curso_id) ?? [];
-    for (const l of m.lecciones ?? []) {
-      const p = porLeccion.get(l.id);
-      lista.push({
-        id: l.id, titulo: l.titulo, orden: l.orden, moduloOrden: m.orden, moduloTitulo: m.titulo,
-        duracionMinutos: l.duracion_minutos, completada: Boolean(p?.completada_en),
+  versiones.forEach((v, i) => {
+    const filas = (temarios[i]?.data ?? []) as FilaTemario[];
+    resultado.set(v.cursoId, ordenarLecciones(filas.map((f) => {
+      const p = porLeccion.get(f.leccion_id);
+      return {
+        id: f.leccion_id, titulo: f.leccion_titulo, orden: f.orden, moduloOrden: f.modulo_orden, moduloTitulo: f.modulo_titulo,
+        duracionMinutos: f.duracion_minutos, completada: Boolean(p?.completada_en),
         ultimaVisita: p ? new Date(p.ultima_visita_en) : null,
-      });
-    }
-    resultado.set(m.curso_id, lista);
-  }
-  for (const [k, v] of resultado) resultado.set(k, ordenarLecciones(v));
+      };
+    })));
+  });
   return resultado;
 }
 
-type FilaAcceso = { curso_id: string; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
+type FilaAcceso = { curso_id: string; version_id: string; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
 
-/** Cursos con acceso activo, con su avance. El acceso no vence. */
+/** Cursos con acceso activo, con su avance según la versión de cada uno. El acceso no vence. */
 export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   await exigirSesion('/campus');
   const supabase = await clienteSesion();
   const { data: accesos, error } = await supabase
-    .from('accesos_curso').select('curso_id, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
+    .from('accesos_curso').select('curso_id, version_id, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
   if (error) throw new Error(`No se pudieron leer sus cursos: ${error.message}`);
   const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos);
   if (filas.length === 0) return [];
   const ids = filas.map((a) => a.curso_id);
-  const [lecciones, { data: certs }] = await Promise.all([
-    leccionesConProgreso(ids),
-    supabase.from('certificados').select('id, curso_id, codigo_verificacion').in('curso_id', ids),
+  const [lecciones, { data: certs }, { data: versiones }] = await Promise.all([
+    leccionesConProgreso(filas.map((f) => ({ cursoId: f.curso_id, versionId: f.version_id }))),
+    supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion, emitido_en').in('curso_id', ids).order('emitido_en', { ascending: false }),
+    supabase.from('versiones_curso').select('id, numero, publicada_en').in('id', filas.map((f) => f.version_id)),
   ]);
-  const certPorCurso = new Map(((certs ?? []) as { id: string; curso_id: string; codigo_verificacion: string }[])
-    .map((c) => [c.curso_id, { id: c.id, codigo: c.codigo_verificacion }]));
-  return filas.map(({ cursos: c }) => {
+  type Cert = { id: string; curso_id: string; version_id: string; codigo_verificacion: string };
+  const listaCerts = (certs ?? []) as Cert[];
+  const versionPorId = new Map(((versiones ?? []) as { id: string; numero: number; publicada_en: string }[]).map((v) => [v.id, v]));
+  return filas.map(({ cursos: c, version_id }) => {
     const ls = lecciones.get(c!.id) ?? [];
+    // El certificado de la versión actual; si no hay, el último obtenido (de una versión anterior).
+    const cert = listaCerts.find((x) => x.curso_id === c!.id && x.version_id === version_id) ?? null;
+    const anterior = listaCerts.find((x) => x.curso_id === c!.id && x.version_id !== version_id) ?? null;
+    const v = versionPorId.get(version_id);
     return {
       id: c!.id, slug: c!.slug, titulo: c!.titulo, resumen: c!.resumen, lecciones: ls,
-      avance: porcentajeAvance(ls), continuar: leccionParaContinuar(ls), certificado: certPorCurso.get(c!.id) ?? null,
+      avance: porcentajeAvance(ls), continuar: leccionParaContinuar(ls),
+      certificado: cert ? { id: cert.id, codigo: cert.codigo_verificacion } : null,
+      certificadoAnterior: anterior ? { id: anterior.id, codigo: anterior.codigo_verificacion } : null,
+      version: v ? { id: version_id, numero: v.numero, publicadaEn: new Date(v.publicada_en) } : null,
     };
   });
 });
@@ -96,7 +104,10 @@ export interface EvaluacionResumen {
   id: string;
   puntajeMinimo: number;
   intentosPermitidos: number | null;
-  intentos: { numero: number; puntaje: number; aprobado: boolean; entregadoEn: Date }[];
+  preguntas: number;
+  intentos: { numero: number; puntaje: number; aprobado: boolean; revisado: boolean; entregadoEn: Date }[];
+  /** Aprobó esta evaluación (en su versión o en otra con la misma evaluación). */
+  aprobada: boolean;
 }
 
 export interface CursoCampusDetalle extends CursoCampus {
@@ -111,23 +122,21 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
   if (!curso) return null;
   const supabase = await clienteSesion();
   const ids = curso.lecciones.map((l) => l.id);
-  const [{ data: materiales }, { data: evaluacion }] = await Promise.all([
+  const [{ data: materiales }, { data: ev }] = await Promise.all([
     ids.length
       ? supabase.from('recursos_leccion').select('id, titulo, leccion_id, tamano_bytes, orden').in('leccion_id', ids).order('orden')
       : Promise.resolve({ data: [] }),
-    supabase.from('evaluaciones').select('id, puntaje_minimo, intentos_permitidos').eq('curso_id', curso.id).maybeSingle(),
+    // Criterios e intentos de la versión del alumno, no del borrador.
+    supabase.rpc('mi_evaluacion', { p_curso: curso.id }),
   ]);
-  let resumen: EvaluacionResumen | null = null;
-  if (evaluacion) {
-    const { data: intentos } = await supabase
-      .from('intentos_evaluacion').select('numero, puntaje, aprobado, entregado_en')
-      .eq('evaluacion_id', evaluacion.id).order('numero');
-    resumen = {
-      id: evaluacion.id, puntajeMinimo: evaluacion.puntaje_minimo, intentosPermitidos: evaluacion.intentos_permitidos,
-      intentos: ((intentos ?? []) as { numero: number; puntaje: number; aprobado: boolean; entregado_en: string }[])
-        .map((i) => ({ numero: i.numero, puntaje: i.puntaje, aprobado: i.aprobado, entregadoEn: new Date(i.entregado_en) })),
-    };
-  }
+  type Ev = { evaluacion_id: string | null; puntaje_minimo: number; intentos_permitidos: number | null; preguntas: number;
+    aprobado_equivalente: boolean; intentos: { numero: number; puntaje: number; aprobado: boolean; revisado: boolean; entregado_en: string }[] };
+  const e = ev as Ev | null;
+  const resumen: EvaluacionResumen | null = e?.evaluacion_id && e.preguntas > 0 ? {
+    id: e.evaluacion_id, puntajeMinimo: e.puntaje_minimo, intentosPermitidos: e.intentos_permitidos, preguntas: e.preguntas,
+    aprobada: e.aprobado_equivalente,
+    intentos: (e.intentos ?? []).map((i) => ({ numero: i.numero, puntaje: i.puntaje, aprobado: i.aprobado, revisado: i.revisado, entregadoEn: new Date(i.entregado_en) })),
+  } : null;
   return {
     ...curso,
     materiales: ((materiales ?? []) as { id: string; titulo: string; leccion_id: string; tamano_bytes: number }[])
@@ -165,14 +174,18 @@ export interface PreguntaEvaluacion {
   opciones: { id: string; texto: string }[];
 }
 
-/** Preguntas sin la respuesta correcta (esa columna no es legible por clientes). */
-export async function preguntasEvaluacion(evaluacionId: string): Promise<PreguntaEvaluacion[]> {
+/** Preguntas de la versión del alumno, en su orden, sin la respuesta correcta (no legible por clientes). */
+export async function preguntasEvaluacion(evaluacionId: string, cursoId: string): Promise<PreguntaEvaluacion[]> {
   const supabase = await clienteSesion();
-  const { data, error } = await supabase
-    .from('preguntas').select('id, enunciado, tipo, orden, opciones(id, texto, orden)')
-    .eq('evaluacion_id', evaluacionId).order('orden');
+  const [{ data, error }, { data: orden }] = await Promise.all([
+    supabase.from('preguntas').select('id, enunciado, tipo, opciones(id, texto, orden)').eq('evaluacion_id', evaluacionId),
+    supabase.rpc('orden_preguntas_mi_version', { p_curso: cursoId }),
+  ]);
   if (error) throw new Error(`No se pudo leer la evaluación: ${error.message}`);
+  const posicion = new Map(((orden ?? []) as { pregunta_id: string; orden: number }[]).map((o) => [o.pregunta_id, o.orden]));
   return ((data ?? []) as { id: string; enunciado: string; tipo: 'unica' | 'multiple'; opciones: { id: string; texto: string; orden: number }[] }[])
+    .filter((p) => posicion.has(p.id))
+    .sort((a, b) => posicion.get(a.id)! - posicion.get(b.id)!)
     .map((p) => ({
       id: p.id, enunciado: p.enunciado, tipo: p.tipo,
       opciones: [...(p.opciones ?? [])].sort((a, b) => a.orden - b.orden).map((o) => ({ id: o.id, texto: o.texto })),
@@ -275,4 +288,37 @@ export async function registrarVisita(perfilId: string, leccionId: string) {
   const supabase = await clienteSesion();
   await supabase.from('progreso_leccion')
     .upsert({ perfil_id: perfilId, leccion_id: leccionId, ultima_visita_en: new Date().toISOString() }, { onConflict: 'perfil_id,leccion_id' });
+}
+
+export interface CambioVersion {
+  actual: { id: string; numero: number; publicadaEn: Date };
+  nueva: { id: string; numero: number; publicadaEn: Date; resumen: string | null };
+  leccionesNuevas: string[];
+  leccionesQuitadas: string[];
+  pendientesDespues: number;
+  completadasConservadas: number;
+  puntajeMinimo: { antes: number; despues: number };
+  intentosPermitidos: { antes: number | null; despues: number | null };
+  evaluacionIgual: boolean;
+  tieneCertificado: boolean;
+}
+
+/** Qué cambiaría si el alumno pasa a la versión vigente del curso. null si ya está en ella. */
+export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | null> {
+  const { data } = await (await clienteSesion()).rpc('vista_cambio_version', { p_curso: cursoId });
+  if (!data) return null;
+  const d = data as {
+    actual: { id: string; numero: number; publicada_en: string }; nueva: { id: string; numero: number; publicada_en: string; resumen: string | null };
+    lecciones_nuevas: string[]; lecciones_quitadas: string[]; pendientes_despues: number; completadas_conservadas: number;
+    puntaje_minimo: { antes: number; despues: number }; intentos_permitidos: { antes: number | null; despues: number | null };
+    evaluacion_igual: boolean; tiene_certificado: boolean;
+  };
+  return {
+    actual: { id: d.actual.id, numero: d.actual.numero, publicadaEn: new Date(d.actual.publicada_en) },
+    nueva: { id: d.nueva.id, numero: d.nueva.numero, publicadaEn: new Date(d.nueva.publicada_en), resumen: d.nueva.resumen },
+    leccionesNuevas: d.lecciones_nuevas ?? [], leccionesQuitadas: d.lecciones_quitadas ?? [],
+    pendientesDespues: d.pendientes_despues, completadasConservadas: d.completadas_conservadas,
+    puntajeMinimo: d.puntaje_minimo, intentosPermitidos: d.intentos_permitidos,
+    evaluacionIgual: d.evaluacion_igual, tieneCertificado: d.tiene_certificado,
+  };
 }

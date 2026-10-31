@@ -73,3 +73,17 @@ test('registro de actividad: retiro de lección legible', async () => {
   assert.equal(d.nombre, 'Rutinas');
   assert.deepEqual(d.cambios, [{ campo: 'Retirada', antes: 'No', despues: 'Sí' }]);
 });
+
+test('versionado: códigos de error y de éxito nuevos', async () => {
+  const { codigoError, mensajeOk } = await import('../../src/dominio/cursos-admin');
+  assert.equal(codigoError('curso_incompleto: lecciones'), 'curso_incompleto');
+  for (const c of ['pregunta_publicada', 'leccion_en_version', 'material_en_version', 'resumen_requerido', 'motivo_requerido',
+    'ya_es_correcta', 'confirmacion_incorrecta', 'opciones_invalidas']) {
+    assert.equal(codigoError(c), c);
+    assert.doesNotMatch(mensajeError(c), /No se pudo guardar/);
+  }
+  for (const c of ['pregunta_reemplazada', 'version_publicada', 'revision_aplicada', 'revision_ya_aplicada', 'bloqueado', 'desbloqueado', 'material_retirado']) {
+    assert.ok(mensajeOk(c), c);
+  }
+  assert.match(mensajeOk('revision_aplicada')!, /originales se conservan/);
+});

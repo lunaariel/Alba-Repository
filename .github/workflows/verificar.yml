@@ -94,6 +94,8 @@ jobs:
           node scripts/recorrido-admin.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- cursos en el panel" | tee -a capturas/informe.txt
           node scripts/recorrido-cursos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- acciones protegidas con la sesión de la alumna" | tee -a capturas/informe.txt
+          node scripts/acciones-protegidas.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           exit $fallo
       - name: Señalar problemas de capturas
         if: failure()

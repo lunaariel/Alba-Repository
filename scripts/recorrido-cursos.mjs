@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 
 const BASE = process.env.BASE ?? 'http://localhost:3000';
 const SALIDA = process.env.SALIDA ?? 'capturas';
-const { CORREO, CLAVE, ADMIN_CORREO, ADMIN_CLAVE, CODIGO, PREGUNTA } = process.env;
+const { CORREO, CLAVE, ADMIN_CORREO, ADMIN_CLAVE, CODIGO, PREGUNTA, PREGUNTA_C3, LECCION } = process.env;
 const C1 = 'c1000000-0000-0000-0000-000000000001'; // comprado por la alumna, con avance
 const C2 = 'c1000000-0000-0000-0000-000000000002'; // completo, con certificado e intentos
 const C3 = 'c1000000-0000-0000-0000-000000000003'; // con acceso concedido
@@ -31,10 +31,11 @@ async function ingresar(contexto, correo, clave) {
   return p;
 }
 // Abre la confirmación de un botón, escribe la palabra si hace falta y confirma.
-async function confirmar(p, boton, { palabra, textoConfirmar } = {}) {
+async function confirmar(p, boton, { palabra, textoConfirmar, campos = {} } = {}) {
   const texto = (await boton.first().textContent()).trim();
   await boton.first().click();
   const dialogo = p.locator('dialog[open]');
+  for (const [nombre, valor] of Object.entries(campos)) await dialogo.locator(`[name=${nombre}]`).fill(valor);
   if (palabra) await dialogo.locator('input[name=confirmacion]').fill(palabra);
   await dialogo.getByRole('button', { name: textoConfirmar ?? texto, exact: true }).click();
   await p.waitForLoadState('networkidle');
@@ -130,28 +131,89 @@ try {
   const publico = await (await contexto.request.get(`${BASE}/cursos`)).text();
   comprobar(publico.includes('Curso de prueba del panel'), 'el curso publicado aparece en el catálogo');
 
-  // 7. Reglas de historial sobre cursos con alumnos.
+  // 7. Reglas de historial sobre cursos con alumnos (ya versionados: se edita el borrador).
   await p.goto(`${BASE}/admin/cursos/${C1}/temario`, { waitUntil: 'networkidle' });
-  comprobar(await p.getByText(/Este curso tiene alumnos/).isVisible(), 'el temario avisa que el curso tiene alumnos');
+  comprobar(await p.getByText(/Está editando el/).first().isVisible(), 'el temario avisa que se edita el borrador');
   const primera = p.locator('li', { hasText: 'Qué significa acompañar' }).first();
   comprobar((await primera.getByRole('button', { name: 'Eliminar' }).count()) === 0 && (await primera.getByRole('button', { name: 'Retirar' }).count()) === 1,
     'una lección ya vista solo se puede retirar, no eliminar');
-  comprobar(await p.getByText(/deberá completar también la lección nueva|deberán completar también/).first().isVisible(), 'al agregar lecciones se avisa a cuántos alumnos afecta');
 
+  // 8. Versionado: retirar del borrador no cambia nada hasta publicar una versión nueva.
+  const alumna = await navegador.newContext({ viewport: { width: 1280, height: 900 } });
+  const pa = await ingresar(alumna, CORREO, CLAVE);
+  const cursoAlumna = `${BASE}/campus/cursos/demo-autonomia-0-3`;
   await p.goto(`${BASE}/admin/cursos/${C2}/temario`, { waitUntil: 'networkidle' });
   const rutinas = p.locator('li', { hasText: 'Rutinas que dan autonomía' }).first();
   await confirmar(p, rutinas.getByRole('button', { name: 'Retirar' }));
-  comprobar(await ve(p, /Retirado/), 'se retira una lección de un curso con certificados');
-  const ficha = await (await contexto.request.get(`${BASE}/cursos/demo-autonomia-0-3`)).text();
-  comprobar(!ficha.includes('Rutinas que dan autonomía'), 'la lección retirada ya no se ve en el sitio');
-  const verificacion = await (await contexto.request.get(`${BASE}/verificar/${CODIGO}`)).text();
-  comprobar(verificacion.includes('Certificado válido'), 'el certificado emitido sigue siendo válido');
-  await p.goto(`${BASE}/admin/cursos/${C2}/temario`, { waitUntil: 'networkidle' });
-  await confirmar(p, p.locator('li', { hasText: 'Rutinas que dan autonomía' }).first().getByRole('button', { name: 'Restaurar' }));
-  comprobar(await ve(p, /Restaurado/), 'la lección se puede restaurar');
+  comprobar(await ve(p, /Retirado/), 'se retira una lección del borrador de un curso con certificados');
+  let ficha = await (await contexto.request.get(`${BASE}/cursos/demo-autonomia-0-3`)).text();
+  comprobar(ficha.includes('Rutinas que dan autonomía'), 'retirar del borrador no cambia el sitio hasta publicar');
+
+  await p.goto(`${BASE}/admin/cursos/${C2}/publicacion`, { waitUntil: 'networkidle' });
+  comprobar(await p.getByText(/Lecciones quitadas: Rutinas que dan autonomía/).isVisible(), 'la publicación muestra la diferencia con la versión vigente');
+  await confirmar(p, p.getByRole('button', { name: 'Publicar la versión 2' }), { palabra: 'PUBLICAR', campos: { resumen: 'Se quitó la lección de rutinas; el resto no cambia.' } });
+  comprobar(await ve(p, /Versión publicada/), 'se publica la versión 2 tras escribir PUBLICAR y el resumen');
+  comprobar(await p.locator('table').getByText('vigente').isVisible(), 'el historial de versiones marca la vigente');
+  await p.screenshot({ path: `${SALIDA}/recorrido-versiones-1-publicacion.png`, fullPage: true });
+  ficha = await (await contexto.request.get(`${BASE}/cursos/demo-autonomia-0-3`)).text();
+  comprobar(!ficha.includes('Rutinas que dan autonomía'), 'el sitio muestra la versión 2');
+  let verificacion = await (await contexto.request.get(`${BASE}/verificar/${CODIGO}`)).text();
+  comprobar(verificacion.includes('Certificado válido') && verificacion.includes('versión 1'), 'el certificado emitido sigue válido e indica la versión 1');
+
+  // La alumna sigue en la versión 1 hasta que decide cambiar.
+  await pa.goto(cursoAlumna, { waitUntil: 'networkidle' });
+  comprobar(await pa.getByText('Rutinas que dan autonomía').first().isVisible() && await pa.getByText(/Programa: versión 1/).isVisible(),
+    'la alumna sigue en la versión 1, con su temario completo');
+  comprobar(await pa.getByText('Hay una versión más reciente de este curso').isVisible(), 'la alumna ve que hay una versión nueva, sin cambio automático');
+  await pa.screenshot({ path: `${SALIDA}/recorrido-versiones-2-alumna-v1.png`, fullPage: true });
+  await Promise.all([pa.waitForURL(/\/version$/), pa.getByRole('link', { name: /Ver qué cambia/ }).click()]);
+  comprobar(await pa.getByText(/Ya no forman parte del programa: Rutinas que dan autonomía/).isVisible(), 'antes de cambiar ve qué lecciones salen');
+  comprobar(await pa.getByText(/La evaluación final es la misma/).isVisible(), 'antes de cambiar ve si la evaluación cambia');
+  await pa.screenshot({ path: `${SALIDA}/recorrido-versiones-3-que-cambia.png`, fullPage: true });
+  await pa.getByLabel(/Entiendo qué cambia/).check();
+  await Promise.all([pa.waitForURL(/aviso=version-cambiada/), pa.getByRole('button', { name: 'Pasar a la versión 2' }).click()]);
+  comprobar(await pa.getByText(/Programa: versión 2/).isVisible(), 'tras confirmar, la alumna sigue la versión 2');
+  comprobar((await pa.getByText('Rutinas que dan autonomía').count()) === 0, 'su temario ya es el de la versión 2');
+  comprobar(await pa.getByText(/Certificado de una versión anterior/).isVisible(), 'conserva el certificado de la versión 1');
+  comprobar(await pa.getByText(/Aprobada en la versión anterior/).isVisible(), 'la misma evaluación aprobada se reconoce');
+  await pa.getByRole('button', { name: 'Obtener mi certificado' }).click({ noWaitAfter: true });
+  await pa.getByText('Su certificado está listo').first().waitFor({ timeout: 20000 });
+  comprobar(true, 'obtiene el certificado de la versión 2 sin rendir de nuevo');
+  await pa.screenshot({ path: `${SALIDA}/recorrido-versiones-4-alumna-v2.png`, fullPage: true });
+  verificacion = await (await contexto.request.get(`${BASE}/verificar/${CODIGO}`)).text();
+  comprobar(verificacion.includes('Certificado válido') && verificacion.includes('versión 1'), 'el certificado anterior sigue válido y sigue diciendo versión 1');
+  const sinVersion = await pa.goto(`${cursoAlumna}/version`, { waitUntil: 'networkidle' });
+  comprobar(new URL(pa.url()).pathname === '/campus/cursos/demo-autonomia-0-3' && sinVersion.ok(), 'ya en la vigente, la página de cambio no ofrece nada');
+
+  // 9. Revisión favorable en dos pasos, sobre la pregunta de c3 (la alumna tiene un intento con «Incorrecta»).
+  await p.goto(`${BASE}/admin/cursos/${C3}/evaluacion/${PREGUNTA_C3}`, { waitUntil: 'networkidle' });
+  comprobar(await p.getByText(/forma parte de la versión publicada 1/).isVisible(), 'una pregunta publicada avisa que no se modifica');
+  await Promise.all([p.waitForURL(/\/revision$/), p.getByRole('link', { name: 'Revisión favorable' }).click()]);
+  await p.getByLabel('Incorrecta').check();
+  await p.fill('#motivo', 'La consigna admitía las dos respuestas.');
+  await Promise.all([p.waitForURL(/calculo=/), p.getByRole('button', { name: 'Calcular el impacto' }).click()]);
+  comprobar(await p.getByText('1 intento mejora').isVisible() && await p.getByText(/Pasa a aprobado/).isVisible(), 'el cálculo muestra a quién beneficia, sin aplicar nada');
+  await p.screenshot({ path: `${SALIDA}/recorrido-versiones-5-revision.png`, fullPage: true });
+  await p.fill('#confirmar-revision', 'CORREGIR');
+  await p.getByRole('button', { name: 'Aplicar la revisión favorable' }).click();
+  comprobar(await ve(p, /confirmación no coincide/), 'sin la confirmación exacta no se aplica');
+  await p.fill('#confirmar-revision', 'CORREGIR 1');
+  await p.getByRole('button', { name: 'Aplicar la revisión favorable' }).click();
+  comprobar(await ve(p, /Revisión favorable aplicada/), 'con CORREGIR 1 se aplica');
+  comprobar(await p.getByText(/Revisiones aplicadas/).isVisible(), 'la revisión queda listada con su motivo');
+
+  // 10. Bloqueo excepcional de una lección publicada (y desbloqueo), con motivo.
+  await p.goto(`${BASE}/admin/cursos/${C1}/temario/${LECCION}`, { waitUntil: 'networkidle' });
+  await confirmar(p, p.getByRole('button', { name: 'Bloquear la lección' }), { palabra: 'BLOQUEAR', campos: { motivo: 'Contenido con un error que confunde.' } });
+  comprobar(await ve(p, /Contenido bloqueado/), 'se bloquea una lección con motivo');
+  await pa.goto(`${BASE}/campus/cursos/demo-montessori-en-casa`, { waitUntil: 'networkidle' });
+  comprobar((await pa.getByText('Un espacio a su altura').count()) === 0, 'la lección bloqueada no se muestra a la alumna');
+  await p.goto(`${BASE}/admin/cursos/${C1}/temario/${LECCION}`, { waitUntil: 'networkidle' });
+  await confirmar(p, p.getByRole('button', { name: 'Desbloquear' }), { palabra: 'DESBLOQUEAR', campos: { motivo: 'Se corrigió el contenido del video.' } });
+  comprobar(await ve(p, /Contenido desbloqueado/), 'se desbloquea con motivo');
 
   await p.goto(`${BASE}/admin/cursos/${C2}/evaluacion`, { waitUntil: 'networkidle' });
-  comprobar(await p.getByText(/ya tiene \d+ intento/).isVisible(), 'la evaluación avisa que ya tiene intentos');
+  comprobar(await p.getByText(/editando el borrador de la evaluación/).isVisible(), 'la evaluación avisa que se edita el borrador');
   comprobar((await p.locator('li', { hasText: 'Pregunta de ejemplo' }).getByRole('button', { name: 'Eliminar' }).count()) === 0, 'una pregunta respondida no se puede eliminar');
   await p.goto(`${BASE}/admin/cursos/${C2}/evaluacion/${PREGUNTA}`, { waitUntil: 'networkidle' });
   comprobar((await p.getByRole('button', { name: 'Quitar' }).count()) === 0, 'las opciones de una pregunta respondida no se pueden quitar');
@@ -166,18 +228,22 @@ try {
   comprobar(await ve(p, /archivado/i), 'se archiva un curso con alumnos tras escribir ARCHIVAR');
   const catalogo = await (await contexto.request.get(`${BASE}/cursos`)).text();
   comprobar(!catalogo.includes('El ambiente preparado de 3 a 6'), 'el curso archivado sale del catálogo');
-  const alumna = await navegador.newContext();
-  const pa = await ingresar(alumna, CORREO, CLAVE);
+  await pa.goto(`${BASE}/campus`, { waitUntil: 'networkidle' });
   comprobar(await pa.getByText('El ambiente preparado de 3 a 6').first().isVisible(), 'la alumna conserva el curso archivado en su campus');
   const editor = await alumna.request.get(`${BASE}/admin/cursos/${C1}/temario`);
   comprobar(editor.status() === 404, `la alumna no abre el editor de cursos (${editor.status()})`);
   await alumna.close();
   await p.screenshot({ path: `${SALIDA}/recorrido-cursos-2-archivado.png`, fullPage: true });
 
-  // 8. Todo quedó en el registro de actividad.
+  // 11. Todo quedó en el registro de actividad.
   await p.goto(`${BASE}/admin/configuracion/actividad?grupo=cursos`, { waitUntil: 'networkidle' });
   comprobar(await p.getByText('Creó un curso').first().isVisible() && await p.getByText('Cambió una lección').first().isVisible(),
     'el registro muestra la creación del curso y el retiro de la lección');
+  comprobar(await p.getByText('Publicó una versión de un curso').first().isVisible() && await p.getByText('Bloqueó contenido en todas las versiones').first().isVisible(),
+    'el registro muestra la versión publicada y el bloqueo');
+  await p.goto(`${BASE}/admin/configuracion/actividad?grupo=evaluaciones`, { waitUntil: 'networkidle' });
+  comprobar(await p.getByText('Aplicó una revisión favorable').first().isVisible(), 'el registro muestra la revisión favorable aplicada');
+  await p.screenshot({ path: `${SALIDA}/recorrido-versiones-6-actividad.png`, fullPage: true });
   for (const e of errores) console.log(`  error en consola: ${e}`);
   comprobar(errores.length === 0, 'sin errores en la consola');
 } catch (e) {

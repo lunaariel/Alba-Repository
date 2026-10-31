@@ -77,9 +77,15 @@ select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'co
   and antes ->> 'whatsapp' is null and despues ->> 'whatsapp' = '+50200000000'), 'Cambio de configuración registrado');
 
 -- (La columna es_correcta no se lee desde el cliente ni siquiera como admin: se escribe sin leerla.)
-update public.opciones set es_correcta = true where id = 'a2000000-0000-0000-0000-000000000012';
-select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'opcion_actualizado'
-  and entidad_id = 'a2000000-0000-0000-0000-000000000012'), 'Cambiar la respuesta correcta queda registrado');
+-- Desde la migración 0014, una pregunta publicada no cambia (ver 97_versionado); se prueba con una del borrador.
+do $$ declare q uuid; o uuid; begin
+  q := public.guardar_pregunta('f0000000-0000-0000-0000-000000000001', null, 'Pregunta del borrador', 'multiple', null,
+        '[{"texto":"x","es_correcta":true},{"texto":"y","es_correcta":false}]');
+  select id into o from public.opciones where pregunta_id = q and texto = 'y';
+  update public.opciones set es_correcta = true where id = o;
+  perform pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'opcion_actualizado' and entidad_id = o::text),
+    'Cambiar la respuesta correcta queda registrado');
+end $$;
 
 insert into public.cupones (codigo, tipo, valor) values ('BECA50', 'porcentaje', 50);
 select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'cupon_creado' and despues ->> 'codigo' = 'BECA50'), 'Alta de cupón registrada');

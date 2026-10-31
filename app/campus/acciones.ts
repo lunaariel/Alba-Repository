@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { clienteSesion, clienteServicio } from '@/datos/supabase';
 import { exigirSesion } from '@/datos/sesion';
-import { cursoCampus } from '@/datos/campus';
+import { cambioDeVersion, cursoCampus } from '@/datos/campus';
 import { respuestasDesdeFormulario } from '@/dominio/aprendizaje';
 
 const uuid = z.string().uuid();
@@ -116,4 +116,24 @@ export async function cambiarContrasena(_: EstadoCuenta, datos: FormData): Promi
   const { error: e2 } = await supabase.auth.updateUser({ password: r.data.nueva });
   if (e2) return { error: 'No pudimos cambiar la contraseña. Pruebe con otra distinta de la anterior.' };
   return { ok: 'Contraseña actualizada.' };
+}
+
+/** Cambio voluntario a la versión vigente. Se exige la casilla de confirmación; se registra todo. */
+export async function cambiarDeVersion(datos: FormData) {
+  const usuario = await exigirSesion('/campus');
+  const r = z.object({ curso: slug, destino: uuid, entiendo: z.literal('si') })
+    .safeParse({ curso: datos.get('curso'), destino: datos.get('destino'), entiendo: datos.get('entiendo') });
+  if (!r.success) redirect(`/campus/cursos/${String(datos.get('curso') ?? '').replace(/[^a-z0-9-]/g, '')}/version?aviso=error`);
+  const curso = await cursoCampus(r.data.curso);
+  if (!curso) redirect('/campus');
+  const cambio = await cambioDeVersion(curso.id);
+  // El destino tiene que ser exactamente la versión que se le mostró al alumno.
+  if (!cambio || cambio.nueva.id !== r.data.destino) redirect(`/campus/cursos/${r.data.curso}/version?aviso=error`);
+  const confirmacion = `Entiendo qué cambia y quiero pasar de la versión ${cambio.actual.numero} a la versión ${cambio.nueva.numero}.`;
+  const { error } = await clienteServicio().rpc('cambiar_version', {
+    p_perfil: usuario.id, p_curso: curso.id, p_version_destino: r.data.destino, p_confirmacion: confirmacion,
+  });
+  if (error) redirect(`/campus/cursos/${r.data.curso}/version?aviso=error`);
+  revalidatePath('/campus', 'layout');
+  redirect(`/campus/cursos/${r.data.curso}?aviso=version-cambiada`);
 }

@@ -5,7 +5,7 @@ import { EnlaceAccion } from '@/ui/acciones';
 
 export const metadata: Metadata = { title: 'Verificación de certificado', robots: { index: false } };
 
-type Resultado = { nombre: string; curso: string; emitido_en: string; codigo: string } | null;
+type Resultado = { nombre: string; curso: string; emitido_en: string; codigo: string; version?: number | null } | null;
 
 export default async function ResultadoVerificacion({ params }: { params: Promise<{ codigo: string }> }) {
   const codigo = decodeURIComponent((await params).codigo).replace(/[^0-9a-z]/gi, '').toUpperCase().slice(0, 12);
@@ -22,7 +22,7 @@ export default async function ResultadoVerificacion({ params }: { params: Promis
               <p className="m-0 font-bold text-oliva-profundo">Certificado válido</p>
               <h1 id="titulo" className="m-0 mt-2 text-[clamp(30px,3.6vw,44px)] leading-[1.1]">{c.nombre}</h1>
               <p className="m-0 mt-4 text-lg">completó el curso <strong>{c.curso}</strong> y aprobó su evaluación final.</p>
-              <p className="m-0 mt-2 text-tinta-suave">Emitido el {fecha} · Código {c.codigo}</p>
+              <p className="m-0 mt-2 text-tinta-suave">Emitido el {fecha}{c.version ? ` · Programa: versión ${c.version}` : ''} · Código {c.codigo}</p>
               <p className="m-0 mt-6 border-t border-borde-bandeja pt-4 text-[15px] text-tinta-suave">
                 Es un certificado de finalización emitido por Albor. No es una acreditación Montessori oficial.
               </p>

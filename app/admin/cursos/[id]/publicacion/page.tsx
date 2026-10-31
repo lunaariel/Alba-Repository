@@ -1,18 +1,21 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { cursoAdmin, estadoContenido, tieneHistorial } from '@/datos/admin-cursos';
+import { cambiosDelBorrador, cursoAdmin, estadoContenido, tieneHistorial } from '@/datos/admin-cursos';
 import { requisitosPublicacion } from '@/dominio/cursos-admin';
 import { formatearUSD } from '@/dominio/dinero';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
-import { cambiarEstadoCurso, eliminarCurso } from '../../acciones';
+import { cambiarEstadoCurso, eliminarCurso, publicarVersion } from '../../acciones';
 
 export const metadata: Metadata = { title: 'Publicación' };
 
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; error?: string }> };
 
 const DONDE = { datos: '', temario: '/temario', evaluacion: '/evaluacion' } as const;
+const fecha = (d: Date) => new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'America/Guatemala' }).format(d);
+const intentosTexto = (n: number | null) => (n === null ? 'sin límite' : String(n));
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
 export default async function Publicacion({ params, searchParams }: Props) {
   const [{ id }, aviso] = await Promise.all([params, searchParams]);
@@ -24,6 +27,9 @@ export default async function Publicacion({ params, searchParams }: Props) {
   const conHistorial = tieneHistorial(c);
   const base = `/admin/cursos/${c.id}`;
   const h = c.historial;
+  const cambios = cambiosDelBorrador(c);
+  const hayCambios = cambios.leccionesNuevas.length + cambios.leccionesQuitadas.length + cambios.preguntasNuevas + cambios.preguntasQuitadas > 0
+    || (cambios.criterios !== null && (cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] || cambios.criterios.intentos[0] !== cambios.criterios.intentos[1]));
 
   return (
     <>
@@ -107,6 +113,79 @@ export default async function Publicacion({ params, searchParams }: Props) {
           </div>
         </section>
       </div>
+
+      {c.versiones.length > 0 && (
+        <section aria-labelledby="versiones" className="mt-6 max-w-[1100px] rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6">
+          <h2 id="versiones" className="m-0 text-[22px]">Versiones del programa</h2>
+          <p className="m-0 mt-1 max-w-[760px] text-[15px] text-tinta-suave">
+            Lo que edita en Temario y Evaluación es el borrador. Cada versión publicada queda fija: quienes la siguen ven exactamente
+            ese contenido y esos criterios. Una versión nueva se aplica a quienes compren desde ese momento; los alumnos actuales
+            pueden pasarse si lo desean, nunca de forma automática.
+          </p>
+
+          {cambios.vigente && (
+            <div className="mt-5 rounded-xl bg-arena px-5 py-4">
+              <h3 className="m-0 text-[18px]">Borrador frente a la versión vigente ({cambios.vigente.numero})</h3>
+              {hayCambios ? (
+                <ul className="m-0 mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px]">
+                  {cambios.leccionesNuevas.length > 0 && <li>Lecciones nuevas: {cambios.leccionesNuevas.join(', ')}.</li>}
+                  {cambios.leccionesQuitadas.length > 0 && <li>Lecciones quitadas: {cambios.leccionesQuitadas.join(', ')}.</li>}
+                  {cambios.preguntasNuevas > 0 && <li>{plural(cambios.preguntasNuevas, 'pregunta nueva o reemplazada', 'preguntas nuevas o reemplazadas')}.</li>}
+                  {cambios.preguntasQuitadas > 0 && <li>{plural(cambios.preguntasQuitadas, 'pregunta quitada', 'preguntas quitadas')}.</li>}
+                  {cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
+                  {cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
+                </ul>
+              ) : (
+                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas ni criterios. (Los cambios de orden, textos y precio no se listan aquí.)</p>
+              )}
+              {c.estado === 'publicado' && (
+                <div className="mt-4">
+                  {listo ? (
+                    <ConfirmarAccion accion={publicarVersion} campos={{ id: c.id }} textoBoton={`Publicar la versión ${cambios.vigente.numero + 1}`}
+                      titulo={`¿Publicar la versión ${cambios.vigente.numero + 1}?`} palabra="PUBLICAR" estilo="primario">
+                      <p className="m-0">Quienes compren desde ahora seguirán la versión {cambios.vigente.numero + 1}.</p>
+                      <p className="m-0"><b>{h.alumnos === 0 ? 'Todavía nadie tiene acceso.' : `${plural(h.alumnos, 'persona sigue', 'personas siguen')} en su versión actual`}</b>{h.alumnos > 0 ? ': conservan su avance, intentos y certificados, y podrán decidir si se pasan.' : ''}</p>
+                      <label htmlFor="resumen-version" className="mt-2 text-[15px] font-bold">Qué cambió (lo verán los alumnos antes de decidir)</label>
+                      <textarea id="resumen-version" name="resumen" required minLength={5} maxLength={600} rows={3}
+                        className="rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-4 py-3 text-marron" />
+                    </ConfirmarAccion>
+                  ) : (
+                    <p className="m-0 text-[15px]">Para publicar una versión nueva, complete los requisitos de la lista.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="mt-5 overflow-x-auto">
+            <table className="w-full min-w-[640px] border-collapse text-left text-[15px]">
+              <caption className="sr-only">Historial de versiones</caption>
+              <thead>
+                <tr className="border-b-[1.5px] border-borde-bandeja text-tinta-suave">
+                  <th scope="col" className="py-2 pr-4 font-bold">Versión</th>
+                  <th scope="col" className="py-2 pr-4 font-bold">Publicada</th>
+                  <th scope="col" className="py-2 pr-4 font-bold">Contenido</th>
+                  <th scope="col" className="py-2 pr-4 font-bold">Criterios</th>
+                  <th scope="col" className="py-2 pr-4 font-bold">Alumnos</th>
+                  <th scope="col" className="py-2 font-bold">Qué cambió</th>
+                </tr>
+              </thead>
+              <tbody>
+                {c.versiones.map((v) => (
+                  <tr key={v.id} className="border-b border-borde-bandeja align-top">
+                    <td className="py-2 pr-4 font-bold">{v.numero}{v.vigente && <span className="ml-2 rounded-full bg-oliva-profundo px-2 py-0.5 text-[12px] text-marfil">vigente</span>}</td>
+                    <td className="py-2 pr-4">{fecha(v.publicadaEn)}</td>
+                    <td className="py-2 pr-4">{plural(v.lecciones, 'lección', 'lecciones')} · {plural(v.preguntas, 'pregunta', 'preguntas')}</td>
+                    <td className="py-2 pr-4">mínimo {v.puntajeMinimo} · intentos {intentosTexto(v.intentosPermitidos)}</td>
+                    <td className="py-2 pr-4">{v.alumnos} · {plural(v.certificados, 'certificado', 'certificados')}</td>
+                    <td className="py-2">{v.resumen ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </>
   );
 }

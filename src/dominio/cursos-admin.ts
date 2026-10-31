@@ -77,13 +77,33 @@ const ERRORES: Record<string, string> = {
   confirmacion: 'Para confirmar, escriba la palabra que se pide.',
   invalido: 'No se pudo completar la acción. Recargue la página e intente de nuevo.',
   titulo_vacio: 'Escriba un nombre (al menos 2 letras).',
+  pregunta_publicada: 'Esta pregunta forma parte de una versión publicada: no se modifica. Guárdela desde el editor y se creará una nueva para el borrador.',
+  leccion_en_version: 'Esta lección forma parte de una versión publicada: no se puede eliminar. Puede retirarla del borrador.',
+  modulo_en_version: 'Este módulo forma parte de una versión publicada: no se puede eliminar. Puede retirarlo del borrador.',
+  material_en_version: 'Este material forma parte de una versión publicada: no se puede eliminar.',
+  version_inmutable: 'Una versión publicada no se modifica.',
+  resumen_requerido: 'Explique en pocas palabras qué cambió (al menos 5 caracteres). Lo verán los alumnos antes de decidir si cambian.',
+  motivo_requerido: 'Escriba el motivo (al menos 10 caracteres). Queda registrado.',
+  opciones_invalidas: 'Elija qué opciones se aceptarán también como correctas (en opción única, exactamente una).',
+  ya_es_correcta: 'Esa respuesta ya se considera correcta en esta versión: no hay nada que corregir.',
+  pregunta_fuera_de_version: 'Esa pregunta no forma parte de la versión elegida.',
+  confirmacion_incorrecta: 'La confirmación no coincide. Escriba exactamente lo que se pide.',
+  revision_inexistente: 'No se encontró esa revisión. Vuelva a calcularla.',
+  revision_descartada: 'Esa revisión ya no se puede aplicar. Vuelva a calcularla.',
+  no_autorizado: 'No tiene permiso para esta acción.',
 };
+
+// La clave más larga que coincide gana: «confirmacion_incorrecta» no debe leerse como «confirmacion».
+const CLAVES_ERROR = Object.keys(ERRORES).sort((a, b) => b.length - a.length);
+function claveDeError(m: string): string | undefined {
+  return CLAVES_ERROR.find((k) => m === k || m.startsWith(`${k}:`) || m.startsWith(k));
+}
 
 /** Código corto para llevar un error por la dirección (nunca texto libre). */
 export function codigoError(mensaje: string | null | undefined): string {
   const m = mensaje ?? '';
   if (m.includes('duplicate key') && m.includes('slug')) return 'slug_repetido';
-  return Object.keys(ERRORES).find((k) => m === k || m.startsWith(`${k}:`) || m.startsWith(k)) ?? 'desconocido';
+  return claveDeError(m) ?? 'desconocido';
 }
 
 const OKS: Record<string, string> = {
@@ -99,6 +119,13 @@ const OKS: Record<string, string> = {
   restaurado: 'Restaurado.',
   material_quitado: 'Material quitado.',
   pregunta_creada: 'Pregunta creada.',
+  pregunta_reemplazada: 'Como la pregunta anterior ya estaba en una versión publicada, se creó esta nueva para el borrador. La anterior se conserva intacta en esa versión.',
+  material_retirado: 'Material retirado del borrador. Se conserva para quienes siguen las versiones que lo incluyen.',
+  version_publicada: 'Versión publicada. Los alumnos actuales siguen en su versión hasta que decidan cambiar.',
+  revision_aplicada: 'Revisión favorable aplicada. Los resultados originales se conservan junto a los corregidos.',
+  revision_ya_aplicada: 'Esa revisión ya estaba aplicada: no se volvió a aplicar.',
+  bloqueado: 'Contenido bloqueado. Ya no se muestra a nadie y no cuenta como requisito. Queda registrado.',
+  desbloqueado: 'Contenido desbloqueado. Queda registrado.',
 };
 
 /** Mensaje de un aviso de éxito; un código desconocido no muestra nada. */
@@ -110,7 +137,7 @@ export function mensajeOk(codigo: string | undefined): string | undefined {
 export function mensajeError(codigoOMensaje: string | null | undefined): string {
   const m = codigoOMensaje ?? '';
   if (m.includes('duplicate key') && m.includes('slug')) return ERRORES.slug_repetido!;
-  const clave = Object.keys(ERRORES).find((k) => m === k || m.startsWith(`${k}:`) || m.startsWith(k));
+  const clave = claveDeError(m);
   return clave ? ERRORES[clave]! : 'No se pudo guardar. Intente de nuevo; si sigue fallando, avísenos.';
 }
 

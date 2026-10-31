@@ -12,6 +12,8 @@ export interface DatosCertificado {
   codigo: string;
   urlVerificacion: string;           // p. ej. https://albor.example/verificar/ABCD…
   academia?: string;
+  /** Versión del programa con que se emitió (desde el versionado académico). */
+  version?: number;
 }
 
 export const LEYENDA_CERTIFICADO =
@@ -91,6 +93,7 @@ export async function generarCertificadoPdf(d: DatosCertificado): Promise<Uint8A
   pagina.drawLine({ start: { x: W / 2 - 170, y: H - 304 }, end: { x: W / 2 + 170, y: H - 304 }, thickness: 0.8, color: OLIVA });
   centrado('completó todas las lecciones y aprobó la evaluación final del curso', H - 334, sans, 13, SUAVE);
   centrado(d.curso, H - 370, serif, 24);
+  if (d.version) centrado(`Programa: versión ${d.version}`, H - 396, sans, 11, SUAVE);
 
   const fecha = new Intl.DateTimeFormat('es-GT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Guatemala' })
     .format(d.emitidoEn);

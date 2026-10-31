@@ -5,7 +5,8 @@ import { cursoAdmin } from '@/datos/admin-cursos';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { EstadoChip } from '@/ui/admin/estructura';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
-import { quitarMaterial } from '../../../acciones';
+import { BloqueoExcepcional } from '@/ui/admin/BloqueoExcepcional';
+import { bloquearContenido, quitarMaterial } from '../../../acciones';
 import { FormLeccion } from './FormLeccion';
 import { SubirMaterial } from './SubirMaterial';
 
@@ -30,7 +31,8 @@ export default async function EditarLeccion({ params, searchParams }: Props) {
       <AvisoAccion ok={aviso.ok} error={aviso.error} />
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <h2 className="m-0 text-[26px]">{l.titulo}</h2>
-        {l.retirada && <EstadoChip estado="archivado" texto="Retirada" />}
+        {l.retirada && <EstadoChip estado="archivado" texto={c.versiones.length ? 'Retirada del borrador' : 'Retirada'} />}
+        {l.marca.bloqueada && <EstadoChip estado="pendiente" texto="Bloqueada" />}
         <span className="text-[15px] text-tinta-suave">Módulo: {modulo.titulo}{l.vistas > 0 ? ` · vista por ${l.vistas}, completada por ${l.completadas}` : ''}</span>
       </div>
       <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[1fr_380px]">
@@ -42,10 +44,15 @@ export default async function EditarLeccion({ params, searchParams }: Props) {
             <ul className="m-0 mt-4 flex list-none flex-col gap-2 p-0">
               {l.materiales.map((m) => (
                 <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-marfil px-3 py-2">
-                  <span><b>{m.titulo}</b> <span className="text-[13.5px] text-tinta-suave">· {peso(m.tamanoBytes)}</span></span>
-                  <ConfirmarAccion accion={quitarMaterial} campos={{ id: m.id, volver }} textoBoton="Quitar" titulo="¿Quitar el material?" estilo="enlacePeligro" peligro textoConfirmar="Quitar">
-                    <p className="m-0">«{m.titulo}» deja de estar disponible para los alumnos y el archivo se borra.</p>
-                  </ConfirmarAccion>
+                  <span><b className={m.retirado ? 'text-tinta-suave line-through decoration-1' : ''}>{m.titulo}</b> <span className="text-[13.5px] text-tinta-suave">· {peso(m.tamanoBytes)}</span>
+                    {m.retirado && <> <EstadoChip estado="archivado" texto="Retirado del borrador" /></>}</span>
+                  {!m.retirado && (
+                    <ConfirmarAccion accion={quitarMaterial} campos={{ id: m.id, volver }} textoBoton="Quitar" titulo="¿Quitar el material?" estilo="enlacePeligro" peligro textoConfirmar="Quitar">
+                      <p className="m-0">{m.enVersion
+                        ? `«${m.titulo}» sale del borrador. Como forma parte de una versión publicada, el archivo se conserva para quienes siguen esa versión.`
+                        : `«${m.titulo}» deja de estar disponible y el archivo se borra.`}</p>
+                    </ConfirmarAccion>
+                  )}
                 </li>
               ))}
             </ul>
@@ -55,6 +62,10 @@ export default async function EditarLeccion({ params, searchParams }: Props) {
           <SubirMaterial leccionId={l.id} />
         </section>
       </div>
+      {l.marca.enAlgunaVersion && (
+        <BloqueoExcepcional accion={bloquearContenido} tabla="lecciones" id={l.id} volver={volver} nombre={l.titulo} tipo="la lección"
+          bloqueada={l.marca.bloqueada} motivo={l.marca.bloqueoMotivo} />
+      )}
     </>
   );
 }
