@@ -10,16 +10,21 @@ export function Campo(props: {
   autoComplete?: string;
   error?: string;
   ayuda?: string;
+  /** Valor inicial (campo no controlado). */
+  valorInicial?: string;
+  /** Muestra «(opcional)» junto a la etiqueta. */
+  opcional?: boolean;
 }) {
   const idError = `${props.nombre}-error`;
   const idAyuda = `${props.nombre}-ayuda`;
   const describe = [props.error ? idError : null, props.ayuda ? idAyuda : null].filter(Boolean).join(' ') || undefined;
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={props.nombre} className="text-[15px] font-bold">{props.etiqueta}</label>
+      <label htmlFor={props.nombre} className="text-[15px] font-bold">{props.etiqueta}{props.opcional && <span className="font-normal text-tinta-suave"> (opcional)</span>}</label>
       <input
         id={props.nombre}
         name={props.nombre}
+        defaultValue={props.valorInicial}
         type={props.tipo ?? 'text'}
         autoComplete={props.autoComplete}
         aria-invalid={props.error ? true : undefined}

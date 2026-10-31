@@ -114,11 +114,15 @@ export async function guardarCuenta(_: EstadoCuenta, datos: FormData): Promise<E
   const r = z.object({
     nombre: z.string().trim().min(2, 'Escriba su nombre completo.').max(120, 'El nombre es demasiado largo.'),
     zona: z.string().refine((z: string) => ZONAS_VALIDAS.has(z) || z === 'UTC', 'Elija una zona horaria de la lista.'),
-  }).safeParse({ nombre: datos.get('nombre'), zona: datos.get('zona') });
+    // Opcionales: vacío = no lo informa.
+    areaLaboral: z.string().trim().refine((v) => v === '' || (v.length >= 2 && v.length <= 120), 'El área laboral va de 2 a 120 caracteres, o vacía.'),
+    estudios: z.string().trim().refine((v) => v === '' || (v.length >= 2 && v.length <= 160), 'Los estudios van de 2 a 160 caracteres, o vacíos.'),
+  }).safeParse({ nombre: datos.get('nombre'), zona: datos.get('zona'), areaLaboral: datos.get('areaLaboral') ?? '', estudios: datos.get('estudios') ?? '' });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const supabase = await clienteSesion();
   const { error } = await supabase.from('perfiles')
-    .update({ nombre_completo: r.data.nombre, zona_horaria: r.data.zona }).eq('id', usuario.id);
+    .update({ nombre_completo: r.data.nombre, zona_horaria: r.data.zona, area_laboral: r.data.areaLaboral || null, estudios: r.data.estudios || null })
+    .eq('id', usuario.id);
   if (error) return { error: 'No pudimos guardar los cambios. Intente de nuevo.' };
   revalidatePath('/campus', 'layout');
   return { ok: 'Cambios guardados.' };

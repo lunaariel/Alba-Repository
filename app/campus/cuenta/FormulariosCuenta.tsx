@@ -4,7 +4,9 @@ import { useActionState } from 'react';
 import { Aviso, BotonEnviar, Campo } from '@/ui/Formulario';
 import { cambiarContrasena, guardarCuenta, type EstadoCuenta } from '../acciones';
 
-export function FormularioDatos({ nombre, zona, zonas }: { nombre: string; zona: string; zonas: { valor: string; texto: string }[] }) {
+export function FormularioDatos({ nombre, zona, zonas, areaLaboral, estudios }: {
+  nombre: string; zona: string; zonas: { valor: string; texto: string }[]; areaLaboral: string; estudios: string;
+}) {
   const [estado, accion] = useActionState<EstadoCuenta, FormData>(guardarCuenta, undefined);
   return (
     <form action={accion} className="flex flex-col gap-5">
@@ -31,6 +33,14 @@ export function FormularioDatos({ nombre, zona, zonas }: { nombre: string; zona:
         </select>
         <p id="zona-ayuda" className="m-0 text-[15px] text-tinta-suave">La usamos para mostrarle el horario de los talleres en su hora.</p>
       </div>
+      <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">
+        <legend className="mb-1 text-[15px] font-bold">Sobre usted (opcional)</legend>
+        <p className="m-0 -mt-2 text-[15px] text-tinta-suave">Nos ayuda a preparar cursos pensados para quienes estudian. No es obligatorio y solo lo ve la academia.</p>
+        <Campo nombre="areaLaboral" etiqueta="Área laboral" valorInicial={areaLaboral} autoComplete="organization-title" opcional
+          error={estado?.campo === 'areaLaboral' ? estado.error : undefined} ayuda="Por ejemplo: docente de nivel inicial, madre o padre, cuidadora." />
+        <Campo nombre="estudios" etiqueta="Estudios académicos" valorInicial={estudios} opcional
+          error={estado?.campo === 'estudios' ? estado.error : undefined} ayuda="Por ejemplo: profesorado en educación inicial." />
+      </fieldset>
       <div><BotonEnviar>Guardar cambios</BotonEnviar></div>
     </form>
   );

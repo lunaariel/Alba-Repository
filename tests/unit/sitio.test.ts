@@ -94,3 +94,17 @@ test('talleres: la hora escrita en la zona del taller se convierte bien, incluso
   assert.match(vista, /21:00 en Buenos Aires/);
   assert.match(vista, /01:00 en Madrid/);
 });
+
+test('presentación de la maestra: trayectoria informada, sin publicar hasta aprobarla', () => {
+  assert.equal(TEXTOS_POR_DEFECTO.maestraLema, 'Una educadora que vela por las infancias');
+  assert.equal(TEXTOS_POR_DEFECTO.presentacionAprobada, false);
+  assert.equal(TEXTOS_POR_DEFECTO.maestraTrayectoria.length, 7);
+  assert.ok(TEXTOS_POR_DEFECTO.maestraTrayectoria.every((x) => !/\d{4}/.test(x)), 'sin fechas inventadas');
+  const t = combinarTextos({ maestraTrayectoria: ['  Diplomado  ', '', 3], presentacionAprobada: true, maestraLema: 'Otra frase' });
+  assert.deepEqual(t.maestraTrayectoria, ['Diplomado']);
+  assert.equal(t.presentacionAprobada, true);
+  assert.equal(t.maestraLema, 'Otra frase');
+  assert.equal(combinarTextos({ presentacionAprobada: 'si' }).presentacionAprobada, false);
+  // Las preguntas frecuentes ya no prometen acceso sin vencimiento.
+  assert.ok(!TEXTOS_POR_DEFECTO.preguntas.some((p) => /acceso a un curso comprado no vence/.test(p.respuesta)));
+});

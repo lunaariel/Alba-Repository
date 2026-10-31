@@ -30,7 +30,7 @@ export default async function Cuenta() {
       <Contenedor className="flex flex-wrap gap-x-16 gap-y-12 pb-20 pt-2">
         <section aria-labelledby="datos" className="min-w-0 max-w-[520px] flex-[1_1_360px]">
           <h2 id="datos" className="m-0 mb-5 text-[24px]">Sus datos</h2>
-          <FormularioDatos nombre={perfil.nombre} zona={perfil.zonaHoraria} zonas={zonas} />
+          <FormularioDatos nombre={perfil.nombre} zona={perfil.zonaHoraria} zonas={zonas} areaLaboral={perfil.areaLaboral} estudios={perfil.estudios} />
         </section>
         <section aria-labelledby="clave" className="min-w-0 max-w-[520px] flex-[1_1_360px]">
           <h2 id="clave" className="m-0 mb-5 text-[24px]">Contraseña</h2>

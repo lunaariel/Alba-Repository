@@ -354,13 +354,20 @@ export async function compra(id: string): Promise<Compra | null> {
   return (await misCompras()).find((c) => c.id === id) ?? null;
 }
 
-export interface Perfil { nombre: string; correo: string; zonaHoraria: string }
+export interface Perfil {
+  nombre: string; correo: string; zonaHoraria: string;
+  /** Opcionales; datos personales que solo ven la persona y la admin. */
+  areaLaboral: string; estudios: string;
+}
 
 export const miPerfil = cache(async (): Promise<Perfil> => {
   const usuario = await exigirSesion('/campus/cuenta');
   const supabase = await clienteSesion();
-  const { data } = await supabase.from('perfiles').select('nombre_completo, zona_horaria').eq('id', usuario.id).maybeSingle();
-  return { nombre: data?.nombre_completo ?? '', correo: usuario.email ?? '', zonaHoraria: data?.zona_horaria ?? 'America/Guatemala' };
+  const { data } = await supabase.from('perfiles').select('nombre_completo, zona_horaria, area_laboral, estudios').eq('id', usuario.id).maybeSingle();
+  return {
+    nombre: data?.nombre_completo ?? '', correo: usuario.email ?? '', zonaHoraria: data?.zona_horaria ?? 'America/Guatemala',
+    areaLaboral: data?.area_laboral ?? '', estudios: data?.estudios ?? '',
+  };
 });
 
 /** Visita a una lección (para "Continuar donde lo dejó"). No toca completada_en; RLS exige acceso. */

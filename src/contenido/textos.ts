@@ -13,6 +13,12 @@ export interface Textos {
   maestraResumen: string;
   maestraFrase: string;
   maestraHistoria: string;
+  /** Frase que la presenta (informada por la titular; se publica solo con la presentación aprobada). */
+  maestraLema: string;
+  /** Formación y trayectoria, una por línea, tal como la informó la titular. Sin instituciones ni fechas inventadas. */
+  maestraTrayectoria: string[];
+  /** La maestra revisó y aprobó la presentación: recién entonces se muestran lema y trayectoria en el sitio. */
+  presentacionAprobada: boolean;
   preguntas: PreguntaFrecuente[];
   terminos: string | null;
   privacidad: string | null;
@@ -26,10 +32,21 @@ export const TEXTOS_POR_DEFECTO: Textos = {
   maestraResumen: '[Formación, años de experiencia y lugares donde trabajó, tal como ella los cuente.]',
   maestraFrase: '[Una frase suya sobre por qué enseña.]',
   maestraHistoria: '[Su historia en primera persona: cómo llegó a la educación, qué aprendió en el aula y por qué creó Albor.]',
+  maestraLema: 'Una educadora que vela por las infancias',
+  maestraTrayectoria: [
+    'Profesorado en Educación Inicial y Preprimaria',
+    'Licenciatura en Educación y Aprendizaje',
+    'Diplomado de Guía Montessori',
+    'Diplomado en Psicopedagogía',
+    'Participación en el Congreso Latinoamericano de Educación en Derechos Humanos',
+    'Experiencia en educación preescolar',
+    'Acompañamiento en educación popular',
+  ],
+  presentacionAprobada: false,
   preguntas: [
     { pregunta: '¿Necesito saber de Montessori para empezar?', respuesta: 'No. Los cursos empiezan desde lo básico.' },
-    { pregunta: '¿Por cuánto tiempo tendré acceso?', respuesta: 'El acceso a un curso comprado no vence.' },
-    { pregunta: '¿El certificado es una acreditación oficial?', respuesta: 'No. Es un certificado de finalización emitido por Albor, que se obtiene al completar todas las lecciones y aprobar la evaluación final.' },
+    { pregunta: '¿Por cuánto tiempo tendré acceso?', respuesta: 'Cada curso indica su período de acceso antes de comprarlo: la duración del curso más 5 meses adicionales, contados desde la compra. Su certificado no vence.' },
+    { pregunta: '¿El certificado es una acreditación oficial?', respuesta: 'No. Es un certificado de finalización emitido por Albor. Se obtiene al cumplir los requisitos de cada curso, que se informan en su página.' },
     { pregunta: '¿Cómo puedo pagar?', respuesta: '[Medios de pago a confirmar.]' },
   ],
   terminos: null,
@@ -37,18 +54,23 @@ export const TEXTOS_POR_DEFECTO: Textos = {
   reembolsos: null,
 };
 
-const CLAVES_TEXTO = ['heroTitulo', 'heroBajada', 'maestraNombre', 'maestraResumen', 'maestraFrase', 'maestraHistoria',
+const CLAVES_TEXTO = ['heroTitulo', 'heroBajada', 'maestraNombre', 'maestraResumen', 'maestraFrase', 'maestraHistoria', 'maestraLema',
   'terminos', 'privacidad', 'reembolsos'] as const;
 
 /** Combina lo guardado con los valores por defecto, aceptando solo claves y tipos conocidos. */
 export function combinarTextos(guardados: unknown): Textos {
-  const t: Textos = { ...TEXTOS_POR_DEFECTO, preguntas: [...TEXTOS_POR_DEFECTO.preguntas] };
+  const t: Textos = { ...TEXTOS_POR_DEFECTO, preguntas: [...TEXTOS_POR_DEFECTO.preguntas], maestraTrayectoria: [...TEXTOS_POR_DEFECTO.maestraTrayectoria] };
   if (!guardados || typeof guardados !== 'object') return t;
   const g = guardados as Record<string, unknown>;
   for (const clave of CLAVES_TEXTO) {
     const v = g[clave];
     if (typeof v === 'string' && v.trim() !== '') (t as unknown as Record<string, unknown>)[clave] = v.trim();
   }
+  if (Array.isArray(g.maestraTrayectoria)) {
+    const items = g.maestraTrayectoria.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map((x) => x.trim()).slice(0, 20);
+    t.maestraTrayectoria = items;
+  }
+  if (typeof g.presentacionAprobada === 'boolean') t.presentacionAprobada = g.presentacionAprobada;
   if (Array.isArray(g.preguntas)) {
     const validas = g.preguntas.filter(
       (p): p is PreguntaFrecuente =>
