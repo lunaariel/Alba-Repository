@@ -105,8 +105,8 @@ try {
   await p.fill('#pdf-titulo', 'Guía de prueba');
   await p.getByRole('button', { name: 'Subir PDF' }).click();
   await p.getByText('Material agregado.').waitFor({ timeout: 20000 });
-  await p.waitForLoadState('networkidle');
-  comprobar(await p.getByText('Guía de prueba').first().isVisible(), 'el PDF se sube al almacenamiento privado y queda en la lección');
+  comprobar(await p.getByText('Guía de prueba').first().waitFor({ timeout: 15000 }).then(() => true, () => false),
+    'el PDF se sube al almacenamiento privado y queda en la lección');
   await p.screenshot({ path: `${SALIDA}/recorrido-cursos-1-leccion.png`, fullPage: true });
 
   // 5. Evaluación: una pregunta con tema y criterios.

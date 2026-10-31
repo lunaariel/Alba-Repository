@@ -177,6 +177,27 @@ do $$ begin
 end $$;
 set local request.jwt.claim.sub = 'adadadad-0000-0000-0000-000000000003';
 select pruebas.afirmar((select count(*) from public.lecciones where modulo_id = 'd0000000-0000-0000-0000-000000000001') = 2, 'La admin ve también lo retirado');
+-- La admin, con su propia sesión (no como superusuario), archiva, vuelve a publicar, retira y restaura.
+update public.cursos set estado = 'archivado' where id = 'c0000000-0000-0000-0000-000000000001';
+update public.cursos set estado = 'publicado' where id = 'c0000000-0000-0000-0000-000000000001';
+select pruebas.afirmar((select estado from public.cursos where id = 'c0000000-0000-0000-0000-000000000001') = 'publicado', 'La admin vuelve a publicar con su sesión');
+update public.lecciones set retirada = false where id = 'e0000000-0000-0000-0000-000000000001';
+update public.lecciones set retirada = true where id = 'e0000000-0000-0000-0000-000000000001';
+update public.preguntas set retirada = false where id = 'a1000000-0000-0000-0000-000000000002';
+select public.mover_en_orden('preguntas', 'a1000000-0000-0000-0000-000000000002', -1);
+select pruebas.afirmar((select orden from public.preguntas where id = 'a1000000-0000-0000-0000-000000000002') = 0, 'La admin reordena con su sesión');
+do $$ declare c uuid; m uuid; e uuid; begin
+  insert into public.cursos (slug, titulo, precio_centavos) values ('de-la-admin', 'Curso de la admin', 2900) returning id into c;
+  insert into public.modulos (curso_id, titulo, orden) values (c, 'M', 0) returning id into m;
+  insert into public.lecciones (modulo_id, titulo, orden) values (m, 'L', 0);
+  insert into public.evaluaciones (curso_id) values (c) returning id into e;
+  perform public.guardar_pregunta(e, null, '¿Lista?', 'unica', null, '[{"texto":"Sí","es_correcta":true},{"texto":"No","es_correcta":false}]');
+  update public.cursos set estado = 'publicado' where id = c;
+  perform pruebas.afirmar((select estado from public.cursos where id = c) = 'publicado', 'La admin crea y publica un curso con su sesión');
+  update public.cursos set estado = 'borrador' where id = c;   -- sin alumnos: puede volver a borrador
+  delete from public.cursos where id = c;
+  perform pruebas.afirmar(not exists (select 1 from public.cursos where id = c), 'La admin elimina un curso sin historial con su sesión');
+end $$;
 reset role;
 
 -- Todo quedó en el registro de actividad.

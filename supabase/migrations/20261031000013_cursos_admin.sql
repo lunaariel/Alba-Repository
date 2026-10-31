@@ -60,8 +60,10 @@ returns int language sql stable security definer set search_path = public as $$
                       where p.leccion_id = v.id and p.perfil_id = auth.uid() and p.completada_en is not null);
 $$;
 
+-- security definer: la admin publica con su sesión y esta regla usa funciones que los clientes
+-- no pueden ejecutar directamente (lecciones_vigentes_de).
 create or replace function public.validar_publicacion_curso()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 declare
   faltantes text[] := '{}';
 begin
