@@ -24,7 +24,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Migraciones desde cero y pruebas de acceso, compras, evaluación, talleres y concurrencia
-        run: ./scripts/probar-db.sh
+        run: |
+          set -o pipefail
+          ./scripts/probar-db.sh 2>&1 | tee probar-db.log
+      - name: Señalar fallas de base de datos
+        if: failure()
+        run: grep -A6 -E "FALLA|ERROR|error:" probar-db.log | head -30 | while IFS= read -r l; do echo "::error::$l"; done
 
   aplicacion:
     runs-on: ubuntu-latest
