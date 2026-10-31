@@ -11,7 +11,7 @@ q() { "${PSQL[@]}" -d "$DB" -tA -c "$1"; }
 "${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB encoding 'UTF8' template template0" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/supabase_stub.sql" >/dev/null
 for m in "$RAIZ"/supabase/migrations/*.sql; do
-  case "$(basename "$m")" in 2026103100001[5-6]_*) continue;; esac
+  case "$(basename "$m")" in 2026103100001[5-7]_*) continue;; esac
   "${PSQL[@]}" -d "$DB" -f "$m" >/dev/null
 done
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/00_ayudas.sql" >/dev/null
@@ -35,20 +35,31 @@ HUELLA="select md5(string_agg(t, '|' order by t)) from (
 antes=$(q "$HUELLA")
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000015_ajustes_versionado.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000016_talleres_gestion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000017_talleres_adaptacion.sql" >/dev/null
 [ "$(q "select origen from public.inscripciones_taller limit 1")" = "compra" ] || { echo "FALLA      0016 no clasificó la inscripción existente"; exit 1; }
 [ "$(q "select count(*) from public.envios_recordatorio where para_inicio is not null")" = "1" ] || { echo "FALLA      0016 no completó para_inicio"; exit 1; }
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000017_talleres_adaptacion_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000016_talleres_gestion_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000015_ajustes_versionado_down.sql" >/dev/null
 despues=$(q "$HUELLA")
 [ "$antes" = "$despues" ] || { echo "FALLA      reversión 0015/0016: la huella cambió"; exit 1; }
-[ "$(q "select count(*) from pg_proc where proname in ('cancelar_taller','asociar_complemento','enlace_taller','reemplazar_leccion')")" = "0" ] \
+[ "$(q "select count(*) from pg_proc where proname in ('cancelar_taller','asociar_complemento','enlace_taller','reemplazar_leccion','responder_reprogramacion','cambiar_estado_grabacion')")" = "0" ] \
   || { echo "FALLA      quedaron funciones de 0015/0016"; exit 1; }
 # Se vuelve a aplicar sin errores; tras abrir una incidencia, la reversión de 0016 se niega.
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000015_ajustes_versionado.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000016_talleres_gestion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000017_talleres_adaptacion.sql" >/dev/null
+# Con una grabación ya recibida, la reversión de 0017 se niega (perdería su estado).
+q "insert into public.grabaciones_taller (taller_id, estado) select id, 'recibida' from public.talleres limit 1 on conflict (taller_id) do update set estado = 'recibida'" >/dev/null
+if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000017_talleres_adaptacion_down.sql" >/dev/null 2>/tmp/albor_rev17.log; then
+  echo "FALLA      la reversión de 0017 debió negarse"; exit 1
+fi
+grep -q reversion_imposible /tmp/albor_rev17.log || { echo "FALLA      la reversión de 0017 falló por otro motivo: $(head -2 /tmp/albor_rev17.log)"; exit 1; }
+q "update public.grabaciones_taller set estado = 'prevista'" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000017_talleres_adaptacion_down.sql" >/dev/null
 q "insert into public.incidencias (tipo) values ('pago_sin_cupo')" >/dev/null
 if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000016_talleres_gestion_down.sql" >/dev/null 2>/tmp/albor_rev16.log; then
   echo "FALLA      la reversión de 0016 debió negarse"; exit 1
 fi
 grep -q reversion_imposible /tmp/albor_rev16.log || { echo "FALLA      la reversión falló por otro motivo: $(head -2 /tmp/albor_rev16.log)"; exit 1; }
-echo "ok         reversión de 0015 y 0016: datos idénticos, se reaplican, y se niega cuando perdería información"
+echo "ok         reversión de 0015, 0016 y 0017: datos idénticos, se reaplican, y se niega cuando perdería información"

@@ -82,8 +82,7 @@ export function FormTaller({ t, vistaPrevia }: { t: DatosFormTaller; vistaPrevia
       <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">
         <legend className="mb-1 font-display text-[22px] font-semibold">Videollamada</legend>
         <Selector nombre="plataforma" etiqueta="Plataforma" defaultValue={t.plataforma} opciones={[{ valor: 'zoom', texto: 'Zoom' }, { valor: 'meet', texto: 'Google Meet' }]} />
-        <Entrada nombre="visible" etiqueta="Mostrar el enlace a los inscriptos desde (horas antes del inicio)" inputMode="numeric" defaultValue={t.visible} error={err('visible')}
-          ayuda="Por defecto, 24 horas antes. Solo lo ven las personas con inscripción confirmada; lo controla el servidor." />
+        <p className="m-0 text-[14px] text-tinta-suave">El enlace lo ven solo las personas con inscripción confirmada, desde que se confirma; lo controla el servidor.</p>
       </fieldset>
       <div>
         <button type="submit" disabled={enviando} className="min-h-[54px] rounded-md bg-oliva-profundo px-7 text-[17px] font-bold text-marfil transition-colors hover:bg-marron disabled:opacity-55">

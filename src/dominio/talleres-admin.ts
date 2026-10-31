@@ -28,6 +28,12 @@ const ERRORES: Record<string, string> = {
   slug_repetido: 'Ya existe otro taller con esa dirección web.',
   invalido: 'No se pudo completar la acción. Recargue la página e intente de nuevo.',
   no_autorizado: 'No tiene permiso para esta acción.',
+  taller_no_realizado: 'El taller todavía no se realizó: no puede haber grabación recibida.',
+  revision_incompleta: 'Para verificarla, confirme los cuatro puntos de la revisión: sin imagen ni voces de participantes, sin nombres ni datos en pantalla y contenido verificado.',
+  revision_fuera_de_estado: 'La revisión se registra con la grabación «En revisión».',
+  condiciones_sin_definir: 'Antes de publicar, defina cuánto dura el acceso incluido en la inscripción (días o sin vencimiento).',
+  condiciones_invalidas: 'Revise las condiciones: los días van de 1 a 3650 y el precio en USD, por ejemplo 15 o 15.50.',
+  venta_sin_condiciones: 'Para ponerla a la venta, indique el precio y la duración del acceso comprado.',
 };
 const CLAVES = Object.keys(ERRORES).sort((a, b) => b.length - a.length);
 
@@ -53,6 +59,17 @@ const OKS: Record<string, string> = {
   recordatorios_guardados: 'Recordatorios guardados. Se calculan siempre con la fecha vigente del taller.',
   cortesia: 'Inscripción de cortesía registrada.',
   asistencia: 'Asistencia registrada.',
+  revision_guardada: 'Revisión guardada.',
+  condiciones_guardadas: 'Condiciones guardadas. Los accesos ya otorgados conservan las condiciones con que se otorgaron.',
+  grabacion_recibida: 'Grabación marcada como recibida.',
+  grabacion_en_revision: 'Grabación en revisión. La revisión empieza de cero.',
+  grabacion_en_edicion: 'Grabación en edición.',
+  grabacion_verificada: 'Grabación verificada.',
+  grabacion_publicada: 'Grabación publicada: las personas con derecho la ven en su campus.',
+  grabacion_no_publicable: 'Marcada como no publicable: queda sin publicar.',
+  grabacion_fallida: 'Grabación marcada como fallida.',
+  grabacion_faltante: 'Grabación marcada como faltante.',
+  grabacion_retirada: 'Grabación retirada: nadie la ve. Los derechos se conservan.',
   incidencia_anotada: 'Nota guardada. La incidencia queda en revisión hasta que la pasarela confirme el reembolso (Fase 6).',
 };
 export function mensajeOkTaller(codigo: string | undefined): string | undefined {
@@ -79,3 +96,26 @@ export function requisitosTaller(t: { titulo: string; descripcion: string | null
     { clave: 'duracion', texto: 'Duración de hasta 12 horas', cumplido: dur > 0 && dur <= 12 * 3600 * 1000 },
   ];
 }
+
+/** Estados de la grabación, en palabras, para el panel. */
+export const ESTADOS_GRABACION_TEXTO: Record<string, string> = {
+  prevista: 'Prevista', recibida: 'Original recibida', en_revision: 'En revisión', en_edicion: 'En edición', verificada: 'Verificada',
+  publicada: 'Publicada', no_publicable: 'No publicable', fallida: 'Fallida', faltante: 'Faltante', retirada: 'Retirada', no_corresponde: 'No corresponde',
+};
+/** Próximos pasos que ofrece el panel desde cada estado (la base valida las mismas transiciones). */
+export const SIGUIENTES_GRABACION: Record<string, { estado: string; texto: string; motivo?: boolean }[]> = {
+  prevista: [{ estado: 'recibida', texto: 'Marcar original recibida' }, { estado: 'fallida', texto: 'Marcar fallida', motivo: true }, { estado: 'faltante', texto: 'Marcar faltante', motivo: true }],
+  fallida: [{ estado: 'recibida', texto: 'Marcar original recibida' }],
+  faltante: [{ estado: 'recibida', texto: 'Marcar original recibida' }],
+  recibida: [{ estado: 'en_revision', texto: 'Pasar a revisión' }],
+  en_revision: [{ estado: 'en_edicion', texto: 'Enviar a edición' }, { estado: 'verificada', texto: 'Marcar verificada' }, { estado: 'no_publicable', texto: 'No se puede publicar', motivo: true }],
+  en_edicion: [{ estado: 'en_revision', texto: 'Volver a revisión' }, { estado: 'no_publicable', texto: 'No se puede publicar', motivo: true }],
+  verificada: [{ estado: 'en_edicion', texto: 'Enviar a edición' }, { estado: 'no_publicable', texto: 'No se puede publicar', motivo: true }],
+  no_publicable: [{ estado: 'en_edicion', texto: 'Enviar a edición' }],
+  publicada: [{ estado: 'retirada', texto: 'Retirar', motivo: true }],
+  retirada: [{ estado: 'en_revision', texto: 'Volver a revisión' }],
+};
+export const RESPUESTAS_TEXTO: Record<string, string> = {
+  pendiente: 'Pendiente de respuesta a la reprogramación', aceptada: 'Aceptó la nueva fecha', reembolso_solicitado: 'Pidió reembolso por la reprogramación',
+  no_asiste: 'No puede asistir a la nueva fecha',
+};

@@ -1,7 +1,8 @@
 // Recorrido de la entrega 3 (talleres) en CI, con la admin y la alumna de ejemplo.
-// Crear, publicar, inscripción gratuita, cupo, enlace con horario, participantes y CSV, reprogramar,
-// duplicar, cancelar la inscripción, cancelar el taller, pago tardío con incidencia, procesos
-// programados, permisos y capturas en escritorio (1440) y celular (390).
+// Crear, publicar, inscripción gratuita, cupo, enlace desde la confirmación, participantes y CSV,
+// reprogramar con respuesta de la alumna, duplicar, cancelar la inscripción (24 h), talleres pagos sin
+// cancelación ordinaria, cortesías nuevas retiradas, grabación (estados), cancelar el taller, pago tardío
+// con incidencia, procesos programados, permisos y capturas en escritorio (1440) y celular (390).
 import { execFileSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -117,16 +118,17 @@ try {
   comprobar(await pub.getByText('Cupo completo').isVisible() && (await pub.getByRole('link', { name: 'Ingresar para inscribirme' }).count()) === 0, 'con el único lugar ocupado: «Cupo completo»');
   await pub.screenshot({ path: `${SALIDA}/recorrido-talleres-3-sitio-completo.png`, fullPage: true });
 
-  // 15. Enlace: a 3 días no se ve (24 h antes); con 168 horas de anticipación sí. El de anfitrión, nunca.
+  // 15. Enlace: visible desde la inscripción confirmada. El de anfitrión, nunca.
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
   const filaTaller = al.locator('li', { hasText: 'Taller de prueba del recorrido' });
-  comprobar((await filaTaller.getByRole('link', { name: 'Entrar a la videollamada' }).count()) === 0 && await filaTaller.getByText(/El enlace de la videollamada aparecerá aquí desde/).isVisible(),
-    'a 3 días del inicio, el enlace todavía no se muestra');
-  sql(`update public.talleres set enlace_visible_horas = 168 where id = '${id}'`);
-  await al.reload({ waitUntil: 'networkidle' });
   const html = await al.content();
   comprobar(await filaTaller.getByRole('link', { name: 'Entrar a la videollamada' }).isVisible() && !html.includes('anfitrion-secreto'),
-    'con la anticipación configurada se muestra el enlace de participante, nunca el de anfitrión');
+    'con la inscripción confirmada se muestra el enlace de participante, nunca el de anfitrión');
+  comprobar(await filaTaller.getByText('Cancelar mi inscripción').isVisible(), 'gratuito a más de 24 h: se ofrece cancelar');
+  // Ya no hay formulario para inscribir por cortesía.
+  await a.goto(`${BASE}/admin/talleres/${id}/participantes`, { waitUntil: 'networkidle' });
+  comprobar((await a.getByRole('button', { name: /cortesía/i }).count()) === 0
+    && await a.getByText(/cupones/).first().isVisible(), 'el panel no ofrece inscribir por cortesía (las invitaciones serán cupones, Fase 6)');
   await al.screenshot({ path: `${SALIDA}/recorrido-talleres-4-mis-talleres.png`, fullPage: true });
 
   // Participantes y exportación.
@@ -147,8 +149,31 @@ try {
   comprobar(await ve(a, /Taller reprogramado/), 'se reprograma con motivo');
   comprobar(sql(`select count(*) from public.notificaciones n where n.taller_id = '${id}' and n.tipo = 'taller_reprogramado' and n.estado = 'pendiente'`) === '1',
     'el aviso de reprogramación queda registrado (pendiente, sin correo)');
+  comprobar(sql(`select estado || ':' || respuesta_reprogramacion from public.inscripciones_taller where taller_id = '${id}' and estado <> 'cancelada'`) === 'confirmada:pendiente',
+    'la inscripción queda pendiente de respuesta: ni aceptada ni cancelada, con su lugar');
+  await a.goto(`${BASE}/admin/talleres/${id}/participantes`, { waitUntil: 'networkidle' });
+  comprobar(await a.getByText(/1 sin responder a la reprogramación/).isVisible() && await a.getByText('Pendiente de respuesta').first().isVisible(),
+    'la admin identifica a quien no respondió');
+  await a.screenshot({ path: `${SALIDA}/recorrido-talleres-5b-pendiente.png`, fullPage: true });
+  await a.goto(`${BASE}/admin/talleres`, { waitUntil: 'networkidle' });
+  comprobar(await a.getByText(/sin responder/).first().isVisible(), 'la lista de talleres señala respuestas pendientes');
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
-  comprobar(await filaTaller.getByText(/Reprogramado/).isVisible() && await filaTaller.getByText(/17:00/).first().isVisible(), 'la alumna ve la fecha nueva y el aviso de reprogramación');
+  comprobar(await filaTaller.getByText(/falta su respuesta/).isVisible() && await filaTaller.getByText(/Fecha original/).isVisible()
+    && await filaTaller.getByText(/17:00/).first().isVisible(), 'la alumna ve la fecha original y la nueva, y que falta su respuesta');
+  comprobar((await filaTaller.getByText(/Inscripción confirmada/).count()) === 0 && (await filaTaller.getByRole('link', { name: 'Entrar a la videollamada' }).count()) === 0,
+    'mientras está pendiente no se le confirma la asistencia a la fecha nueva');
+  comprobar(await al.getByRole('heading', { name: 'Avisos' }).isVisible() && await al.getByText(/cambió de fecha/).first().isVisible(), 'el aviso aparece en el campus');
+  await al.screenshot({ path: `${SALIDA}/recorrido-talleres-4b-responder.png`, fullPage: true });
+  // Sin la casilla no se registra nada (el navegador lo exige; el servidor también).
+  await filaTaller.getByText('Acepto la nueva fecha', { exact: true }).first().click();
+  await filaTaller.getByLabel(/Confirmo que asistiré/).check();
+  await Promise.all([al.waitForURL(/aviso=respuesta_aceptada/), filaTaller.getByRole('button', { name: 'Acepto la nueva fecha' }).click()]);
+  comprobar(await al.getByText(/acepta la nueva fecha/).isVisible() && await filaTaller.getByText(/Nueva fecha aceptada/).isVisible(), 'la alumna acepta la nueva fecha');
+  comprobar(sql(`select count(*) from public.respuestas_reprogramacion r join public.inscripciones_taller i on i.id = r.inscripcion_id where i.taller_id = '${id}' and r.respuesta = 'aceptada'`) === '1'
+    && sql(`select count(*) from public.auditoria where accion = 'reprogramacion_respondida'`) !== '0', 'la decisión queda registrada y auditada');
+  await al.getByRole('button', { name: 'Marcar como leídos' }).click();
+  await al.waitForLoadState('networkidle');
+  comprobar((await al.getByRole('heading', { name: 'Avisos' }).count()) === 0, 'los avisos se marcan como leídos');
 
   // 16 y 17. Procesos programados: recordatorios con la fecha vigente, una sola vez.
   const sinClave = await ctxPublico.request.post(`${BASE}/api/procesos`);
@@ -185,6 +210,62 @@ try {
   await al.goto(`${BASE}/talleres/${slug}`, { waitUntil: 'networkidle' });
   await Promise.all([al.waitForURL(/aviso=inscripcion/), al.getByRole('button', { name: 'Inscribirme gratis' }).click()]);
   comprobar(true, 'la alumna puede volver a inscribirse');
+
+  // 24 h: un taller gratuito que empieza en 12 horas ya no se cancela desde el campus.
+  const alumna = sql(`select id from auth.users where email = '${CORREO}'`);
+  const pronto = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
+    values ('recorrido-pronto', '[Ejemplo] Taller en 12 horas', 'Gratuito que empieza pronto.', now() + interval '12 hours', now() + interval '13 hours', 'publicado') returning id`).split('\n').pop();
+  sql(`insert into public.inscripciones_taller (taller_id, perfil_id) values ('${pronto}', '${alumna}')`);
+  // Pago: inscripción confirmada por un pago simulado aprobado.
+  const pago = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, precio_centavos, estado)
+    values ('recorrido-pago', '[Ejemplo] Taller pago', 'Taller pago de prueba.', now() + interval '6 days', now() + interval '6 days 1 hour', 2500, 'publicado') returning id`).split('\n').pop();
+  const ordenPago = sql(`select public.crear_orden('${alumna}', 'taller', '${pago}')`);
+  sql(`select public.procesar_evento_pago('simulado', 'rec-pago-ok', 'pago', '{}', '${ordenPago}', 'rec-pago-ok', 'aprobado', 2500)`);
+  await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
+  const filaPronto = al.locator('li', { hasText: 'Taller en 12 horas' });
+  comprobar((await filaPronto.getByText('Cancelar mi inscripción').count()) === 0 && await filaPronto.getByText(/hasta 24 horas antes/).isVisible(),
+    'gratuito a menos de 24 h: no se ofrece cancelar');
+  const filaPago = al.locator('li', { hasText: '[Ejemplo] Taller pago' });
+  comprobar((await filaPago.getByText('Cancelar mi inscripción').count()) === 0 && await filaPago.getByRole('link', { name: 'escriba a la academia' }).isVisible(),
+    'pago: sin botón de cancelación, con el contacto de la academia');
+  await al.screenshot({ path: `${SALIDA}/recorrido-talleres-4c-pago-y-24h.png`, fullPage: true });
+  // Reprogramar el pago: la alumna puede pedir el reembolso (sin calcular montos ni ejecutar nada).
+  await a.goto(`${BASE}/admin/talleres/${pago}/estado`, { waitUntil: 'networkidle' });
+  await confirmar(a, a.getByRole('button', { name: 'Reprogramar' }), { palabra: 'REPROGRAMAR', campos: { fecha: enDias(9), hora: '10:00', motivo: 'Cambio de agenda de la maestra.' } });
+  await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
+  comprobar(await filaPago.getByText('Prefiero el reembolso').isVisible() && (await filaPago.getByText('No puedo asistir').count()) === 0, 'pago reprogramado: se ofrece pedir el reembolso');
+  await filaPago.getByText('Prefiero el reembolso', { exact: true }).first().click();
+  await filaPago.getByLabel(/gestionará el reembolso/).check();
+  await Promise.all([al.waitForURL(/aviso=respuesta_reembolso_solicitado/), filaPago.getByRole('button', { name: 'Prefiero el reembolso' }).click()]);
+  comprobar(await filaPago.getByText(/Reembolso solicitado/).isVisible()
+    && sql(`select estado from public.ordenes where id = '${ordenPago}'`) === 'aprobada'
+    && sql(`select count(*) from public.incidencias where taller_id = '${pago}' and tipo = 'reembolso_por_reprogramacion'`) === '1',
+    'el pedido de reembolso crea una incidencia; la orden no se toca y nada figura reembolsado');
+
+  // Grabación: estados con revisión (un taller ya realizado con la alumna inscripta).
+  const realizado = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
+    values ('recorrido-realizado', '[Ejemplo] Taller realizado', 'Taller ya realizado.', now() - interval '3 days', now() - interval '3 days' + interval '1 hour', 'finalizado') returning id`).split('\n').pop();
+  sql(`insert into public.inscripciones_taller (taller_id, perfil_id, asistio) values ('${realizado}', '${alumna}', false)`);
+  await a.goto(`${BASE}/admin/talleres/${realizado}/grabacion`, { waitUntil: 'networkidle' });
+  comprobar(await a.getByText('Prevista').first().isVisible() && await a.getByText(/nunca se publica/).isVisible(), 'la grabación nace prevista y explica la regla de privacidad');
+  comprobar((await a.getByRole('button', { name: 'Publicar la grabación' }).count()) === 0, 'sin verificar no se ofrece publicar');
+  await confirmar(a, a.getByRole('button', { name: 'Marcar original recibida' }));
+  comprobar(await ve(a, /recibida/i), 'original recibida');
+  await confirmar(a, a.getByRole('button', { name: 'Pasar a revisión' }));
+  for (const t of [/Sin imagen de participantes/, /Sin voces/, /Sin nombres/, /Contenido final verificado/]) await a.getByLabel(t).check();
+  await a.getByRole('button', { name: 'Guardar revisión' }).click();
+  comprobar(await ve(a, /Revisión/i), 'se registra la revisión');
+  await confirmar(a, a.getByRole('button', { name: 'Marcar verificada' }));
+  await a.getByLabel('Durante una cantidad de días').check();
+  await a.locator('input[name=incluidoDias]').fill('30');
+  await a.getByRole('button', { name: 'Guardar condiciones' }).click();
+  comprobar(await ve(a, /ondiciones/), 'se guardan las condiciones de acceso');
+  await confirmar(a, a.getByRole('button', { name: 'Publicar la grabación' }), { palabra: 'PUBLICAR' });
+  comprobar(await ve(a, /publicada/i) && sql(`select count(*) from public.accesos_grabacion g join public.grabaciones_taller t on t.id = g.grabacion_id where t.taller_id = '${realizado}' and g.perfil_id = '${alumna}'`) === '1',
+    'al publicar, la alumna inscripta (aunque no asistió) recibe el acceso, con sus condiciones');
+  await a.screenshot({ path: `${SALIDA}/recorrido-talleres-8-grabacion.png`, fullPage: true });
+  await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
+  comprobar(await al.locator('li', { hasText: 'Taller realizado' }).getByText(/Grabación publicada, disponible hasta/).isVisible(), 'la alumna ve la grabación publicada con su vencimiento');
 
   // 14. Cancelar el taller con motivo y palabra.
   await a.goto(`${BASE}/admin/talleres/${id}/estado`, { waitUntil: 'networkidle' });
@@ -223,7 +304,7 @@ try {
   await a.screenshot({ path: `${SALIDA}/recorrido-talleres-7-incidencias.png`, fullPage: true });
 
   // 18. La alumna no abre ni usa el panel de talleres.
-  for (const ruta of ['/admin/talleres', `/admin/talleres/${id}`, `/admin/talleres/${id}/participantes/csv`, '/admin/talleres/incidencias']) {
+  for (const ruta of ['/admin/talleres', `/admin/talleres/${id}`, `/admin/talleres/${id}/participantes/csv`, '/admin/talleres/incidencias', `/admin/talleres/${realizado}/grabacion`]) {
     const r = await ctxAlumna.request.get(`${BASE}${ruta}`);
     comprobar(r.status() === 404, `alumna en ${ruta}: ${r.status()}`);
   }
@@ -236,7 +317,8 @@ try {
   // 20. Celular (390 px): sin desbordes en las pantallas de talleres.
   const { p: m } = await sesion(ADMIN_CORREO, ADMIN_CLAVE, { width: 390, height: 844 });
   for (const [ruta, nombre] of [['/admin/talleres', 'lista'], [`/admin/talleres/${copia}`, 'datos'], [`/admin/talleres/${id}/participantes`, 'participantes'],
-    [`/admin/talleres/${id}/estado`, 'estado'], [`/admin/talleres/${copia}/videollamada`, 'videollamada'], ['/admin/talleres/incidencias', 'incidencias']]) {
+    [`/admin/talleres/${id}/estado`, 'estado'], [`/admin/talleres/${copia}/videollamada`, 'videollamada'], ['/admin/talleres/incidencias', 'incidencias'],
+    [`/admin/talleres/${realizado}/grabacion`, 'grabacion'], [`/admin/talleres/${pago}/participantes`, 'participantes-pago']]) {
     await m.goto(`${BASE}${ruta}`, { waitUntil: 'networkidle' });
     comprobar(await sinDesborde(m), `celular, panel ${nombre}: sin desborde horizontal`);
     await m.screenshot({ path: `${SALIDA}/movil-talleres-${nombre}.png`, fullPage: true });

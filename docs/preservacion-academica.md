@@ -80,11 +80,18 @@ Además:
 - Los certificados guardan, al emitirse, el nombre del alumno, el título del curso y la versión. Editar el curso no los modifica.
 - Cada publicación de versión, retiro, restauración, eliminación, revisión favorable, bloqueo y cambio de versión de un alumno queda en el registro de actividad.
 
-## Migraciones 0014, 0015 y 0016 — solo en entornos de prueba
+## Talleres: reprogramaciones, cortesías y grabaciones (migración 0017)
+
+- Una reprogramación nunca cambia en silencio un estado comercial: la inscripción sigue confirmada, con su lugar, y queda «pendiente de respuesta» hasta que la persona decide. Cada respuesta queda en `respuestas_reprogramacion` (una por inscripción y reprogramación) con las fechas anterior y nueva y el texto confirmado.
+- Las cortesías históricas no se modifican: alumno, taller, fecha, origen, motivo y estado están protegidos por disparador (`cortesia_historica`). No se crean nuevas.
+- Los accesos a grabaciones guardan las condiciones con que se otorgaron; cambiarlas después o dejar de vender la grabación no modifica accesos existentes. Al vencer, el acceso deja de valer, pero no se borra ningún archivo ni registro.
+- Nada de esto toca avances, evaluaciones, certificados ni versiones de cursos.
+
+## Migraciones 0014 a 0017 — solo en entornos de prueba
 
 **Ninguna se aplicó a una base real ni a producción** y no está autorizado hacerlo. Antes de una ejecución real se presentará: identificación exacta del entorno, respaldo verificable, plan de ejecución, impacto esperado, procedimiento de recuperación, pruebas posteriores y riesgos de reversión, y se pedirá autorización específica.
 
-Reversión: en orden inverso (0016, 0015, 0014), con `supabase/rollback/*_down.sql`. Cada script se niega (`reversion_imposible`) si ya existen datos que solo tienen sentido con esa migración (por ejemplo, complementos asociados, correcciones menores, incidencias o notificaciones). La reversión de 0015 y 0016 sobre datos previos se ensaya en `tests/db/reversion_0015_0016.sh` (datos idénticos, se reaplican, y se niega cuando perdería información). La 0015 completa las columnas nuevas de objetivos y requisitos de las versiones existentes con los valores vigentes al migrar; es el único ajuste a versiones ya publicadas.
+Reversión: en orden inverso (0017, 0016, 0015, 0014), con `supabase/rollback/*_down.sql`. Cada script se niega (`reversion_imposible`) si ya existen datos que solo tienen sentido con esa migración (por ejemplo, complementos asociados, correcciones menores, incidencias, notificaciones, respuestas a reprogramaciones o grabaciones que avanzaron de «prevista»). La reversión de 0015 y 0016 sobre datos previos se ensaya en `tests/db/reversion_0015_0016.sh` (datos idénticos, se reaplican, y se niega cuando perdería información). La 0015 completa las columnas nuevas de objetivos y requisitos de las versiones existentes con los valores vigentes al migrar; es el único ajuste a versiones ya publicadas.
 
 ## Migración y reconciliación (0014)
 

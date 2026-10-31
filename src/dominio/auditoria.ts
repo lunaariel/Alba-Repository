@@ -61,7 +61,14 @@ const ACCIONES: Record<string, string> = {
   taller_duplicado: 'Duplicó un taller como borrador',
   taller_reprogramado: 'Reprogramó un taller',
   taller_cancelado: 'Canceló un taller',
-  inscripcion_cortesia: 'Inscribió a una persona por cortesía',
+  inscripcion_cortesia: 'Inscribió a una persona por cortesía (registro histórico)',
+  reprogramacion_respondida: 'Una persona respondió a la reprogramación de un taller',
+  grabacion_estado: 'Cambió el estado de la grabación de un taller',
+  grabacion_revisada: 'Registró la revisión de una grabación',
+  grabacion_creado: 'Se previó la grabación de un taller',
+  grabacion_actualizado: 'Cambió la grabación o sus condiciones de acceso',
+  acceso_grabacion_creado: 'Se otorgó acceso a una grabación',
+  acceso_grabacion_actualizado: 'Cambió un acceso a una grabación',
   inscripcion_creado: 'Se registró una inscripción a un taller',
   inscripcion_actualizado: 'Cambió una inscripción a un taller',
   recordatorio_creado: 'Agregó un recordatorio a un taller',
@@ -78,7 +85,7 @@ const ACCIONES: Record<string, string> = {
 export const GRUPOS_ACTIVIDAD = {
   cursos: { texto: 'Cursos y temario', entidades: ['cursos', 'modulos', 'lecciones', 'recursos_leccion', 'versiones_curso'] },
   evaluaciones: { texto: 'Evaluaciones', entidades: ['evaluaciones', 'preguntas', 'opciones', 'revisiones_evaluacion'] },
-  talleres: { texto: 'Talleres', entidades: ['talleres', 'inscripciones_taller', 'recordatorios', 'reuniones', 'incidencias'] },
+  talleres: { texto: 'Talleres', entidades: ['talleres', 'inscripciones_taller', 'recordatorios', 'reuniones', 'incidencias', 'grabaciones_taller', 'accesos_grabacion'] },
   accesos: { texto: 'Accesos y roles', entidades: ['accesos_curso', 'roles_usuario'] },
   ventas: { texto: 'Ventas y cupones', entidades: ['ordenes', 'cupones'] },
   contenido: { texto: 'Contenido y correos', entidades: ['articulos', 'plantillas_correo'] },
@@ -99,16 +106,22 @@ const CAMPOS: Record<string, string> = {
   vigente_desde: 'Desde', vigente_hasta: 'Hasta', usos_maximos: 'Usos máximos', motivo: 'Motivo', retirada: 'Retirada', retirado: 'Retirado', enunciado: 'Pregunta',
   minutos_antes: 'Anticipación (min)', origen: 'Origen', asistio: 'Asistió', proveedor: 'Proveedor',
   numero: 'Versión', resumen: 'Qué cambió', versiones: 'Versiones', tipo_correccion: 'Tipo de corrección', descripcion: 'Descripción', duracion_minutos: 'Duración', ajustados: 'Intentos mejorados', beneficiados: 'Intentos que mejorarían',
+  respuesta: 'Respuesta', vence_en: 'Vence', revocado_en: 'Revocado', a_la_venta: 'A la venta',
+  acceso_incluido_dias: 'Días de acceso (inscripción)', acceso_incluido_sin_vencimiento: 'Sin vencimiento (inscripción)',
+  acceso_compra_dias: 'Días de acceso (compra)', acceso_compra_sin_vencimiento: 'Sin vencimiento (compra)',
+  inicia_antes: 'Fecha anterior', inicia_despues: 'Fecha nueva', accesos_otorgados: 'Accesos otorgados',
 };
 
 const ESTADOS: Record<string, string> = {
   borrador: 'Borrador', publicado: 'Publicado', archivado: 'Archivado', cancelado: 'Cancelado',
   finalizado: 'Finalizado', activo: 'Activo', revocado: 'Revocado',
+  prevista: 'Prevista', recibida: 'Original recibida', en_revision: 'En revisión', en_edicion: 'En edición', verificada: 'Verificada',
+  publicada: 'Publicada', no_publicable: 'No publicable', fallida: 'Fallida', faltante: 'Faltante', retirada: 'Retirada', no_corresponde: 'No corresponde',
 };
 
 // Campos que se registran pero no se muestran valor por valor (largos o técnicos).
 const SOLO_MENCION = new Set(['textos', 'cuerpo']);
-const OCULTOS = new Set(['perfil_id', 'curso_id', 'modulo_id', 'leccion_id', 'evaluacion_id', 'pregunta_id', 'ruta_almacenamiento', 'rol']);
+const OCULTOS = new Set(['perfil_id', 'curso_id', 'modulo_id', 'leccion_id', 'evaluacion_id', 'pregunta_id', 'ruta_almacenamiento', 'rol', 'grabacion_id']);
 
 const fechaHora = (iso: string) =>
   new Intl.DateTimeFormat('es-GT', {

@@ -52,6 +52,14 @@ begin
 end $$;
 SQL
 
+# Segunda alumna real (Auth), sin compras: para probar que nadie actúa en nombre de otra persona.
+CORREO2="alumna2.demo@albor.invalid"
+CLAVE2="clave-de-ejemplo-456"
+curl -sf -X POST "$API_URL/auth/v1/admin/users" \
+  -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H "Content-Type: application/json" \
+  -d "{\"email\":\"$CORREO2\",\"password\":\"$CLAVE2\",\"email_confirm\":true,
+       \"user_metadata\":{\"nombre_completo\":\"Ana Pérez (ejemplo)\",\"confirma_mayoria_edad\":true,\"zona_horaria\":\"America/Guatemala\"}}" >/dev/null
+
 # Administradora de ejemplo y algo de actividad hecha "por ella" (para el registro de actividad).
 ADMIN_CORREO="maestra.demo@albor.invalid"
 ADMIN_CLAVE="clave-admin-de-ejemplo-123"
@@ -82,6 +90,8 @@ PREGUNTA_C3=$(q "select p.id from public.preguntas p join public.evaluaciones e 
 cat > campus.env <<EOF
 CORREO=$CORREO
 CLAVE=$CLAVE
+CORREO2=$CORREO2
+CLAVE2=$CLAVE2
 ADMIN_CORREO=$ADMIN_CORREO
 ADMIN_CLAVE=$ADMIN_CLAVE
 LECCION=$LECCION

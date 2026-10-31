@@ -159,8 +159,44 @@ export async function cancelarInscripcionTaller(datos: FormData) {
   const r = z.object({ taller: uuid, entiendo: z.literal('si') }).safeParse({ taller: datos.get('taller'), entiendo: datos.get('entiendo') });
   if (!r.success) redirect('/campus/talleres?aviso=error');
   const { error } = await (await clienteSesion()).rpc('cancelar_mi_inscripcion', { p_taller: r.data.taller });
-  if (error) redirect('/campus/talleres?aviso=error');
+  if (error) redirect(`/campus/talleres?aviso=${['inscripcion_paga', 'fuera_de_plazo'].find((k) => error.message.startsWith(k)) ?? 'error'}`);
   revalidatePath('/campus/talleres');
   revalidatePath('/talleres', 'layout');
   redirect('/campus/talleres?aviso=cancelada');
+}
+
+const ERRORES_RESPUESTA = ['sin_respuesta_pendiente', 'taller_ya_empezo', 'inscripcion_paga', 'inscripcion_sin_pago', 'sin_inscripcion'] as const;
+
+/**
+ * Respuesta del alumno a una reprogramación. La base actúa solo sobre la inscripción de quien tiene la sesión:
+ * nadie puede responder por otra persona. Sin respuesta, la inscripción queda pendiente (nunca se acepta ni se cancela sola).
+ */
+export async function responderReprogramacion(datos: FormData) {
+  await exigirSesion('/campus/talleres');
+  const r = z.object({ taller: uuid, respuesta: z.enum(['aceptada', 'reembolso_solicitado', 'no_asiste']), entiendo: z.literal('si') })
+    .safeParse({ taller: datos.get('taller'), respuesta: datos.get('respuesta'), entiendo: datos.get('entiendo') });
+  if (!r.success) redirect('/campus/talleres?aviso=error');
+  const confirmacion = {
+    aceptada: 'Acepto la nueva fecha del taller.',
+    reembolso_solicitado: 'No acepto la nueva fecha y solicito el reembolso.',
+    no_asiste: 'No puedo asistir a la nueva fecha y libero mi lugar.',
+  }[r.data.respuesta];
+  const { error } = await (await clienteSesion()).rpc('responder_reprogramacion', { p_taller: r.data.taller, p_respuesta: r.data.respuesta, p_confirmacion: confirmacion });
+  if (error) {
+    const clave = ERRORES_RESPUESTA.find((k) => error.message.startsWith(k));
+    redirect(`/campus/talleres?aviso=${clave ?? 'error'}`);
+  }
+  revalidatePath('/campus/talleres');
+  revalidatePath('/talleres', 'layout');
+  redirect(`/campus/talleres?aviso=respuesta_${r.data.respuesta}`);
+}
+
+/** Marca como leídos los avisos propios (la base ignora los de otras personas). */
+export async function marcarAvisosLeidos(datos: FormData) {
+  await exigirSesion('/campus/talleres');
+  const ids = z.array(uuid).max(50).safeParse(datos.getAll('aviso'));
+  if (!ids.success || ids.data.length === 0) redirect('/campus/talleres');
+  await (await clienteSesion()).rpc('marcar_notificaciones_leidas', { p_ids: ids.data });
+  revalidatePath('/campus/talleres');
+  redirect('/campus/talleres');
 }

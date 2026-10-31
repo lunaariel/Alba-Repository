@@ -156,7 +156,15 @@ begin
   perform pruebas.afirmar(r = 'procesado', 'A paga el taller pago: ' || r);
   update public.talleres set cupo = 3 where id = '7a000000-0000-0000-0000-000000000001';
   o := public.crear_orden(B, 'taller', '7a000000-0000-0000-0000-000000000001');   -- reserva pendiente de B
-  perform public.inscribir_cortesia('7a000000-0000-0000-0000-000000000001', 'c5@prueba.test', 'Beca para la alumna C.');
+  -- Una cortesía histórica (creada antes de 0017): ya no hay vía ordinaria para crearlas.
+  begin
+    perform public.inscribir_cortesia('7a000000-0000-0000-0000-000000000001', 'c5@prueba.test', 'Beca para la alumna C.');
+    fallo := 'no falló';
+  exception when others then fallo := sqlerrm; end;
+  perform pruebas.afirmar(fallo = 'cortesia_no_disponible', 'No se crean cortesías nuevas, ni siquiera la admin: ' || fallo);
+  alter table public.inscripciones_taller disable trigger inscripciones_cortesias;
+  insert into public.inscripciones_taller (taller_id, perfil_id, origen, motivo) values ('7a000000-0000-0000-0000-000000000001', C, 'cortesia', 'Beca para la alumna C.');
+  alter table public.inscripciones_taller enable trigger inscripciones_cortesias;
   begin
     perform public.cancelar_taller('7a000000-0000-0000-0000-000000000001', 'corto');
     fallo := 'no falló';
@@ -242,24 +250,19 @@ begin
   -- 19. Registro de actividad.
   perform pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'taller_reprogramado' and entidad_id = g::text and actor_id = ADMIN)
                           and exists (select 1 from public.auditoria where accion = 'taller_duplicado' and actor_id = ADMIN)
-                          and exists (select 1 from public.auditoria where accion = 'inscripcion_cortesia' and actor_id = ADMIN)
                           and exists (select 1 from public.auditoria where accion = 'pago_requiere_reembolso' and entidad_id = o::text)
                           and exists (select 1 from public.auditoria where accion = 'inscripcion_creado' and entidad = 'inscripciones_taller'),
-    'Reprogramar, duplicar, cortesía, pago sin lugar e inscripciones quedan registrados');
+    'Reprogramar, duplicar, pago sin lugar e inscripciones quedan registrados');
   perform set_config('request.jwt.claim.sub', '', true);
 end $$;
 
--- 15. Enlaces: la alumna inscripta solo lo recibe desde N horas antes; tras cancelar, nadie.
+-- 15. Enlaces: la alumna confirmada lo recibe desde la inscripción (decisión del 31/10/2026); tras cancelar, nadie.
 set local role authenticated;
 set local request.jwt.claim.sub = 'aaaaaaaa-0000-0000-0000-000000000001';
-select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) is null, 'A 5 días del inicio, sin enlace (24 h antes por defecto)');
+select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) = 'https://reunion.test/nuevo', 'A 5 días del inicio, la inscripta confirmada ya recibe el enlace');
 select pruebas.afirmar((select count(*) from public.incidencias) = 0, 'La alumna no ve incidencias');
 select pruebas.afirmar((select count(*) from public.notificaciones where perfil_id <> 'aaaaaaaa-0000-0000-0000-000000000001') = 0, 'La alumna solo ve sus notificaciones');
 select pruebas.afirmar((select count(*) from public.talleres where slug = 'taller-prueba') = 1, 'Ve el taller archivado en el que estuvo inscripta');
-reset role;
-update public.talleres set enlace_visible_horas = 168 where slug = 'gratis';
-set local role authenticated;
-select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) = 'https://reunion.test/nuevo', 'Con 7 días de anticipación configurada, lo recibe');
 set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
 select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) is null, 'Quien canceló su inscripción no lo recibe');
 set local role anon;

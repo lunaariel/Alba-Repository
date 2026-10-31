@@ -26,6 +26,7 @@ function Fila({ t }: { t: TallerListado }) {
         </p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {t.estado === 'publicado' && t.sinEnlace && <EstadoChip estado="pendiente" texto="Sin enlace de videollamada" />}
+          {t.pendientesRespuesta > 0 && <EstadoChip estado="pendiente" texto={`${t.pendientesRespuesta} sin responder a la reprogramación`} />}
           {t.reembolsosPendientes > 0 && <EstadoChip estado="error" texto={`${t.reembolsosPendientes} ${t.reembolsosPendientes === 1 ? 'reembolso pendiente' : 'reembolsos pendientes'}`} />}
         </div>
       </div>
@@ -50,7 +51,10 @@ export default async function Talleres({ searchParams }: { searchParams: Promise
   const ahora = Date.now();
   const proximos = talleres.filter((t) => t.estado === 'publicado' && t.terminaEn.getTime() >= ahora);
   const borradores = talleres.filter((t) => t.estado === 'borrador');
-  const anteriores = talleres.filter((t) => !proximos.includes(t) && !borradores.includes(t)).reverse();
+  const resto = talleres.filter((t) => !proximos.includes(t) && !borradores.includes(t)).reverse();
+  const realizados = resto.filter((t) => t.estado === 'finalizado' || t.estado === 'publicado');
+  const cancelados = resto.filter((t) => t.estado === 'cancelado');
+  const archivados = resto.filter((t) => t.estado === 'archivado');
   const abiertas = incidencias.filter((i) => i.estado !== 'resuelta').length;
   return (
     <>
@@ -63,7 +67,9 @@ export default async function Talleres({ searchParams }: { searchParams: Promise
         <div className="flex min-w-0 flex-col gap-8">
           <Grupo titulo="Próximos" talleres={proximos} vacio="No hay talleres publicados próximos." />
           <Grupo titulo="Borradores" talleres={borradores} />
-          <Grupo titulo="Anteriores, cancelados y archivados" talleres={anteriores} />
+          <Grupo titulo="Realizados" talleres={realizados} />
+          <Grupo titulo="Cancelados" talleres={cancelados} />
+          <Grupo titulo="Archivados" talleres={archivados} />
         </div>
         <NuevoTaller />
       </div>

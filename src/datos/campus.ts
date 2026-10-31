@@ -203,30 +203,39 @@ export interface TallerInscripto {
   /** Estado de la inscripción: confirmada, cancelada, reembolso_pendiente, reembolsada. */
   inscripcion: string;
   origen: 'compra' | 'gratuita' | 'cortesia';
-  /** El servidor solo lo entrega a inscriptos confirmados y desde N horas antes (enlace_taller). */
+  /** Paga: tiene orden asociada. No hay cancelación ordinaria desde el campus. */
+  paga: boolean;
+  canceladaPor: 'alumno' | 'academia' | null;
+  /** Respuesta a la última reprogramación (null si no hubo). */
+  respuesta: 'pendiente' | 'aceptada' | 'reembolso_solicitado' | 'no_asiste' | null;
+  /** El servidor solo lo entrega a inscriptos confirmados (enlace_taller). */
   enlace: string | null;
-  enlaceDesde: Date;
   reprogramadoDesde: Date | null;
   motivoCancelacion: string | null;
+  grabacion: { estado: string; acceso: boolean; venceEn: Date | null } | null;
 }
 
+export interface AvisoCampus { id: string; tipo: string; tallerId: string | null; detalle: Record<string, unknown>; creadoEn: Date }
+
 type FilaInscripcion = {
-  estado: string; origen: TallerInscripto['origen']; creado_en: string;
+  estado: string; origen: TallerInscripto['origen']; creado_en: string; item_orden_id: string | null;
+  cancelada_por: TallerInscripto['canceladaPor']; respuesta_reprogramacion: TallerInscripto['respuesta'];
   talleres: {
     id: string; slug: string; titulo: string; inicia_en: string; termina_en: string; zona_horaria: string; estado: string;
-    enlace_visible_horas: number; motivo_cancelacion: string | null;
+    motivo_cancelacion: string | null;
   } | null;
 };
 
 export async function misTalleres(): Promise<TallerInscripto[]> {
   await exigirSesion('/campus/talleres');
   const supabase = await clienteSesion();
-  const [{ data, error }, { data: avisos }] = await Promise.all([
+  const [{ data, error }, { data: avisos }, { data: grabaciones }] = await Promise.all([
     supabase.from('inscripciones_taller')
-      .select('estado, origen, creado_en, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, enlace_visible_horas, motivo_cancelacion)')
+      .select('estado, origen, creado_en, item_orden_id, cancelada_por, respuesta_reprogramacion, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, motivo_cancelacion)')
       .in('estado', ['confirmada', 'reembolso_pendiente', 'reembolsada', 'cancelada'])
       .order('creado_en', { ascending: false }),
     supabase.from('notificaciones').select('taller_id, detalle, creado_en').eq('tipo', 'taller_reprogramado').order('creado_en', { ascending: false }),
+    supabase.rpc('mis_grabaciones'),
   ]);
   if (error) throw new Error(`No se pudieron leer sus talleres: ${error.message}`);
   // Una fila por taller: la inscripción más reciente (alguien puede cancelar y volver a inscribirse).
@@ -236,18 +245,31 @@ export async function misTalleres(): Promise<TallerInscripto[]> {
   for (const a of (avisos ?? []) as { taller_id: string; detalle: { inicia_antes?: string } }[]) {
     if (!reprogramado.has(a.taller_id) && a.detalle?.inicia_antes) reprogramado.set(a.taller_id, new Date(a.detalle.inicia_antes));
   }
+  const grab = new Map(((grabaciones ?? []) as { taller_id: string; estado: string; acceso: boolean; vence_en: string | null }[])
+    .map((g) => [g.taller_id, { estado: g.estado, acceso: g.acceso, venceEn: g.vence_en ? new Date(g.vence_en) : null }]));
   const enlaces = await Promise.all(filas.map(async (f) =>
     f.estado === 'confirmada' ? ((await supabase.rpc('enlace_taller', { p_taller: f.talleres!.id })).data as string | null) : null));
   return filas.map((f, i) => {
     const t = f.talleres!;
-    const inicio = new Date(t.inicia_en);
     return {
-      id: t.id, slug: t.slug, titulo: t.titulo, iniciaEn: inicio, terminaEn: new Date(t.termina_en), zonaHoraria: t.zona_horaria,
-      estado: t.estado, inscripcion: f.estado, origen: f.origen, enlace: enlaces[i] ?? null,
-      enlaceDesde: new Date(inicio.getTime() - t.enlace_visible_horas * 3600 * 1000),
-      reprogramadoDesde: reprogramado.get(t.id) ?? null, motivoCancelacion: t.motivo_cancelacion,
+      id: t.id, slug: t.slug, titulo: t.titulo, iniciaEn: new Date(t.inicia_en), terminaEn: new Date(t.termina_en), zonaHoraria: t.zona_horaria,
+      estado: t.estado, inscripcion: f.estado, origen: f.origen, paga: f.origen === 'compra' || f.item_orden_id !== null,
+      canceladaPor: f.cancelada_por, respuesta: f.respuesta_reprogramacion, enlace: enlaces[i] ?? null,
+      reprogramadoDesde: reprogramado.get(t.id) ?? null, motivoCancelacion: t.motivo_cancelacion, grabacion: grab.get(t.id) ?? null,
     };
   }).sort((a, b) => a.iniciaEn.getTime() - b.iniciaEn.getTime());
+}
+
+/** Avisos del campus sin leer. No hay proveedor de correo: estos avisos son el único canal por ahora. */
+export async function misAvisos(): Promise<AvisoCampus[]> {
+  await exigirSesion('/campus/talleres');
+  const { data } = await (await clienteSesion()).from('notificaciones')
+    .select('id, tipo, taller_id, detalle, creado_en')
+    .is('leida_en', null).neq('estado', 'descartada')
+    .in('tipo', ['taller_reprogramado', 'reprogramacion_pendiente', 'taller_cancelado', 'grabacion_disponible', 'recordatorio_taller'])
+    .order('creado_en', { ascending: false }).limit(20);
+  return ((data ?? []) as { id: string; tipo: string; taller_id: string | null; detalle: Record<string, unknown> | null; creado_en: string }[])
+    .map((n) => ({ id: n.id, tipo: n.tipo, tallerId: n.taller_id, detalle: n.detalle ?? {}, creadoEn: new Date(n.creado_en) }));
 }
 
 export interface Compra {

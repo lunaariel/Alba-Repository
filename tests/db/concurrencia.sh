@@ -75,3 +75,33 @@ else
   echo "FALLA      concurrencia de recordatorios: $envios envíos"
   exit 1
 fi
+
+# Reprogramación: dos respuestas simultáneas de la misma persona (aceptar y no asistir). Solo una cuenta.
+R='7a000000-0000-0000-0000-0000000000f2'
+A='aaaaaaaa-0000-0000-0000-000000000001'
+"${PSQL[@]}" -c "
+  insert into public.talleres (id, slug, titulo, descripcion, inicia_en, termina_en, cupo, precio_centavos)
+  values ('$R', 'reprog-concurrencia', 'Reprog', 'Prueba de concurrencia.', now() + interval '3 days', now() + interval '3 days 1 hour', 5, 0);
+  update public.talleres set estado = 'publicado' where id = '$R';
+  select set_config('request.jwt.claim.sub', '$A', false);
+  select public.inscribirme_gratis('$R');
+  select set_config('request.jwt.claim.sub', 'adadadad-0000-0000-0000-000000000003', false);
+  select public.reprogramar_taller('$R', now() + interval '6 days', now() + interval '6 days 1 hour', 'Motivo suficiente para la prueba.');" >/dev/null
+for resp in aceptada no_asiste; do
+  ( "${PSQL[@]}" -c "begin; select set_config('request.jwt.claim.sub', '$A', true);
+                     select public.responder_reprogramacion('$R', '$resp', 'Respuesta de prueba concurrente.'); select pg_sleep(0.8); commit;" >/dev/null 2>&1 \
+    && echo ok || echo rechazada ) > /tmp/albor_resp_$resp &
+done
+wait
+exitos=$(cat /tmp/albor_resp_aceptada /tmp/albor_resp_no_asiste | grep -c '^ok')
+respuestas=$("${PSQL[@]}" -c "select count(*) from public.respuestas_reprogramacion r join public.inscripciones_taller i on i.id = r.inscripcion_id where i.taller_id = '$R'")
+"${PSQL[@]}" -c "delete from public.respuestas_reprogramacion where inscripcion_id in (select id from public.inscripciones_taller where taller_id = '$R');
+                 delete from public.notificaciones where taller_id = '$R';
+                 delete from public.inscripciones_taller where taller_id = '$R'; delete from public.reprogramaciones_taller where taller_id = '$R';
+                 delete from public.talleres where id = '$R';" >/dev/null
+if [ "$exitos" = "1" ] && [ "$respuestas" = "1" ]; then
+  echo "ok         concurrencia: dos respuestas simultáneas a una reprogramación, se registra una sola"
+else
+  echo "FALLA      concurrencia de respuestas: éxitos=$exitos respuestas=$respuestas"
+  exit 1
+fi

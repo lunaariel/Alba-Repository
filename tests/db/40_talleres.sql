@@ -76,16 +76,12 @@ end $$;
 -- Como B (inscripta): ve el enlace de participante, nunca el de anfitrión.
 set local role authenticated;
 set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
-select pruebas.afirmar(public.enlace_taller('7a000000-0000-0000-0000-000000000001') is null, 'A 7 días del inicio, el enlace todavía no se muestra (24 h antes)');
-reset role;
-update public.talleres set enlace_visible_horas = 168 where id = '7a000000-0000-0000-0000-000000000001';
-set local role authenticated;
-set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
-select pruebas.afirmar(public.enlace_taller('7a000000-0000-0000-0000-000000000001') = 'https://reunion.test/participante', 'Con la visibilidad en 7 días, la inscripta ve el enlace');
+-- Decisión de la maestra (31/10/2026): el enlace se muestra desde la inscripción confirmada.
+select pruebas.afirmar(public.enlace_taller('7a000000-0000-0000-0000-000000000001') = 'https://reunion.test/participante', 'A 7 días del inicio, la inscripta confirmada ya ve el enlace');
 do $$ declare v text; begin
   begin
     select enlace_participante into v from public.reuniones;
-    raise exception 'NO_FALLÓ: la columna del enlace se leyó sin la regla de horario';
+    raise exception 'NO_FALLÓ: la columna del enlace se leyó sin pasar por enlace_taller()';
   exception when insufficient_privilege then null;
   end;
 end $$;

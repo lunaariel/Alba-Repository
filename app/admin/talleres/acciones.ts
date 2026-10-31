@@ -79,11 +79,9 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
     tipo: z.enum(['gratuito', 'pago'], { errorMap: () => ({ message: 'Indique si es gratuito o pago.' }) }),
     cupoTipo: z.enum(['limitado', 'ilimitado']),
     plataforma: z.enum(['zoom', 'meet']),
-    visible: z.coerce.number().int().min(0, 'Entre 0 y 168 horas.').max(168, 'Entre 0 y 168 horas.'),
   }).safeParse({
     id: datos.get('id'), titulo: datos.get('titulo'), slug: datos.get('slug'), descripcion: datos.get('descripcion') ?? '',
     zona: datos.get('zona'), tipo: datos.get('tipo'), cupoTipo: datos.get('cupoTipo'), plataforma: datos.get('plataforma'),
-    visible: datos.get('visible') ?? '24',
   });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
@@ -101,7 +99,7 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
   }
   const cambios: Record<string, unknown> = {
     titulo: d.titulo, slug: d.slug, descripcion: d.descripcion || null, zona_horaria: d.zona, precio_centavos: precio, cupo,
-    plataforma: d.plataforma, enlace_visible_horas: d.visible,
+    plataforma: d.plataforma,
   };
   if (datos.get('conFecha') === 'si') {
     const h = horario(datos);
@@ -219,18 +217,6 @@ export async function guardarRecordatorios(datos: FormData) {
   ir(ruta, { ok: 'recordatorios_guardados' });
 }
 
-export async function inscribirCortesia(datos: FormData) {
-  await exigirAdminAccion();
-  const r = z.object({ id: uuid, correo: z.string().trim().email().max(200), motivo: texto(500) })
-    .safeParse({ id: datos.get('id'), correo: datos.get('correo'), motivo: datos.get('motivo') ?? '' });
-  const ruta = `${base(limpio(datos.get('id')))}/participantes`;
-  if (!r.success) ir(ruta, { error: 'correo_invalido' });
-  const { error } = await (await clienteSesion()).rpc('inscribir_cortesia', { p_taller: r.data.id, p_correo: r.data.correo, p_motivo: r.data.motivo });
-  if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
-  refrescar(r.data.id);
-  ir(ruta, { ok: 'cortesia' });
-}
-
 export async function marcarAsistencia(datos: FormData) {
   await exigirAdminAccion();
   const r = z.object({ taller: uuid, inscripcion: uuid, asistio: z.enum(['si', 'no']) })
@@ -241,6 +227,63 @@ export async function marcarAsistencia(datos: FormData) {
   if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
   refrescar(r.data.taller);
   ir(ruta, { ok: 'asistencia' });
+}
+
+// ---------------------------------------------------------------- grabaciones (sin video real hasta la Fase 6)
+
+const ESTADOS_GRABACION = ['recibida', 'en_revision', 'en_edicion', 'verificada', 'publicada', 'no_publicable', 'fallida', 'faltante', 'retirada'] as const;
+
+export async function cambiarEstadoGrabacion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ taller: uuid, grabacion: uuid, estado: z.enum(ESTADOS_GRABACION), motivo: texto(500) })
+    .safeParse({ taller: datos.get('taller'), grabacion: datos.get('grabacion'), estado: datos.get('estado'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/talleres');
+  const ruta = `${base(r.data.taller)}/grabacion`;
+  if (r.data.estado === 'publicada' && String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== 'PUBLICAR') ir(ruta, { error: 'confirmacion' });
+  const { error } = await (await clienteSesion()).rpc('cambiar_estado_grabacion', { p_grabacion: r.data.grabacion, p_estado: r.data.estado, p_motivo: r.data.motivo || null });
+  if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
+  refrescar(r.data.taller);
+  ir(ruta, { ok: `grabacion_${r.data.estado}` });
+}
+
+export async function guardarRevisionGrabacion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ taller: uuid, grabacion: uuid }).safeParse({ taller: datos.get('taller'), grabacion: datos.get('grabacion') });
+  if (!r.success) redirect('/admin/talleres');
+  const ruta = `${base(r.data.taller)}/grabacion`;
+  const si = (n: string) => datos.get(n) === 'si';
+  const { error } = await (await clienteSesion()).rpc('guardar_revision_grabacion', {
+    p_grabacion: r.data.grabacion, p_sin_imagen: si('sin_imagen'), p_sin_voces: si('sin_voces'), p_sin_datos: si('sin_datos'), p_contenido: si('contenido'),
+  });
+  if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
+  refrescar(r.data.taller);
+  ir(ruta, { ok: 'revision_guardada' });
+}
+
+export async function guardarCondicionesGrabacion(datos: FormData) {
+  await exigirAdminAccion();
+  const dias = z.union([z.literal(''), z.coerce.number().int().min(1).max(3650)]);
+  const r = z.object({ taller: uuid, grabacion: uuid, incluido: z.enum(['dias', 'sin_vencimiento', 'sin_definir']), incluidoDias: dias,
+    compra: z.enum(['dias', 'sin_vencimiento', 'sin_definir']), compraDias: dias })
+    .safeParse({ taller: datos.get('taller'), grabacion: datos.get('grabacion'), incluido: datos.get('incluido'), incluidoDias: datos.get('incluidoDias') ?? '',
+      compra: datos.get('compra'), compraDias: datos.get('compraDias') ?? '' });
+  const ruta = `${base(limpio(datos.get('taller')))}/grabacion`;
+  if (!r.success) ir(ruta, { error: 'condiciones_invalidas' });
+  const d = r.data;
+  if ((d.incluido === 'dias' && d.incluidoDias === '') || (d.compra === 'dias' && d.compraDias === '')) ir(ruta, { error: 'condiciones_invalidas' });
+  const aLaVenta = datos.get('aLaVenta') === 'si';
+  const precioTexto = String(datos.get('precio') ?? '').trim();
+  const precio = precioTexto ? precioACentavos(precioTexto) : null;
+  if (precioTexto && (precio === null || precio <= 0)) ir(ruta, { error: 'condiciones_invalidas' });
+  const { error } = await (await clienteSesion()).rpc('guardar_condiciones_grabacion', {
+    p_grabacion: d.grabacion,
+    p_incluido_dias: d.incluido === 'dias' ? Number(d.incluidoDias) : null, p_incluido_sin_venc: d.incluido === 'sin_vencimiento',
+    p_compra_dias: d.compra === 'dias' ? Number(d.compraDias) : null, p_compra_sin_venc: d.compra === 'sin_vencimiento',
+    p_a_la_venta: aLaVenta, p_precio: precio,
+  });
+  if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
+  refrescar(d.taller);
+  ir(ruta, { ok: 'condiciones_guardadas' });
 }
 
 export async function anotarIncidencia(datos: FormData) {

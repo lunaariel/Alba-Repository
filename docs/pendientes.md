@@ -58,11 +58,37 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 | Venta de talleres pagos | Reserva de 15 minutos, pago simulado y pago tardío probados con el simulador | Pasarela real y política de reembolsos | Fase 6 |
 | Reembolsos (incidencias «requiere reembolso» y «reembolso pendiente») | Se registran y se ven en el panel; nunca figuran como hechos | Ejecutarlos con la pasarela y cerrar la incidencia con su confirmación | Fase 6 |
 | Envío real de correos (confirmación, recordatorios, reprogramación, cancelación) | Registrados como notificaciones pendientes; no se envía nada | Proveedor de correo transaccional | Fase 6 |
-| Zoom o Google Meet automáticos | Enlace cargado a mano (adaptador manual) | Elegir proveedor, cuenta y credenciales | Fase 6 (no autorizado todavía) |
+| Google Meet automático (proveedor oficial decidido por la maestra) | Enlace cargado a mano (adaptador manual) | Workspace (plan a decidir), cuenta y credenciales | Fase 6 (no autorizado todavía) |
 | Ejecución programada de `/api/procesos` | Ruta lista con clave; probada en CI llamándola dos veces | Configurar Vercel Cron o pg_cron al definir el hosting | Con el hosting |
 | Materiales descargables de talleres | No implementado (figuraba en el plan; no en el pedido de la entrega) | Tabla y subida privada, copia al duplicar | A definir |
 | Avisos en «Hoy» (talleres sin enlace a 48 h, incidencias) | La lista de talleres y la página de incidencias los muestran | Tablero «Hoy» | Entrega 4 |
 | Errores del proveedor de reuniones (reintentos) | Columnas de estado y error existen; sin proveedor no aplica | Reintentos y aviso urgente | Fase 6 |
+
+## Adaptación de talleres (devolución de la maestra, 31/10/2026 · migración 0017)
+
+Implementado y probado **solo en local y en CI**. Nada de lo siguiente está conectado a un servicio real.
+
+| Pendiente | Estado | Qué falta | Cuándo |
+| --- | --- | --- | --- |
+| Política de reembolsos (por anticipación) | Sin definir. Las inscripciones pagas no se cancelan desde el campus: se indica escribir a la academia. No se calculan montos ni se ejecutan reembolsos | Aprobación de la política por la titular; luego, cancelación paga con montos | Fase 6 |
+| Jurisdicción fiscal y facturación | Solo recibo comercial no fiscal | Definir jurisdicción y certificador | Fase 6 o posterior |
+| Pasarela de pago | Simulador | Elegir y conectar la pasarela | Fase 6 |
+| Cupones comerciales (invitaciones al 100 %) | El panel ya no crea cortesías; las históricas se conservan intactas | Cupones en el flujo de compra | Fase 6 |
+| Google Workspace: Business Standard o Business Plus | **No decidido ni contratado.** Comparar con fuentes oficiales: precio mensual y anual, moneda, facturación, licencias mínimas; creación automática de Meet, grabación, grabación automática, almacenamiento; recuperación por API, informes de asistencia, datos de participantes; permisos OAuth, restricciones y cuotas; operación por una sola administradora; dependencia de Calendar y Drive. Costos presentados aparte del resto de la infraestructura | Comparación y autorización; no se crean suscripciones ni pruebas con cargos | Antes de la Fase 6 |
+| Meet automático (creación de reuniones) | Enlace cargado a mano | Workspace + API de Meet | Fase 6 |
+| Grabación automática | Solo el modelo de estados | Configuración de grabación automática en el espacio de Meet | Fase 6 |
+| Recuperación de la grabación desde Drive | No implementada | Lectura con permisos restringidos de Drive/Meet | Fase 6 |
+| Edición y revisión de la grabación (solo la maestra y sus materiales) | Estados, revisión con cuatro comprobaciones e historial; el contenido real no existe | Proceso de edición fuera de Albor; nunca se publica el original | Fase 6 |
+| Alojamiento privado de videos | No contratado | Elegir proveedor (p. ej., Bunny Stream) y reproductor con vencimiento verificado en el servidor | Fase 6 |
+| Venta de grabaciones | Condiciones guardadas (precio, duración o sin vencimiento) y función de acceso por compra, solo para el servidor; venta no habilitada | Pasarela y alojamiento | Fase 6 |
+| Duraciones y precios de las grabaciones | No se inventaron: quedan «sin definir» hasta que la maestra los cargue | Valores de la maestra | Cuando ella los defina |
+| Asistencia automática | Se marca a mano | Informes de asistencia (requieren Business Plus o superior) y estrategia de identidad | Fase 6 |
+| Servicio de correo | Notificaciones registradas como pendientes; nada se envía | Proveedor transaccional | Fase 6 |
+| Notificaciones reales | Avisos dentro del campus (con «leído»); los correos no salen | Envío y estados de entrega reales | Fase 6 |
+| Textos legales de grabación y privacidad | No redactados | Aviso a participantes, consentimiento y condiciones de acceso | Antes de grabar talleres reales |
+| Migraciones 0014 a 0017 en producción | Probadas en local y CI con reversión. **No autorizadas** | Plan con entorno, respaldo, impacto, recuperación y autorización específica | Cuando la titular lo autorice |
+| MFA de la administradora | No implementado | Ver «Seguridad» | Antes del lanzamiento |
+| Integraciones reales y sus pruebas | Ninguna integración verificada contra un servicio real | Pruebas con cuentas reales | Fase 6 |
 
 ## Seguridad requerida por la titular (30/10/2026)
 
@@ -108,7 +134,7 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 ## Planes presentados y en espera de aprobación (30/10/2026)
 
 - Versionado académico: **implementado** (31/10/2026, migraciones 0014 y 0015), aprobado condicionalmente por la titular. Vista previa de borradores y duplicación de cursos: aprobadas, sin implementar, como bloque aparte.
-- Fase 5, entrega 3: talleres y eventos. **Implementada en local y en pruebas** (31/10/2026, migración 0016), a la espera de la aprobación de la titular. No se aplicó en ninguna base real.
+- Fase 5, entrega 3: talleres y eventos. **Implementada en local y en pruebas** (31/10/2026, migración 0016) y adaptada a la devolución de la maestra (migración 0017). No se aplicó en ninguna base real.
 - Defecto detectado al planificar: un pago aprobado después del vencimiento de la reserva, sin lugar disponible, deja la orden pendiente sin aviso. Su corrección está prevista en la entrega 3.
 
 ## Decisiones de negocio abiertas

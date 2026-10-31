@@ -4,8 +4,10 @@
 //    y sin sesión: la base y el almacenamiento deben quedar idénticos (huella antes y después de cada
 //    intento) y la respuesta debe ser un 404 controlado, sin datos internos. 3) Control positivo: la
 //    misma solicitud de «eliminar curso», reenviada por la admin, sí elimina el curso de prueba.
-// Además: llamadas directas a la API de datos y al almacenamiento con el token de la alumna, y el
-// cambio de versión manipulado (destino distinto, sin confirmar, sin sesión).
+// Además: llamadas directas a la API de datos y al almacenamiento con el token de la alumna, el
+// cambio de versión manipulado (destino distinto, sin confirmar, sin sesión), y las acciones del campus
+// sobre talleres reenviadas por una segunda alumna real (responder una reprogramación, marcar avisos)
+// y manipuladas (cancelar una inscripción paga).
 import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -13,7 +15,7 @@ import { chromium } from 'playwright';
 const BASE = process.env.BASE ?? 'http://localhost:3000';
 const SALIDA = process.env.SALIDA ?? 'capturas';
 const DB = process.env.DB ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
-const { CORREO, CLAVE, ADMIN_CORREO, ADMIN_CLAVE, PREGUNTA_C3, LECCION, API_URL, ANON_KEY } = process.env;
+const { CORREO, CLAVE, CORREO2, CLAVE2, ADMIN_CORREO, ADMIN_CLAVE, PREGUNTA_C3, LECCION, API_URL, ANON_KEY } = process.env;
 const C1 = 'c1000000-0000-0000-0000-000000000001';
 const C2 = 'c1000000-0000-0000-0000-000000000002';
 const C3 = 'c1000000-0000-0000-0000-000000000003';
@@ -42,7 +44,12 @@ const HUELLA = `select md5(string_agg(t, '|' order by t)) from (
   union all select 'au'||count(*) from public.auditoria
   union all select 'so'||count(*) from storage.objects
   union all select 't'||id||estado||titulo||inicia_en||coalesce(cupo,-1)||precio_centavos||enlace_visible_horas from public.talleres
-  union all select 'it'||id||estado||coalesce(asistio::text,'') from public.inscripciones_taller
+  union all select 'it'||id||estado||coalesce(asistio::text,'')||coalesce(respuesta_reprogramacion,'')||coalesce(cancelada_por,'') from public.inscripciones_taller
+  union all select 'rr'||id from public.respuestas_reprogramacion
+  union all select 'gr'||id||estado||sin_imagen_participantes||sin_voces_participantes||sin_datos_en_pantalla||contenido_verificado
+    ||coalesce(acceso_incluido_dias,-1)||acceso_incluido_sin_vencimiento||coalesce(acceso_compra_dias,-1)||a_la_venta||coalesce(precio_centavos,-1) from public.grabaciones_taller
+  union all select 'ag'||id||coalesce(vence_en::text,'')||coalesce(revocado_en::text,'') from public.accesos_grabacion
+  union all select 'nl'||id||coalesce(leida_en::text,'') from public.notificaciones
   union all select 'ru'||id||enlace_participante||estado from public.reuniones
   union all select 're'||id||minutos_antes from public.recordatorios
   union all select 'in'||id||estado||coalesce(nota,'') from public.incidencias
@@ -74,6 +81,28 @@ const REVISION = sql(`
 const TALLER = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, cupo, precio_centavos)
   values ('permisos-taller', '[Prueba] Taller de permisos', 'Taller para probar permisos.', now() + interval '6 days', now() + interval '6 days 1 hour', 5, 0) returning id`).split('\n').pop();
 sql(`update public.talleres set estado = 'publicado' where id = '${TALLER}'`);
+// Talleres ya realizados: uno con la grabación prevista y otro en revisión (para las acciones de grabación).
+const REALIZADO = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
+  values ('permisos-realizado', '[Prueba] Realizado', 'Taller realizado de prueba.', now() - interval '2 days', now() - interval '2 days' + interval '1 hour', 'finalizado') returning id`).split('\n').pop();
+const EN_REVISION = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
+  values ('permisos-revision', '[Prueba] En revisión', 'Taller realizado de prueba.', now() - interval '3 days', now() - interval '3 days' + interval '1 hour', 'finalizado') returning id`).split('\n').pop();
+sql(`select set_config('request.jwt.claim.sub', '${ADMIN_ID}', true);
+  select public.cambiar_estado_grabacion((select id from public.grabaciones_taller where taller_id = '${EN_REVISION}'), 'recibida', null);
+  select public.cambiar_estado_grabacion((select id from public.grabaciones_taller where taller_id = '${EN_REVISION}'), 'en_revision', null);`);
+// Campus: un taller gratuito reprogramado (la alumna 1 inscripta y pendiente; la alumna 2 no inscripta),
+// otro gratuito para capturar la cancelación, y uno pago con la alumna 1 inscripta.
+const ALUMNA_ID = sql(`select id from auth.users where email = '${CORREO}'`);
+const REPRO = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
+  values ('permisos-repro', '[Prueba] Reprogramado', 'Taller de prueba.', now() + interval '5 days', now() + interval '5 days 1 hour', 'publicado') returning id`).split('\n').pop();
+const LIBRE = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
+  values ('permisos-libre', '[Prueba] Gratuito', 'Taller de prueba.', now() + interval '7 days', now() + interval '7 days 1 hour', 'publicado') returning id`).split('\n').pop();
+const PAGO = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, precio_centavos, estado)
+  values ('permisos-pago', '[Prueba] Pago', 'Taller pago de prueba.', now() + interval '8 days', now() + interval '8 days 1 hour', 2000, 'publicado') returning id`).split('\n').pop();
+sql(`insert into public.inscripciones_taller (taller_id, perfil_id) values ('${REPRO}', '${ALUMNA_ID}'), ('${LIBRE}', '${ALUMNA_ID}')`);
+const ORDEN_PAGO = sql(`select public.crear_orden('${ALUMNA_ID}', 'taller', '${PAGO}')`);
+sql(`select public.procesar_evento_pago('simulado', 'perm-pago', 'pago', '{}', '${ORDEN_PAGO}', 'perm-pago', 'aprobado', 2000)`);
+sql(`select set_config('request.jwt.claim.sub', '${ADMIN_ID}', true);
+  select public.reprogramar_taller('${REPRO}', now() + interval '9 days', now() + interval '9 days 1 hour', 'Motivo suficiente para la prueba.')`);
 const INCIDENCIA = sql(`insert into public.incidencias (tipo, taller_id, detalle) values ('pago_sin_cupo', '${TALLER}', '{"motivo":"sin_cupo"}') returning id`).split('\n').pop();
 
 const navegador = await chromium.launch();
@@ -188,7 +217,16 @@ const pasos = [
   ['Duplicar un taller', async () => { await ir(`/admin/talleres/${TALLER}/estado`); await confirmar(p, p.getByRole('button', { name: 'Duplicar el taller' }), { textoConfirmar: 'Crear la copia' }); }],
   ['Cargar el enlace de una videollamada', async () => { await ir(`/admin/talleres/${TALLER}/videollamada`); await p.fill('#participante', 'https://intruso.example.invalid'); await p.getByRole('button', { name: 'Guardar enlace' }).click(); }],
   ['Cambiar recordatorios', async () => { await ir(`/admin/talleres/${TALLER}/videollamada`); await p.getByLabel('7 días antes').check(); await p.getByRole('button', { name: 'Guardar recordatorios' }).click(); }],
-  ['Inscribir por cortesía', async () => { await ir(`/admin/talleres/${TALLER}/participantes`); await p.fill('#correo', CORREO); await p.fill('#motivo-cortesia', 'Motivo suficiente para la prueba.'); await p.getByRole('button', { name: 'Inscribir' }).click(); }],
+  ['Cambiar el estado de una grabación', async () => { await ir(`/admin/talleres/${REALIZADO}/grabacion`); await confirmar(p, p.getByRole('button', { name: 'Marcar original recibida' })); }],
+  ['Registrar la revisión de una grabación', async () => {
+    await ir(`/admin/talleres/${EN_REVISION}/grabacion`);
+    for (const t of [/Sin imagen de participantes/, /Sin voces/, /Sin nombres/, /Contenido final verificado/]) await p.getByLabel(t).check();
+    await p.getByRole('button', { name: 'Guardar revisión' }).click();
+  }],
+  ['Guardar condiciones de una grabación', async () => {
+    await ir(`/admin/talleres/${REALIZADO}/grabacion`);
+    await p.getByLabel('Sin vencimiento', { exact: true }).check(); await p.getByRole('button', { name: 'Guardar condiciones' }).click();
+  }],
   ['Anotar una incidencia', async () => { await ir('/admin/talleres/incidencias'); await p.getByLabel('Nota interna').first().fill('Nota de prueba.'); await p.getByRole('button', { name: 'Guardar nota' }).first().click(); }],
   ['Crear un curso', async () => { await ir('/admin/cursos'); await p.fill('#titulo', 'Curso no autorizado'); await p.getByRole('button', { name: 'Crear curso' }).click(); }],
 ];
@@ -258,11 +296,17 @@ try {
       ['corregir_modulo_publicado', { p_modulo: '00000000-0000-0000-0000-000000000000', p_titulo: 'X', p_tipo: 'ortografia', p_motivo: 'Motivo suficiente.' }],
       ['cambiar_version', { p_perfil: '00000000-0000-0000-0000-000000000000', p_curso: C1, p_version_destino: V1_C3, p_confirmacion: 'Entiendo qué cambia' }],
       ['emitir_certificado', { p_perfil: '00000000-0000-0000-0000-000000000000', p_curso: C3 }],
+      ['inscribir_cortesia', { p_taller: TALLER, p_correo: CORREO, p_motivo: 'Motivo suficiente.' }],
+      ['cambiar_estado_grabacion', { p_grabacion: sql(`select id from public.grabaciones_taller where taller_id = '${REALIZADO}'`), p_estado: 'recibida', p_motivo: null }],
+      ['guardar_condiciones_grabacion', { p_grabacion: sql(`select id from public.grabaciones_taller where taller_id = '${REALIZADO}'`), p_incluido_dias: null, p_incluido_sin_venc: true, p_compra_dias: null, p_compra_sin_venc: false, p_a_la_venta: false, p_precio: null }],
+      ['otorgar_acceso_compra', { p_grabacion: sql(`select id from public.grabaciones_taller where taller_id = '${REALIZADO}'`), p_perfil: ALUMNA_ID, p_item_orden: null }],
     ]) rpc[f] = (await api(`/rest/v1/rpc/${f}`, { method: 'POST', body: JSON.stringify(cuerpo) })).status;
     comprobar(Object.values(rpc).every((s) => s >= 400), `API: funciones administrativas rechazadas para la alumna ${JSON.stringify(rpc)}`);
     const subida = await fetch(`${API_URL}/storage/v1/object/materiales/cursos/${C1}/intruso.pdf`, {
       method: 'POST', headers: { apikey: ANON_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' }, body: '%PDF-1.4 intruso',
     });
+    const grabaciones = await api('/rest/v1/grabaciones_taller?select=id,referencia_video');
+    comprobar(grabaciones.ok && (await grabaciones.json()).length === 0, `API: la alumna no lee grabaciones ni sus referencias (${grabaciones.status})`);
     comprobar(subida.status >= 400, `almacenamiento: la alumna no sube archivos al bucket privado (${subida.status})`);
     const borrado = await fetch(`${API_URL}/storage/v1/object/materiales`, {
       method: 'DELETE', headers: { apikey: ANON_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ prefixes: [`cursos/${C1}/complemento.pdf`] }),
@@ -308,6 +352,65 @@ try {
     comprobar(sql(`select v.numero from public.accesos_curso a join public.versiones_curso v on v.id = a.version_id join auth.users u on u.id = a.perfil_id
                    where u.email = '${CORREO}' and a.curso_id = '${C1}'`) === '1', 'la alumna sigue en la versión 1 de c1');
   }
+  // Talleres en el campus: nadie responde ni marca avisos por otra persona; una paga no se cancela.
+  const alumna2 = await sesion(CORREO2, CLAVE2);
+  const pa1 = alumna.p;
+  await pa1.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
+  const filaRepro = pa1.locator('li', { hasText: '[Prueba] Reprogramado' });
+  const respuesta = await capturar(pa1, async () => {
+    await filaRepro.getByText('Acepto la nueva fecha', { exact: true }).first().click();
+    await filaRepro.getByLabel(/Confirmo que asistiré/).check();
+    await filaRepro.getByRole('button', { name: 'Acepto la nueva fecha' }).click();
+  });
+  comprobar(Boolean(respuesta), 'se capturó la solicitud real de la alumna para responder la reprogramación');
+  const estadoRepro = () => sql(`select respuesta_reprogramacion || ':' || estado from public.inscripciones_taller where taller_id = '${REPRO}' and perfil_id = '${ALUMNA_ID}'`);
+  if (respuesta) {
+    for (const [quien, contexto, cuerpo] of [
+      ['segunda alumna (real)', alumna2.contexto, respuesta.cuerpo],
+      ['visitante', anonimo, respuesta.cuerpo],
+      ['la propia alumna sin la casilla', alumna.contexto, Buffer.from(respuesta.cuerpo.toString('utf8').replace(/--[^\r\n]*\r\nContent-Disposition: form-data; name="[^"]*entiendo"\r\n\r\nsi\r\n/, ''))],
+      ['la propia alumna con una respuesta inventada', alumna.contexto, Buffer.from(respuesta.cuerpo.toString('utf8').replace(/\r\n\r\naceptada\r\n/, '\r\n\r\nconfirmada\r\n'))],
+      ['la propia alumna pidiendo reembolso de un taller gratuito', alumna.contexto, Buffer.from(respuesta.cuerpo.toString('utf8').replace(/\r\n\r\naceptada\r\n/, '\r\n\r\nreembolso_solicitado\r\n'))],
+    ]) {
+      const antes = huella();
+      await reenviar(contexto, respuesta, respuesta.ruta, cuerpo);
+      comprobar(antes === huella() && estadoRepro() === 'pendiente:confirmada', `responder la reprogramación (${quien}): no cambia nada; la alumna sigue pendiente`);
+    }
+    await reenviar(alumna.contexto, respuesta);
+    comprobar(estadoRepro() === 'aceptada:confirmada' && sql(`select count(*) from public.respuestas_reprogramacion r join public.inscripciones_taller i on i.id = r.inscripcion_id where i.taller_id = '${REPRO}'`) === '1',
+      'control positivo: la solicitud de la propia alumna registra su aceptación (una sola vez)');
+    const antes = huella();
+    await reenviar(alumna.contexto, respuesta);
+    comprobar(antes === huella(), 'responder dos veces no registra una segunda decisión');
+  }
+  // Avisos: la segunda alumna reenvía «marcar como leídos» con los avisos de la primera.
+  await pa1.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
+  const sinLeer = () => sql(`select count(*) from public.notificaciones where perfil_id = '${ALUMNA_ID}' and leida_en is null and estado <> 'descartada'`);
+  if ((await pa1.getByRole('button', { name: 'Marcar como leídos' }).count()) > 0) {
+    const marcar = await capturar(pa1, () => pa1.getByRole('button', { name: 'Marcar como leídos' }).click());
+    const n = sinLeer();
+    if (marcar) await reenviar(alumna2.contexto, marcar);
+    comprobar(Boolean(marcar) && sinLeer() === n && n !== '0', `marcar avisos ajenos como leídos (segunda alumna): sin cambios (${n} sin leer)`);
+  } else comprobar(false, 'la alumna debería tener avisos sin leer');
+  // Cancelación: se captura la de un taller gratuito y se cambia por el taller pago.
+  const filaLibre = pa1.locator('li', { hasText: '[Prueba] Gratuito' });
+  const cancelar = await capturar(pa1, async () => {
+    await filaLibre.getByText('Cancelar mi inscripción').click();
+    await filaLibre.getByLabel(/Entiendo que libero mi lugar/).check();
+    await filaLibre.getByRole('button', { name: 'Cancelar inscripción' }).click();
+  });
+  comprobar(Boolean(cancelar), 'se capturó la solicitud de cancelación de un taller gratuito');
+  comprobar((await pa1.locator('li', { hasText: '[Prueba] Pago' }).getByText('Cancelar mi inscripción').count()) === 0, 'el taller pago no ofrece cancelar');
+  if (cancelar) {
+    const antes = huella();
+    await reenviar(alumna.contexto, cancelar, cancelar.ruta, Buffer.from(cancelar.cuerpo.toString('utf8').replace(LIBRE, PAGO)));
+    comprobar(antes === huella() && sql(`select estado from public.inscripciones_taller where taller_id = '${PAGO}' and perfil_id = '${ALUMNA_ID}'`) === 'confirmada'
+      && sql(`select estado from public.ordenes where id = '${ORDEN_PAGO}'`) === 'aprobada', 'cancelar un taller pago con una solicitud manipulada: no cambia nada (ni orden ni acceso)');
+    const antes2 = huella();
+    await reenviar(alumna2.contexto, cancelar);
+    comprobar(antes2 === huella(), 'la segunda alumna no cancela la inscripción de la primera');
+  }
+
   const ajena = await alumna.contexto.request.get(`${BASE}/campus/cursos/curso-que-no-compro/version`);
   comprobar(ajena.status() === 404, `página de cambio de un curso sin acceso: ${ajena.status()}`);
 } catch (e) {

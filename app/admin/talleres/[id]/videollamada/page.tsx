@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { tallerAdmin } from '@/datos/admin-talleres';
-import { formatearHorario } from '@/dominio/talleres';
 import { OPCIONES_RECORDATORIO, textoRecordatorio } from '@/dominio/talleres-admin';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { EstadoChip } from '@/ui/admin/estructura';
@@ -17,7 +16,6 @@ export default async function Videollamada({ params, searchParams }: Props) {
   const [{ id }, aviso] = await Promise.all([params, searchParams]);
   const t = await tallerAdmin(id);
   if (!t) notFound();
-  const desde = new Date(t.iniciaEn.getTime() - t.enlaceVisibleHoras * 3600 * 1000);
   return (
     <>
       <AvisoAccion ok={aviso.ok} error={aviso.error} textos={TEXTOS_TALLER} />
@@ -31,7 +29,7 @@ export default async function Videollamada({ params, searchParams }: Props) {
             {t.reunion?.estado === 'activa' ? <EstadoChip estado="publicado" texto="Enlace cargado" /> : <EstadoChip estado="pendiente" texto="Sin enlace" />}
           </div>
           <p className="m-0 mt-3 text-[15px]">
-            Los inscriptos confirmados lo ven desde <b>{formatearHorario(desde, t.zonaHoraria)}</b> ({t.enlaceVisibleHoras} horas antes; se cambia en Datos y horario).
+            Lo ven solo las personas con inscripción confirmada, desde que se confirma. No lo ven visitantes, reservas sin pagar ni inscripciones canceladas.
             El enlace de anfitrión no lo ve nadie más que usted.
           </p>
           <form action={guardarReunion} className="mt-4 flex flex-col gap-3">
@@ -47,7 +45,7 @@ export default async function Videollamada({ params, searchParams }: Props) {
         <section aria-labelledby="recordatorios" className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6">
           <h2 id="recordatorios" className="m-0 text-[22px]">Recordatorios</h2>
           <p className="m-0 mt-1 text-[15px] text-tinta-suave">
-            Se calculan siempre con la fecha vigente: si reprograma, los de la fecha anterior no se usan y cada recordatorio se registra una sola vez por persona.
+            Se calculan siempre con la fecha vigente: si reprograma, los de la fecha anterior no se usan y cada recordatorio se registra una sola vez por persona. Quien no respondió una reprogramación recibe un aviso para responder, nunca uno que dé por confirmada la fecha nueva. Puede desmarcarlos todos.
           </p>
           <p className="m-0 mt-3 rounded-xl bg-arena px-4 py-3 text-[15px]">
             Todavía no hay servicio de correo: cada recordatorio queda <b>registrado como pendiente</b> y no figura como enviado. El envío real llega en la Fase 6.
@@ -67,6 +65,7 @@ export default async function Videollamada({ params, searchParams }: Props) {
             {t.recordatorios.some((m) => !OPCIONES_RECORDATORIO.some((o) => o.minutos === m)) && (
               <p className="m-0 text-[14px] text-tinta-suave">También configurado: {t.recordatorios.filter((m) => !OPCIONES_RECORDATORIO.some((o) => o.minutos === m)).map(textoRecordatorio).join(', ')}.</p>
             )}
+            {t.recordatorios.length === 0 && <p className="m-0 text-[14px] font-bold">Sin recordatorios: no se registrará ningún aviso previo.</p>}
             <div><button type="submit" className="min-h-[46px] rounded-md border-2 border-oliva-profundo bg-blanco-calido px-5 font-bold text-oliva-profundo hover:bg-arena">Guardar recordatorios</button></div>
           </form>
         </section>

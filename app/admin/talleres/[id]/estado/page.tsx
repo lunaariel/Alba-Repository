@@ -113,7 +113,7 @@ export default async function EstadoTaller({ params, searchParams }: Props) {
             <h2 id="reprogramar" className="m-0 text-[22px]">Reprogramar</h2>
             <p className="m-0 mt-1 text-[15px] text-tinta-suave">
               {n === 0 ? 'Todavía no hay inscriptos.' : `${n === 1 ? '1 persona inscripta conserva' : `Las ${n} personas inscriptas conservan`} su lugar y sus pagos.`}
-              {' '}Se registra el motivo y queda pendiente el aviso a cada persona; los recordatorios se recalculan con la fecha nueva.
+              {' '}Cada persona queda «pendiente de respuesta» hasta que acepte la nueva fecha o pida el reembolso (o, si es gratuita, avise que no puede asistir); el silencio no se toma como aceptación y su lugar se mantiene. Se registra el motivo y los recordatorios se recalculan con la fecha nueva.
             </p>
             <div className="mt-4">
               <ConfirmarAccion accion={reprogramarTaller} campos={{ id: t.id }} textoBoton="Reprogramar" titulo="¿Reprogramar el taller?" palabra="REPROGRAMAR">
