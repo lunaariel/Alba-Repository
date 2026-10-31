@@ -40,8 +40,15 @@ async function confirmar(p, boton, { palabra, textoConfirmar } = {}) {
   await p.waitForLoadState('networkidle');
 }
 // Espera a que aparezca un aviso con ese texto (hasta 15 s). Devuelve si apareció.
-const ve = (p, re) => p.locator('[role=status], [role=alert]').filter({ hasText: re }).first()
-  .waitFor({ timeout: 15000 }).then(() => true, () => false);
+const ve = async (p, re) => {
+  const ok = await p.locator('[role=status], [role=alert]').filter({ hasText: re }).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
+  if (!ok) {
+    const vistos = await p.locator('[role=status], [role=alert]').allTextContents();
+    console.log(`      (en ${p.url()} se ve: ${JSON.stringify(vistos)})`);
+    await p.screenshot({ path: `${SALIDA}/recorrido-cursos-sin-aviso-${Date.now()}.png`, fullPage: true });
+  }
+  return ok;
+};
 
 const contexto = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
 const errores = [];
