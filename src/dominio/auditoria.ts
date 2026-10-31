@@ -18,7 +18,12 @@ const ACCIONES: Record<string, string> = {
   curso_actualizado: 'Cambió el precio o el estado de un curso',
   curso_eliminado: 'Eliminó un curso',
   modulo_eliminado: 'Eliminó un módulo',
+  modulo_actualizado: 'Cambió un módulo',
+  leccion_creado: 'Agregó una lección',
+  leccion_actualizado: 'Cambió una lección',
   leccion_eliminado: 'Eliminó una lección',
+  pregunta_creado: 'Agregó una pregunta',
+  pregunta_actualizado: 'Cambió una pregunta',
   material_creado: 'Agregó un material PDF',
   material_eliminado: 'Quitó un material PDF',
   evaluacion_actualizado: 'Cambió los criterios de una evaluación',
@@ -69,7 +74,7 @@ const CAMPOS: Record<string, string> = {
   puntaje_minimo: 'Puntaje mínimo', intentos_permitidos: 'Intentos permitidos', es_correcta: 'Correcta',
   nombre: 'Nombre', correo_contacto: 'Correo de contacto', whatsapp: 'WhatsApp', textos: 'Textos del sitio',
   asunto: 'Asunto', cuerpo: 'Texto', codigo: 'Código', tipo: 'Tipo', valor: 'Valor', activo: 'Activo',
-  vigente_desde: 'Desde', vigente_hasta: 'Hasta', usos_maximos: 'Usos máximos', motivo: 'Motivo',
+  vigente_desde: 'Desde', vigente_hasta: 'Hasta', usos_maximos: 'Usos máximos', motivo: 'Motivo', retirada: 'Retirada', retirado: 'Retirado', enunciado: 'Pregunta',
 };
 
 const ESTADOS: Record<string, string> = {
@@ -106,14 +111,14 @@ export function describirActividad(f: FilaActividad): DescripcionActividad {
   const antes = f.antes ?? {};
   const despues = f.despues ?? {};
   const titulo = ACCIONES[f.accion] ?? `Acción: ${f.accion.replace(/_/g, ' ')}`;
-  const nombre = (despues.titulo ?? antes.titulo ?? despues.codigo ?? antes.codigo ?? despues.correo ?? null) as string | null;
+  const nombre = (despues.titulo ?? antes.titulo ?? despues.enunciado ?? antes.enunciado ?? despues.codigo ?? antes.codigo ?? despues.correo ?? null) as string | null;
 
   const claves = [...new Set([...Object.keys(antes), ...Object.keys(despues)])].filter((k) => !OCULTOS.has(k));
   const esAlta = f.accion.endsWith('_creado') || f.antes === null;
   const esBaja = f.accion.endsWith('_eliminado');
   const cambios: DescripcionActividad['cambios'] = [];
   for (const k of claves) {
-    if (k === 'titulo' && !(k in antes && k in despues && antes[k] !== despues[k])) continue; // ya figura como nombre
+    if ((k === 'titulo' || k === 'enunciado') && !(k in antes && k in despues && antes[k] !== despues[k])) continue; // ya figura como nombre
     const a = k in antes ? antes[k] : undefined;
     const d = k in despues ? despues[k] : undefined;
     if (!esAlta && !esBaja && JSON.stringify(a) === JSON.stringify(d)) continue;

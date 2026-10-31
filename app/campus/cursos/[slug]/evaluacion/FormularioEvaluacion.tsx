@@ -15,6 +15,12 @@ function Formulario({ curso, preguntas, alTerminar }: { curso: string; preguntas
       <div role="status" className={`rounded-2xl p-7 ${estado.aprobado ? 'bg-salvia-claro' : 'bg-arena'}`}>
         <p className="m-0 font-display text-[clamp(28px,3vw,38px)]">{estado.puntaje} puntos</p>
         <p className="m-0 mt-2 text-lg">{estado.mensaje}</p>
+        {estado.temasAReforzar.length > 0 && (
+          <div className="mt-4 rounded-xl bg-blanco-calido/70 px-4 py-3">
+            <p className="m-0 font-bold">{estado.aprobado ? 'Para seguir profundizando, repase:' : 'Le sugerimos repasar estos temas antes de volver a intentarlo:'}</p>
+            <ul className="m-0 mt-1.5 list-disc pl-5">{estado.temasAReforzar.map((t) => <li key={t}>{t}</li>)}</ul>
+          </div>
+        )}
         {!estado.aprobado && quedan !== null && (
           <p className="m-0 mt-2 text-tinta-suave">{quedan === 0 ? 'No le quedan intentos.' : quedan === 1 ? 'Le queda 1 intento.' : `Le quedan ${quedan} intentos.`}</p>
         )}

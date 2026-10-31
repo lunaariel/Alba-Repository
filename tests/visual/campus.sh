@@ -74,17 +74,22 @@ commit;
 SQL
 
 q() { psql "$DB" -tA -c "$1"; }
+echo "buckets de Storage: $(q "select string_agg(id, ',') from storage.buckets")"
 LECCION=$(q "select l.id from public.lecciones l join public.modulos m on m.id = l.modulo_id where m.curso_id = 'c1000000-0000-0000-0000-000000000001' order by m.orden, l.orden offset 1 limit 1")
 ORDEN=$(q "select id from public.ordenes where estado = 'aprobada' limit 1")
 CERT=$(q "select id from public.certificados limit 1")
 CODIGO=$(q "select codigo_verificacion from public.certificados limit 1")
+PREGUNTA=$(q "select p.id from public.preguntas p join public.evaluaciones e on e.id = p.evaluacion_id where e.curso_id = 'c1000000-0000-0000-0000-000000000002' limit 1")
 cat > campus.env <<EOF
 CORREO=$CORREO
 CLAVE=$CLAVE
 ADMIN_CORREO=$ADMIN_CORREO
 ADMIN_CLAVE=$ADMIN_CLAVE
 LECCION=$LECCION
+PREGUNTA=$PREGUNTA
+CODIGO=$CODIGO
 RUTAS_CAMPUS="/campus /campus/cursos/demo-montessori-en-casa /campus/cursos/demo-montessori-en-casa/lecciones/$LECCION /campus/cursos/demo-autonomia-0-3 /campus/cursos/demo-ambiente-3-6/evaluacion /campus/talleres /campus/compras /campus/compras/$ORDEN /campus/cuenta"
+RUTAS_ADMIN="/admin /admin/cursos /admin/cursos/c1000000-0000-0000-0000-000000000001 /admin/cursos/c1000000-0000-0000-0000-000000000001/temario /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/$LECCION /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/$PREGUNTA /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion /admin/configuracion/actividad"
 RUTAS_VERIFICAR="/verificar /verificar/$CODIGO /verificar/NOEXISTE0000"
 CERTIFICADO=/campus/certificados/$CERT
 EOF

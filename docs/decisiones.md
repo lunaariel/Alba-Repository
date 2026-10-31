@@ -35,3 +35,9 @@ Registro breve de decisiones técnicas. La fuente completa es el documento «Alb
 | 2026-10-30 | Solo se registran columnas que importan (precio, fechas, cupo, estado, respuestas correctas, roles, configuración) | Un registro legible, sin ruido por cada edición de texto |
 | 2026-10-30 | Los roles no se asignan desde el panel, solo con `scripts/asignar-admin.sql` | Una sesión robada de la admin no puede crear otra admin |
 | 2026-10-30 | Los cambios de esquema de cada sección llegan con su entrega (0013 en adelante), no todos en 0012 | Cada entrega se revisa con sus propios cambios |
+| 2026-10-31 | Reglas de preservación del historial académico (`docs/preservacion-academica.md`): lo que tiene historial se retira, no se borra; lo retirado deja de contar hacia adelante | Editar un curso nunca altera avances, intentos, puntajes ni certificados ya obtenidos |
+| 2026-10-31 | Lo retirado se oculta con RLS (sitio y campus), no en cada pantalla | Ninguna consulta nueva puede mostrar por error contenido retirado |
+| 2026-10-31 | Las preguntas se guardan con sus opciones en una sola función (`guardar_pregunta`) | Nunca queda a medias una pregunta sin respuesta correcta |
+| 2026-10-31 | La admin lee `es_correcta` y `video_id` por el servidor, después de `exigirAdmin()` | Esas columnas siguen sin ser legibles desde ningún navegador |
+| 2026-10-31 | PDF subidos directo al almacenamiento con URL firmada; el servidor verifica tamaño y firma `%PDF-` antes de registrarlos | Archivos de hasta 25 MB sin pasar por el servidor de la aplicación (límite de Vercel 4,5 MB) |
+| 2026-10-31 | Avisos tras una acción viajan como códigos (`?ok=retirado`), nunca como texto | Nadie puede hacer que el panel muestre un mensaje inventado con un enlace |

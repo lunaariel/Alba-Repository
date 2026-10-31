@@ -90,8 +90,10 @@ jobs:
           echo "--- recorrido del campus" | tee -a capturas/informe.txt
           node scripts/recorrido-campus.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- panel" | tee -a capturas/informe.txt
-          CORREO="$ADMIN_CORREO" CLAVE="$ADMIN_CLAVE" npm run -s capturas -- /admin /admin/cursos /admin/configuracion /admin/configuracion/actividad 2>&1 | tee -a capturas/informe.txt || fallo=1
+          CORREO="$ADMIN_CORREO" CLAVE="$ADMIN_CLAVE" npm run -s capturas -- $RUTAS_ADMIN 2>&1 | tee -a capturas/informe.txt || fallo=1
           node scripts/recorrido-admin.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- cursos en el panel" | tee -a capturas/informe.txt
+          node scripts/recorrido-cursos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           exit $fallo
       - name: Señalar problemas de capturas
         if: failure()

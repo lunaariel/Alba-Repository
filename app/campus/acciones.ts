@@ -33,7 +33,7 @@ export async function marcarLeccion(datos: FormData) {
 }
 
 export type ResultadoEvaluacion =
-  | { puntaje: number; aprobado: boolean; mensaje: string; intentosRestantes: number | null }
+  | { puntaje: number; aprobado: boolean; mensaje: string; intentosRestantes: number | null; temasAReforzar: string[] }
   | { error: string }
   | undefined;
 
@@ -61,8 +61,11 @@ export async function rendirEvaluacion(_: ResultadoEvaluacion, datos: FormData):
   }
   // Sin revalidatePath: el campus se arma en cada solicitud, y refrescar esta página
   // reemplazaría el resultado que el alumno está leyendo.
-  const d = data as { puntaje: number; aprobado: boolean; mensaje: string; intentos_restantes: number | null };
-  return { puntaje: d.puntaje, aprobado: d.aprobado, mensaje: d.mensaje, intentosRestantes: d.intentos_restantes };
+  const d = data as { puntaje: number; aprobado: boolean; mensaje: string; intentos_restantes: number | null; temas_a_reforzar?: string[] };
+  return {
+    puntaje: d.puntaje, aprobado: d.aprobado, mensaje: d.mensaje, intentosRestantes: d.intentos_restantes,
+    temasAReforzar: Array.isArray(d.temas_a_reforzar) ? d.temas_a_reforzar.filter((t) => typeof t === 'string').slice(0, 10) : [],
+  };
 }
 
 /** Emite el certificado (o devuelve el existente). La base valida las tres condiciones. */

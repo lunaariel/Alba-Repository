@@ -30,6 +30,25 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 | Acciones de servidor del panel | `exigirAdminAccion()` lista; todavía no hay acciones | Probar cada acción con una alumna (debe ser rechazada) | 2 a 6 |
 | Nombre de la persona en "Asignó el rol de administración" | El registro guarda el id, no lo muestra | Mostrar el nombre en la ficha del registro | 4 |
 
+## Fase 5 · entrega 2 (cursos y evaluaciones)
+
+| Pendiente | Estado | Qué falta | Cuándo |
+| --- | --- | --- | --- |
+| Vista previa del curso "como alumno" desde el panel | No implementado (el plan lo incluía) | Página de vista previa para borradores; hoy se ve el curso publicado en el sitio | Entrega 4 o antes del lanzamiento |
+| Duplicar un curso | No implementado (no figuraba en el pedido de esta entrega) | Copiar curso, temario y evaluación como borrador, con copia de los PDF | A definir |
+| Subir videos a Bunny desde el panel | Se pega el id del video subido a Bunny | Subida directa con la API de Bunny | Fase 6 |
+| Pestaña "Alumnos del curso" | No implementada; el editor muestra cuántos alumnos y certificados hay | Lista con avance por alumno | Entrega 4 |
+| Bucket `materiales` en el Supabase real | La migración lo crea si existe el esquema de Storage; la subida se probó en el Supabase local de CI | Confirmar en el proyecto real | Fase 7 |
+| Mover una lección a otro módulo | No implementado; se reordena dentro del módulo | Selector de módulo en la lección | A definir |
+
+## Seguridad requerida por la titular (30/10/2026)
+
+| Requisito | Estado | Qué falta | Cuándo |
+| --- | --- | --- | --- |
+| Trazabilidad completa de roles: fecha, cuenta afectada, rol anterior, rol nuevo y responsable (persona o servicio) | Parcial: el disparador registra alta y baja del rol admin con fecha, cuenta y autor; si lo ejecuta un script, el autor figura como "Sistema" | Exigir que el script identifique a la persona que lo ejecuta y rechazar cambios de rol sin responsable identificado | Antes del lanzamiento (Fase 7), o antes si se necesita una segunda cuenta admin |
+| Autenticación multifactor (MFA) para la administradora | No implementado | Activar MFA en Supabase Auth (TOTP) y exigir nivel `aal2` en `exigirAdmin()` | Requisito previo al lanzamiento comercial |
+| Nueva verificación de identidad para operaciones muy sensibles (revocar certificados, eliminar cuentas, reembolsos, cambios de rol) | En evaluación | Definir la lista y pedir una nueva verificación (contraseña o MFA) si la sesión tiene más de N minutos | Evaluación en la entrega 4; implementación antes del lanzamiento |
+
 ## Decisiones tomadas por la titular (30/10/2026), a implementar
 
 - **Eliminación definitiva de cuenta** (distinta de darse de baja de los correos): quita el acceso a cursos, evaluaciones y certificados; los certificados se revocan y la verificación pública deja de mostrarlos como vigentes y no muestra datos personales. Se conserva solo lo que la ley obligue (por ejemplo, registros de pago sin datos personales innecesarios). Entrega 4.
