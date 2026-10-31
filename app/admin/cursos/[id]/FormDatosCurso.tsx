@@ -61,7 +61,7 @@ export function FormDatosCurso({ curso, alumnos }: { curso: Datos; alumnos: numb
       <fieldset className="m-0 flex flex-col gap-5 border-0 p-0">
         <legend className="mb-1 font-display text-[22px] font-semibold">Precio y video</legend>
         <Entrada nombre="precio" etiqueta="Precio en USD" inputMode="decimal" defaultValue={centavosATexto(curso.precioCentavos)} required error={err('precio')}
-          ayuda={alumnos > 0 ? `Un precio nuevo vale solo para compras futuras: las ${alumnos === 1 ? 'compra anterior conserva' : `${alumnos} compras anteriores conservan`} su precio.` : 'Por ejemplo 49 o 49.50.'} />
+          ayuda={alumnos > 0 ? `Un precio nuevo vale solo para compras futuras: ${alumnos === 1 ? 'el alumno que ya lo tiene no se ve afectado' : `los ${alumnos} alumnos que ya lo tienen no se ven afectados`}; cada compra conserva su precio.` : 'Por ejemplo 49 o 49.50.'} />
         <Entrada nombre="video" etiqueta="Video de presentación (id de Bunny, biblioteca pública)" defaultValue={curso.video} error={err('video')}
           ayuda="Opcional. Es el video que ve cualquiera en la ficha del curso. La subida desde el panel llega al conectar Bunny." />
       </fieldset>

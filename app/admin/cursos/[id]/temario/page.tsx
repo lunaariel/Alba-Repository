@@ -51,7 +51,7 @@ function FilaLeccion({ l, curso, volver, primero, ultimo, numero }: { l: Leccion
           {l.duracionMinutos && <span>{l.duracionMinutos} min ·</span>}
           {l.videoId ? <span className={chip}>Video cargado</span> : <EstadoChip estado="pendiente" texto="Video pendiente" />}
           <span className={chip}>{l.materiales.length === 0 ? 'Sin PDF' : l.materiales.length === 1 ? '1 PDF' : `${l.materiales.length} PDF`}</span>
-          {l.vistas > 0 && <span>· vista por {l.vistas} {l.vistas === 1 ? 'alumno' : 'alumnos'}, {l.completadas} la completaron</span>}
+          {l.vistas > 0 && <span>· vista por {l.vistas} {l.vistas === 1 ? 'alumno' : 'alumnos'}, {l.completadas === 1 ? '1 la completó' : `${l.completadas} la completaron`}</span>}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-x-3">
