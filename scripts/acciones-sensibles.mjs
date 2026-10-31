@@ -291,10 +291,11 @@ try {
     const destino = texto.match(/destino"\r?\n\r?\n([0-9a-f-]{36})/)?.[1] ?? texto.match(/"destino"\s*[:,]\s*"([0-9a-f-]{36})"/)?.[1];
     comprobar(Boolean(destino), 'la solicitud capturada lleva el destino');
     if (!destino) throw new Error('sin destino en la solicitud capturada');
+    comprobar(/name="[^"]*entiendo"/.test(texto), 'la solicitud capturada lleva la casilla de confirmación');
     const variantes = [
       ['destino anterior (versión 1)', texto.replace(destino, v1)],
       ['destino inexistente', texto.replace(destino, '00000000-0000-0000-0000-000000000000')],
-      ['sin la casilla de confirmación', texto.replace(/--[^\r\n]*\r\nContent-Disposition: form-data; name="(?:\d+_)?entiendo"\r\n\r\nsi\r\n/, '')],
+      ['sin la casilla de confirmación', texto.replace(/--[^\r\n]*\r\nContent-Disposition: form-data; name="[^"]*entiendo"\r\n\r\nsi\r\n/, '')],
     ];
     for (const [nombre, cuerpo] of variantes) {
       const antes = huella();

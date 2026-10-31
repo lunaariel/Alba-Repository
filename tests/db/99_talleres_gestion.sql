@@ -224,6 +224,20 @@ begin
     fallo := 'no falló';
   exception when others then fallo := sqlerrm; end;
   perform pruebas.afirmar(fallo = 'no_autorizado', 'Alumna no marca asistencia: ' || fallo);
+  begin
+    perform public.guardar_reunion(g, 'https://intruso.test/x', null);
+    fallo := 'no falló';
+  exception when others then fallo := sqlerrm; end;
+  perform pruebas.afirmar(fallo = 'no_autorizado', 'Alumna no carga enlaces: ' || fallo);
+  perform set_config('request.jwt.claim.sub', ADMIN::text, true);
+  begin
+    perform public.guardar_reunion(g, 'javascript:alert(1)', null);
+    fallo := 'no falló';
+  exception when others then fallo := sqlerrm; end;
+  perform pruebas.afirmar(fallo = 'enlace_invalido', 'Solo enlaces https: ' || fallo);
+  perform public.guardar_reunion(g, 'https://reunion.test/nuevo', 'https://reunion.test/host');
+  perform pruebas.afirmar((select enlace_participante from public.reuniones where taller_id = g) = 'https://reunion.test/nuevo', 'La admin actualiza el enlace');
+  perform set_config('request.jwt.claim.sub', A::text, true);
 
   -- 19. Registro de actividad.
   perform pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'taller_reprogramado' and entidad_id = g::text and actor_id = ADMIN)
@@ -245,7 +259,7 @@ select pruebas.afirmar((select count(*) from public.talleres where slug = 'talle
 reset role;
 update public.talleres set enlace_visible_horas = 168 where slug = 'gratis';
 set local role authenticated;
-select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) = 'https://reunion.test/gratis', 'Con 7 días de anticipación configurada, lo recibe');
+select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) = 'https://reunion.test/nuevo', 'Con 7 días de anticipación configurada, lo recibe');
 set local request.jwt.claim.sub = 'bbbbbbbb-0000-0000-0000-000000000002';
 select pruebas.afirmar(public.enlace_taller((select id from public.talleres where slug = 'gratis')) is null, 'Quien canceló su inscripción no lo recibe');
 set local role anon;

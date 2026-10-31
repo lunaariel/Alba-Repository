@@ -118,12 +118,13 @@ try {
 
   // 15. Enlace: a 3 días no se ve (24 h antes); con 168 horas de anticipación sí. El de anfitrión, nunca.
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
-  comprobar((await al.getByRole('link', { name: 'Entrar a la videollamada' }).count()) === 0 && await al.getByText(/El enlace de la videollamada aparecerá aquí desde/).isVisible(),
+  const filaTaller = al.locator('li', { hasText: 'Taller de prueba del recorrido' });
+  comprobar((await filaTaller.getByRole('link', { name: 'Entrar a la videollamada' }).count()) === 0 && await filaTaller.getByText(/El enlace de la videollamada aparecerá aquí desde/).isVisible(),
     'a 3 días del inicio, el enlace todavía no se muestra');
   sql(`update public.talleres set enlace_visible_horas = 168 where id = '${id}'`);
   await al.reload({ waitUntil: 'networkidle' });
   const html = await al.content();
-  comprobar(await al.getByRole('link', { name: 'Entrar a la videollamada' }).isVisible() && !html.includes('anfitrion-secreto'),
+  comprobar(await filaTaller.getByRole('link', { name: 'Entrar a la videollamada' }).isVisible() && !html.includes('anfitrion-secreto'),
     'con la anticipación configurada se muestra el enlace de participante, nunca el de anfitrión');
   await al.screenshot({ path: `${SALIDA}/recorrido-talleres-4-mis-talleres.png`, fullPage: true });
 
@@ -146,7 +147,7 @@ try {
   comprobar(sql(`select count(*) from public.notificaciones n where n.taller_id = '${id}' and n.tipo = 'taller_reprogramado' and n.estado = 'pendiente'`) === '1',
     'el aviso de reprogramación queda registrado (pendiente, sin correo)');
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
-  comprobar(await al.getByText(/Reprogramado/).isVisible() && await al.getByText(/17:00/).first().isVisible(), 'la alumna ve la fecha nueva y el aviso de reprogramación');
+  comprobar(await filaTaller.getByText(/Reprogramado/).isVisible() && await filaTaller.getByText(/17:00/).first().isVisible(), 'la alumna ve la fecha nueva y el aviso de reprogramación');
 
   // 16 y 17. Procesos programados: recordatorios con la fecha vigente, una sola vez.
   const sinClave = await ctxPublico.request.post(`${BASE}/api/procesos`);
@@ -174,7 +175,7 @@ try {
 
   // 9. La alumna cancela su inscripción: el lugar se libera.
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
-  await al.getByText('Cancelar mi inscripción').click();
+  await filaTaller.getByText('Cancelar mi inscripción').click();
   await al.getByLabel(/Entiendo que libero mi lugar/).check();
   await Promise.all([al.waitForURL(/aviso=cancelada/), al.getByRole('button', { name: 'Cancelar inscripción' }).click()]);
   comprobar(await al.getByText(/el lugar quedó libre/).isVisible(), 'la alumna cancela su inscripción gratuita');
@@ -191,7 +192,7 @@ try {
   comprobar(await ve(a, /Taller cancelado/), 'se cancela el taller con motivo');
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
   comprobar(await al.getByText(/Este taller fue cancelado: La maestra está enferma ese día/).isVisible()
-    && (await al.getByRole('link', { name: 'Entrar a la videollamada' }).count()) === 0, 'la alumna ve la cancelación y el enlace desaparece');
+    && (await filaTaller.getByRole('link', { name: 'Entrar a la videollamada' }).count()) === 0, 'la alumna ve la cancelación y el enlace desaparece');
   const borrar = await a.goto(`${BASE}/admin/talleres/${id}/estado`, { waitUntil: 'networkidle' });
   comprobar(borrar.ok() && (await a.getByRole('button', { name: 'Eliminar el taller' }).count()) === 0, 'un taller con inscriptos no ofrece eliminarse');
   await a.screenshot({ path: `${SALIDA}/recorrido-talleres-6-cancelado.png`, fullPage: true });

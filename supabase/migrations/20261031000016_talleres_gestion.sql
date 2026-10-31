@@ -331,6 +331,26 @@ $$;
 revoke execute on function public.enlace_taller(uuid) from public, anon;
 grant execute on function public.enlace_taller(uuid) to authenticated;
 
+-- Enlace cargado a mano por la admin (adaptador manual). El de anfitrión nunca es legible por clientes.
+create or replace function public.guardar_reunion(p_taller uuid, p_participante text, p_anfitrion text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not public.es_admin() then raise exception 'no_autorizado' using errcode = '42501'; end if;
+  if coalesce(p_participante, '') !~ '^https://[^[:space:]]{4,}$' or char_length(p_participante) > 500
+     or (nullif(p_anfitrion, '') is not null and (p_anfitrion !~ '^https://[^[:space:]]{4,}$' or char_length(p_anfitrion) > 500)) then
+    raise exception 'enlace_invalido' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.talleres where id = p_taller and estado in ('borrador','publicado')) then
+    raise exception 'taller_cerrado' using errcode = 'P0001';
+  end if;
+  insert into public.reuniones (taller_id, proveedor, enlace_participante, enlace_anfitrion, estado)
+  values (p_taller, 'manual', p_participante, nullif(p_anfitrion, ''), 'activa')
+  on conflict (taller_id) do update set proveedor = 'manual', enlace_participante = excluded.enlace_participante,
+    enlace_anfitrion = excluded.enlace_anfitrion, estado = 'activa', ultimo_error = null;
+end; $$;
+revoke execute on function public.guardar_reunion(uuid, text, text) from public, anon;
+grant execute on function public.guardar_reunion(uuid, text, text) to authenticated;
+
 -- ============================================================ 4. Duplicar, reprogramar, cancelar
 create or replace function public.duplicar_taller(p_taller uuid, p_inicio timestamptz, p_fin timestamptz)
 returns uuid language plpgsql security definer set search_path = public as $$

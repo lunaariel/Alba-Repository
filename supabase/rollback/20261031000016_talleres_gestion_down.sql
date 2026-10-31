@@ -22,6 +22,7 @@ drop trigger if exists inscripciones_auditar on public.inscripciones_taller;
 drop trigger if exists recordatorios_auditar on public.recordatorios;
 drop trigger if exists reuniones_auditar on public.reuniones;
 
+drop function if exists public.guardar_reunion(uuid, text, text);
 drop function if exists public.finalizar_talleres();
 drop function if exists public.procesar_recordatorios(timestamptz);
 drop function if exists public.anotar_incidencia(uuid, text);

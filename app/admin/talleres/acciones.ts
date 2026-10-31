@@ -190,9 +190,7 @@ export async function guardarReunion(datos: FormData) {
     .safeParse({ id: datos.get('id'), participante: datos.get('participante'), anfitrion: datos.get('anfitrion') ?? '' });
   const ruta = `${base(limpio(datos.get('id')))}/videollamada`;
   if (!r.success) ir(ruta, { error: 'enlace_invalido' });
-  const { error } = await (await clienteSesion()).from('reuniones').upsert({
-    taller_id: r.data.id, proveedor: 'manual', enlace_participante: r.data.participante, enlace_anfitrion: r.data.anfitrion || null, estado: 'activa', ultimo_error: null,
-  }, { onConflict: 'taller_id' });
+  const { error } = await (await clienteSesion()).rpc('guardar_reunion', { p_taller: r.data.id, p_participante: r.data.participante, p_anfitrion: r.data.anfitrion });
   if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
   refrescar(r.data.id);
   ir(ruta, { ok: 'reunion_guardada' });
