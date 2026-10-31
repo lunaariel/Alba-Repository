@@ -115,7 +115,8 @@ test('describirActividad traduce acciones y muestra solo lo que cambió', async 
     { campo: 'Estado', antes: 'Borrador', despues: 'Publicado' },
   ]);
 
-  const alta = describirActividad({ accion: 'cupon_creado', entidad: 'cupones', entidadId: 'k', antes: null, despues: { codigo: 'BECA50', valor: 50, activo: true } });
+  const alta = describirActividad({ accion: 'cupon_creado', entidad: 'cupones', entidadId: 'k', antes: null, despues: { codigo: 'BECA50', valor: 50, activo: true, vigente_hasta: null } });
+  assert.ok(!alta.cambios.some((c) => c.campo === 'Hasta'), 'en un alta no se listan campos vacíos');
   assert.equal(alta.nombre, 'BECA50');
   assert.ok(alta.cambios.every((c) => c.antes === null));
   assert.ok(alta.cambios.some((c) => c.campo === 'Activo' && c.despues === 'Sí'));

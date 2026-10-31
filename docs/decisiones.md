@@ -30,3 +30,8 @@ Registro breve de decisiones técnicas. La fuente completa es el documento «Alb
 | 2026-10-30 | Video de lecciones: Bunny Stream con token del reproductor (2 horas); sin credenciales, aviso de "video pendiente" | El id del video nunca llega al navegador sin firma |
 | 2026-10-30 | Cambio de contraseña pide la actual; cambio de correo y baja de cuenta por contacto | Evita cambios desde una sesión olvidada abierta; la baja necesita revisar compras y certificados |
 | 2026-10-30 | Menú del encabezado en móvil como botón "Menú" (`<details>`) | Cinco enlaces no entran en una línea a 390 px; funciona sin JavaScript |
+| 2026-10-30 | El panel responde "no encontrado" a quien no es admin, con o sin sesión, y no figura en robots.txt | No se anuncia que existe; la protección real sigue siendo el servidor y RLS |
+| 2026-10-30 | Registro de actividad por disparadores en la base (migración 0012), no desde la interfaz | Ningún cambio se salta el registro, venga del panel, de un script o del servidor |
+| 2026-10-30 | Solo se registran columnas que importan (precio, fechas, cupo, estado, respuestas correctas, roles, configuración) | Un registro legible, sin ruido por cada edición de texto |
+| 2026-10-30 | Los roles no se asignan desde el panel, solo con `scripts/asignar-admin.sql` | Una sesión robada de la admin no puede crear otra admin |
+| 2026-10-30 | Los cambios de esquema de cada sección llegan con su entrega (0013 en adelante), no todos en 0012 | Cada entrega se revisa con sus propios cambios |

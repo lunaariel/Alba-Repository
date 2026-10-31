@@ -64,7 +64,7 @@ export function EnPreparacion({ titulo, entrega, queHara, mientras }: {
           <p id="en-preparacion" className="m-0 font-bold">Llega en la entrega {entrega} de la Fase 5.</p>
         </div>
         <p className="m-0 mt-4">Esta sección va a permitirle:</p>
-        <ul className="m-0 mt-2 flex flex-col gap-1.5 pl-5">
+        <ul className="m-0 mt-2 flex list-disc flex-col gap-1.5 pl-5 marker:text-oliva-profundo">
           {queHara.map((q) => <li key={q}>{q}</li>)}
         </ul>
         {mientras && <div className="mt-5 border-t border-borde-bandeja pt-4 text-[15px] text-tinta-suave">{mientras}</div>}

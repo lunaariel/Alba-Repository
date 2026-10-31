@@ -34,7 +34,7 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
     </div>
   );
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
+    <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr] lg:bg-[linear-gradient(to_right,#E9DFC9_264px,transparent_264px)]">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-30 focus:bg-marfil focus:p-3">
         Ir al contenido
       </a>

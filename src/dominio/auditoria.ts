@@ -117,6 +117,8 @@ export function describirActividad(f: FilaActividad): DescripcionActividad {
     const a = k in antes ? antes[k] : undefined;
     const d = k in despues ? despues[k] : undefined;
     if (!esAlta && !esBaja && JSON.stringify(a) === JSON.stringify(d)) continue;
+    // En un alta o una baja, los campos vacíos no aportan nada.
+    if ((esAlta && (d === null || d === undefined || d === '')) || (esBaja && (a === null || a === undefined || a === ''))) continue;
     const campo = CAMPOS[k] ?? k;
     if (SOLO_MENCION.has(k)) {
       cambios.push({ campo, antes: null, despues: 'modificado' });
