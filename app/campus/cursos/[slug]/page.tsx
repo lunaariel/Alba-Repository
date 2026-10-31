@@ -92,7 +92,7 @@ export default async function CursoCampus({ params, searchParams }: Props) {
                 {curso.materiales.map((m) => (
                   <li key={m.id}>
                     <a href={`/campus/materiales/${m.id}`} className="font-bold text-oliva-profundo underline underline-offset-4">{m.titulo}</a>
-                    <span className="block text-[14px] text-tinta-suave">PDF · {kb(m.tamanoBytes)} · {leccionesDeMaterial.get(m.leccionId)}</span>
+                    <span className="block text-[14px] text-tinta-suave">PDF · {kb(m.tamanoBytes)} · {leccionesDeMaterial.get(m.leccionId)}{m.complementario ? ' · complementario, opcional' : ''}</span>
                   </li>
                 ))}
               </ul>

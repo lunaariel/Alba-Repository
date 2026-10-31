@@ -26,19 +26,21 @@ function subir(ruta: string, token: string, archivo: File, alAvanzar: (p: number
   });
 }
 
-export function SubirMaterial({ leccionId }: { leccionId: string }) {
+export function SubirMaterial({ leccionId, publicada }: { leccionId: string; publicada: boolean }) {
   const router = useRouter();
   const archivoRef = useRef<HTMLInputElement>(null);
   const [titulo, setTitulo] = useState('');
   const [progreso, setProgreso] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
+  const [tipo, setTipo] = useState<'' | 'complementario' | 'programa'>('');
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
     setError(null); setOk(false);
     const archivo = archivoRef.current?.files?.[0];
     if (!archivo) return setError('Elija un archivo PDF.');
+    if (!tipo) return setError('Elija si el material es complementario o parte del programa.');
     if (archivo.size > 25 * 1024 * 1024) return setError('El PDF debe pesar como máximo 25 MB.');
     const nombre = titulo.trim() || archivo.name.replace(/\.pdf$/i, '');
     const preparado = await prepararSubida(leccionId, archivo.name, archivo.size);
@@ -50,10 +52,10 @@ export function SubirMaterial({ leccionId }: { leccionId: string }) {
       setProgreso(null);
       return setError('No se pudo subir el archivo. Revise la conexión e intente de nuevo.');
     }
-    const r = await confirmarSubida(leccionId, preparado.ruta, nombre);
+    const r = await confirmarSubida(leccionId, preparado.ruta, nombre, tipo);
     setProgreso(null);
     if ('error' in r) return setError(r.error);
-    setOk(true); setTitulo('');
+    setOk(true); setTitulo(''); setTipo('');
     if (archivoRef.current) archivoRef.current.value = '';
     router.refresh();
   }
@@ -72,6 +74,19 @@ export function SubirMaterial({ leccionId }: { leccionId: string }) {
         <input id="pdf-titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={140} placeholder="Si lo deja vacío, se usa el nombre del archivo"
           className="min-h-[48px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 text-marron" />
       </div>
+      <fieldset className="m-0 flex flex-col gap-2 border-0 p-0">
+        <legend className="mb-1 text-[15px] font-bold">¿Qué tipo de material es?</legend>
+        <label className="flex items-start gap-3">
+          <input type="radio" name="tipo-material" value="complementario" checked={tipo === 'complementario'} onChange={() => setTipo('complementario')} className="mt-1 h-5 w-5 shrink-0 accent-[#4E6049]" />
+          <span><b>Complementario.</b> Lectura o recurso opcional: no cambia el programa, el avance ni los requisitos del certificado.
+            {publicada && ' Después de subirlo, elija a qué versiones publicadas se suma: los alumnos de esas versiones lo ven enseguida.'}</span>
+        </label>
+        <label className="flex items-start gap-3">
+          <input type="radio" name="tipo-material" value="programa" checked={tipo === 'programa'} onChange={() => setTipo('programa')} className="mt-1 h-5 w-5 shrink-0 accent-[#4E6049]" />
+          <span><b>Parte del programa.</b> Contenido obligatorio o nuevo requisito.
+            {publicada ? ' Entra en el borrador: los alumnos lo reciben cuando publique una versión nueva; quienes siguen versiones anteriores conservan su programa.' : ''}</span>
+        </label>
+      </fieldset>
       {progreso !== null && (
         <div role="progressbar" aria-label="Subiendo el PDF" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progreso} className="h-2.5 overflow-hidden rounded-full bg-arena">
           <div className="h-full bg-oliva-profundo transition-[width]" style={{ width: `${progreso}%` }} />

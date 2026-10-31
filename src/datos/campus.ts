@@ -98,7 +98,7 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   });
 });
 
-export interface MaterialCampus { id: string; titulo: string; leccionId: string; tamanoBytes: number }
+export interface MaterialCampus { id: string; titulo: string; leccionId: string; tamanoBytes: number; complementario: boolean }
 
 export interface EvaluacionResumen {
   id: string;
@@ -124,7 +124,7 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
   const ids = curso.lecciones.map((l) => l.id);
   const [{ data: materiales }, { data: ev }] = await Promise.all([
     ids.length
-      ? supabase.from('recursos_leccion').select('id, titulo, leccion_id, tamano_bytes, orden').in('leccion_id', ids).order('orden')
+      ? supabase.from('recursos_leccion').select('id, titulo, leccion_id, tamano_bytes, orden, complementario').in('leccion_id', ids).order('orden')
       : Promise.resolve({ data: [] }),
     // Criterios e intentos de la versión del alumno, no del borrador.
     supabase.rpc('mi_evaluacion', { p_curso: curso.id }),
@@ -139,8 +139,8 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
   } : null;
   return {
     ...curso,
-    materiales: ((materiales ?? []) as { id: string; titulo: string; leccion_id: string; tamano_bytes: number }[])
-      .map((m) => ({ id: m.id, titulo: m.titulo, leccionId: m.leccion_id, tamanoBytes: m.tamano_bytes })),
+    materiales: ((materiales ?? []) as { id: string; titulo: string; leccion_id: string; tamano_bytes: number; complementario: boolean }[])
+      .map((m) => ({ id: m.id, titulo: m.titulo, leccionId: m.leccion_id, tamanoBytes: m.tamano_bytes, complementario: m.complementario })),
     evaluacion: resumen,
     pendientes: curso.lecciones.filter((l) => !l.completada).length,
   };

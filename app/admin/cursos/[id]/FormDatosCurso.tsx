@@ -37,7 +37,8 @@ export function FormDatosCurso({ curso, alumnos }: { curso: Datos; alumnos: numb
         <AreaTexto nombre="resumen" etiqueta="Resumen (una o dos frases)" defaultValue={curso.resumen} maxLength={240} rows={2} error={err('resumen')} />
         <AreaTexto nombre="descripcion" etiqueta="Descripción" defaultValue={curso.descripcion} maxLength={8000} rows={6}
           ayuda="Separe los párrafos con una línea en blanco." error={err('descripcion')} />
-        <AreaTexto nombre="objetivos" etiqueta="Qué va a aprender (uno por línea)" defaultValue={curso.objetivos} rows={4} error={err('objetivos')} />
+        <AreaTexto nombre="objetivos" etiqueta="Qué va a aprender (uno por línea)" defaultValue={curso.objetivos} rows={4} error={err('objetivos')}
+          ayuda={curso.estado !== 'borrador' ? 'Objetivos y requisitos forman parte del programa: el cambio se aplica desde la próxima versión que publique. Cada versión conserva los suyos.' : undefined} />
         <AreaTexto nombre="requisitos" etiqueta="Requisitos (opcional)" defaultValue={curso.requisitos} rows={2} maxLength={2000} />
       </fieldset>
 

@@ -91,6 +91,16 @@ const ERRORES: Record<string, string> = {
   revision_inexistente: 'No se encontró esa revisión. Vuelva a calcularla.',
   revision_descartada: 'Esa revisión ya no se puede aplicar. Vuelva a calcularla.',
   no_autorizado: 'No tiene permiso para esta acción.',
+  leccion_publicada: 'Esta lección forma parte de una versión publicada: solo admite correcciones menores declaradas. Para un cambio de contenido, cree una lección de reemplazo.',
+  modulo_publicado: 'Este módulo forma parte de una versión publicada: su nombre solo admite correcciones menores declaradas.',
+  cambio_sustancial: 'El cambio altera buena parte del texto: no es una corrección menor. Cree una lección de reemplazo en el borrador y publique una versión nueva.',
+  correccion_no_permitida: 'Ese tipo de corrección no permite cambiar el video ni la duración. Si es el mismo video con mejor calidad, elija «Video mejorado»; si es otro contenido, cree una lección de reemplazo.',
+  tipo_correccion_invalido: 'Elija qué tipo de corrección menor está haciendo.',
+  material_tipo_fijo: 'Este material ya está en uso como requisito o como complemento: su tipo no se puede cambiar.',
+  material_no_complementario: 'Este material forma parte del programa: no se asocia a versiones como complemento.',
+  version_sin_leccion: 'Solo se puede asociar a versiones que incluyen esta lección.',
+  leccion_no_publicada: 'Esta lección todavía no está en ninguna versión: edítela directamente.',
+  leccion_retirada: 'La lección está retirada del borrador.',
 };
 
 // La clave más larga que coincide gana: «confirmacion_incorrecta» no debe leerse como «confirmacion».
@@ -126,6 +136,9 @@ const OKS: Record<string, string> = {
   revision_ya_aplicada: 'Esa revisión ya estaba aplicada: no se volvió a aplicar.',
   bloqueado: 'Contenido bloqueado. Ya no se muestra a nadie y no cuenta como requisito. Queda registrado.',
   desbloqueado: 'Contenido desbloqueado. Queda registrado.',
+  correccion_aplicada: 'Corrección menor aplicada en todas las versiones. Quedó registrada con su tipo y motivo.',
+  leccion_reemplazada: 'Se creó la lección de reemplazo en el borrador. La original se conserva intacta para quienes siguen las versiones publicadas.',
+  complemento_asociado: 'Material complementario actualizado: lo ven los alumnos de las versiones elegidas. No cambia avances ni requisitos.',
 };
 
 /** Mensaje de un aviso de éxito; un código desconocido no muestra nada. */
@@ -145,3 +158,14 @@ export function mensajeError(codigoOMensaje: string | null | undefined): string 
 export function volverSeguro(valor: unknown, porDefecto: string): string {
   return typeof valor === 'string' && /^\/admin\/cursos(\/[a-z0-9-]+)*$/i.test(valor) ? valor : porDefecto;
 }
+
+/** Correcciones menores admitidas sobre contenido publicado (la base valida la misma lista). */
+export const TIPOS_CORRECCION = [
+  { valor: 'ortografia', texto: 'Ortografía' },
+  { valor: 'redaccion', texto: 'Redacción sin cambiar el sentido' },
+  { valor: 'formato', texto: 'Formato' },
+  { valor: 'accesibilidad', texto: 'Accesibilidad' },
+  { valor: 'enlace', texto: 'Enlace roto' },
+  { valor: 'video_mejorado', texto: 'Mismo video, versión técnicamente mejorada' },
+  { valor: 'calidad_audio_video', texto: 'Calidad de sonido o imagen' },
+] as const;

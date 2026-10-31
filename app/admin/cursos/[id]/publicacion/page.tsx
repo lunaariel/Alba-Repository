@@ -29,6 +29,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
   const h = c.historial;
   const cambios = cambiosDelBorrador(c);
   const hayCambios = cambios.leccionesNuevas.length + cambios.leccionesQuitadas.length + cambios.preguntasNuevas + cambios.preguntasQuitadas > 0
+    || cambios.objetivosCambian
     || (cambios.criterios !== null && (cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] || cambios.criterios.intentos[0] !== cambios.criterios.intentos[1]));
 
   return (
@@ -130,13 +131,14 @@ export default async function Publicacion({ params, searchParams }: Props) {
                 <ul className="m-0 mt-2 flex list-disc flex-col gap-1 pl-5 text-[15px]">
                   {cambios.leccionesNuevas.length > 0 && <li>Lecciones nuevas: {cambios.leccionesNuevas.join(', ')}.</li>}
                   {cambios.leccionesQuitadas.length > 0 && <li>Lecciones quitadas: {cambios.leccionesQuitadas.join(', ')}.</li>}
+                  {cambios.objetivosCambian && <li>Objetivos de aprendizaje modificados (Datos y precio).</li>}
                   {cambios.preguntasNuevas > 0 && <li>{plural(cambios.preguntasNuevas, 'pregunta nueva o reemplazada', 'preguntas nuevas o reemplazadas')}.</li>}
                   {cambios.preguntasQuitadas > 0 && <li>{plural(cambios.preguntasQuitadas, 'pregunta quitada', 'preguntas quitadas')}.</li>}
                   {cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
                   {cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
                 </ul>
               ) : (
-                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas ni criterios. (Los cambios de orden, textos y precio no se listan aquí.)</p>
+                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas, objetivos ni criterios. (Los cambios de orden y de precio no se listan aquí.)</p>
               )}
               {c.estado === 'publicado' && (
                 <div className="mt-4">

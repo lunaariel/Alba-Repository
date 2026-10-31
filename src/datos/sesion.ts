@@ -33,9 +33,13 @@ export async function exigirAdmin() {
   return usuario;
 }
 
-/** Acciones de servidor del panel: rechazan sin dar detalles. Cada acción la llama primero. */
+/**
+ * Acciones de servidor del panel. Cada acción la llama primero. Una denegación esperada no es un
+ * error interno: responde el mismo "no encontrado" (404) que las páginas del panel, sin detalles.
+ * La base de datos (RLS y funciones con es_admin()) vuelve a rechazar por su cuenta.
+ */
 export async function exigirAdminAccion() {
   const usuario = await usuarioActual();
-  if (!usuario || !(await esAdmin())) throw new Error('No autorizado.');
+  if (!usuario || !(await esAdmin())) notFound();
   return usuario;
 }

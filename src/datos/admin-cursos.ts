@@ -41,12 +41,15 @@ export async function listaCursos(): Promise<CursoListado[]> {
   }));
 }
 
-export interface MaterialAdmin { id: string; titulo: string; ruta: string; tamanoBytes: number; retirado: boolean; enVersion: boolean; bloqueado: boolean }
+export interface MaterialAdmin {
+  id: string; titulo: string; ruta: string; tamanoBytes: number; retirado: boolean; enVersion: boolean; bloqueado: boolean;
+  complementario: boolean; complementoDe: string[];
+}
 /** Dónde está cada pieza respecto de la versión vigente (para los marcadores del editor). */
-export interface Marca { enVigente: boolean; enAlgunaVersion: boolean; bloqueada: boolean; bloqueoMotivo: string | null }
+export interface Marca { enVigente: boolean; enAlgunaVersion: boolean; bloqueada: boolean; bloqueoMotivo: string | null; versiones: { id: string; numero: number }[] }
 export interface VersionAdmin {
   id: string; numero: number; publicadaEn: Date; resumen: string | null; puntajeMinimo: number; intentosPermitidos: number | null;
-  alumnos: number; certificados: number; lecciones: number; preguntas: number; vigente: boolean;
+  alumnos: number; certificados: number; lecciones: number; preguntas: number; vigente: boolean; objetivos: string[];
 }
 export interface LeccionAdmin {
   id: string; titulo: string; descripcion: string | null; duracionMinutos: number | null; orden: number;
@@ -83,14 +86,14 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
     .select(`id, slug, titulo, resumen, descripcion, publico, edad_desde_meses, edad_hasta_meses, duracion_minutos, objetivos,
              requisitos, precio_centavos, video_presentacion_id, estado, publicado_en, version_vigente_id,
              modulos(id, titulo, orden, retirado, lecciones(id, titulo, descripcion, duracion_minutos, orden, retirada,
-               recursos_leccion(id, titulo, ruta_almacenamiento, tamano_bytes, orden, retirado))),
+               recursos_leccion(id, titulo, ruta_almacenamiento, tamano_bytes, orden, retirado, complementario))),
              evaluaciones(id, puntaje_minimo, intentos_permitidos, mensaje_aprobado, mensaje_desaprobado,
                preguntas(id, enunciado, tipo, tema, orden, retirada, opciones(id, texto, orden)))`)
     .eq('id', id).maybeSingle();
   if (!c) return null;
 
   type L = { id: string; titulo: string; descripcion: string | null; duracion_minutos: number | null; orden: number; retirada: boolean;
-    recursos_leccion: { id: string; titulo: string; ruta_almacenamiento: string; tamano_bytes: number; orden: number; retirado: boolean }[] };
+    recursos_leccion: { id: string; titulo: string; ruta_almacenamiento: string; tamano_bytes: number; orden: number; retirado: boolean; complementario: boolean }[] };
   type M = { id: string; titulo: string; orden: number; retirado: boolean; lecciones: L[] };
   type P = { id: string; enunciado: string; tipo: 'unica' | 'multiple'; tema: string | null; orden: number; retirada: boolean;
     opciones: { id: string; texto: string; orden: number }[] };
@@ -101,7 +104,7 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
   const preguntaIds = (evalFila?.preguntas ?? []).map((p) => p.id);
   const servicio = clienteServicio();
 
-  const [videos, correctas, progreso, respuestas, accesos, certs, items, intentos, versiones, bloqueosPreguntas, bloqueosMateriales] = await Promise.all([
+  const [videos, correctas, progreso, respuestas, accesos, certs, items, intentos, versiones, bloqueosPreguntas, bloqueosMateriales, complementos] = await Promise.all([
     leccionIds.length ? servicio.from('lecciones').select('id, video_id, bloqueada, bloqueo_motivo').in('id', leccionIds) : Promise.resolve({ data: [] }),
     preguntaIds.length ? servicio.from('opciones').select('id, es_correcta').in('pregunta_id', preguntaIds) : Promise.resolve({ data: [] }),
     leccionIds.length ? s.from('progreso_leccion').select('leccion_id, completada_en').in('leccion_id', leccionIds) : Promise.resolve({ data: [] }),
@@ -111,12 +114,13 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
     s.from('items_orden').select('id', { count: 'exact', head: true }).eq('curso_id', id),
     evalFila ? s.from('intentos_evaluacion').select('id', { count: 'exact', head: true }).eq('evaluacion_id', evalFila.id) : Promise.resolve({ count: 0 }),
     servicio.from('versiones_curso')
-      .select('id, numero, publicada_en, resumen, puntaje_minimo, intentos_permitidos, version_lecciones(leccion_id), version_materiales(recurso_id), version_preguntas(pregunta_id)')
+      .select('id, numero, publicada_en, resumen, puntaje_minimo, intentos_permitidos, objetivos, version_lecciones(leccion_id), version_materiales(recurso_id), version_preguntas(pregunta_id)')
       .eq('curso_id', id).order('numero', { ascending: false }),
     preguntaIds.length ? servicio.from('preguntas').select('id, bloqueada, bloqueo_motivo').in('id', preguntaIds) : Promise.resolve({ data: [] }),
     leccionIds.length ? servicio.from('recursos_leccion').select('id, bloqueado').in('leccion_id', leccionIds) : Promise.resolve({ data: [] }),
+    servicio.from('version_complementos').select('recurso_id, version_id, versiones_curso!inner(curso_id)').eq('versiones_curso.curso_id', id),
   ]);
-  type FilaVersion = { id: string; numero: number; publicada_en: string; resumen: string | null; puntaje_minimo: number; intentos_permitidos: number | null;
+  type FilaVersion = { id: string; numero: number; publicada_en: string; resumen: string | null; puntaje_minimo: number; intentos_permitidos: number | null; objetivos: string[];
     version_lecciones: { leccion_id: string }[]; version_materiales: { recurso_id: string }[]; version_preguntas: { pregunta_id: string }[] };
   const filasVersion = (versiones.data ?? []) as FilaVersion[];
   const vigente = filasVersion.find((v) => v.id === c.version_vigente_id);
@@ -125,6 +129,12 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
     lecciones: new Set(filasVersion.flatMap((v) => v.version_lecciones.map((x) => x.leccion_id))),
     materiales: new Set(filasVersion.flatMap((v) => v.version_materiales.map((x) => x.recurso_id))),
   };
+  const versionesDeLeccion = new Map<string, { id: string; numero: number }[]>();
+  for (const v of [...filasVersion].sort((a, b) => a.numero - b.numero)) for (const x of v.version_lecciones) {
+    versionesDeLeccion.set(x.leccion_id, [...(versionesDeLeccion.get(x.leccion_id) ?? []), { id: v.id, numero: v.numero }]);
+  }
+  const complementoDe = new Map<string, string[]>();
+  for (const x of (complementos.data ?? []) as { recurso_id: string; version_id: string }[]) complementoDe.set(x.recurso_id, [...(complementoDe.get(x.recurso_id) ?? []), x.version_id]);
   const versionesDePregunta = new Map<string, number[]>();
   for (const v of filasVersion) for (const x of v.version_preguntas) versionesDePregunta.set(x.pregunta_id, [...(versionesDePregunta.get(x.pregunta_id) ?? []), v.numero]);
   const bloqueoLeccion = new Map(((videos.data ?? []) as { id: string; bloqueada: boolean; bloqueo_motivo: string | null }[]).map((v) => [v.id, v]));
@@ -157,10 +167,12 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
         id: l.id, titulo: l.titulo, descripcion: l.descripcion, duracionMinutos: l.duracion_minutos, orden: l.orden, retirada: l.retirada,
         videoId: video.get(l.id) ?? null, vistas: vistas.get(l.id) ?? 0, completadas: completas.get(l.id) ?? 0,
         marca: { enVigente: enVigente.lecciones.has(l.id), enAlgunaVersion: enAlguna.lecciones.has(l.id),
-          bloqueada: bloqueoLeccion.get(l.id)?.bloqueada ?? false, bloqueoMotivo: bloqueoLeccion.get(l.id)?.bloqueo_motivo ?? null },
+          bloqueada: bloqueoLeccion.get(l.id)?.bloqueada ?? false, bloqueoMotivo: bloqueoLeccion.get(l.id)?.bloqueo_motivo ?? null,
+          versiones: versionesDeLeccion.get(l.id) ?? [] },
         materiales: [...l.recursos_leccion].sort(porOrden).map((r) => ({
           id: r.id, titulo: r.titulo, ruta: r.ruta_almacenamiento, tamanoBytes: r.tamano_bytes, retirado: r.retirado,
           enVersion: enAlguna.materiales.has(r.id), bloqueado: materialBloqueado.has(r.id),
+          complementario: r.complementario, complementoDe: complementoDe.get(r.id) ?? [],
         })),
       })),
     })),
@@ -173,7 +185,7 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
         respuestas: respondidas.get(p.id) ?? 0,
         versiones: (versionesDePregunta.get(p.id) ?? []).sort((a, b) => a - b),
         marca: { enVigente: enVigente.preguntas.has(p.id), enAlgunaVersion: versionesDePregunta.has(p.id),
-          bloqueada: bloqueoPregunta.get(p.id)?.bloqueada ?? false, bloqueoMotivo: bloqueoPregunta.get(p.id)?.bloqueo_motivo ?? null },
+          bloqueada: bloqueoPregunta.get(p.id)?.bloqueada ?? false, bloqueoMotivo: bloqueoPregunta.get(p.id)?.bloqueo_motivo ?? null, versiones: [] },
         opciones: [...p.opciones].sort(porOrden).map((o) => ({ id: o.id, texto: o.texto, orden: o.orden, esCorrecta: correcta.get(o.id) ?? false })),
       })),
     } : null,
@@ -186,7 +198,7 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
     versiones: filasVersion.map((v) => ({
       id: v.id, numero: v.numero, publicadaEn: new Date(v.publicada_en), resumen: v.resumen, puntajeMinimo: v.puntaje_minimo,
       intentosPermitidos: v.intentos_permitidos, alumnos: alumnosPorVersion.get(v.id) ?? 0, certificados: certsPorVersion.get(v.id) ?? 0,
-      lecciones: v.version_lecciones.length, preguntas: v.version_preguntas.length, vigente: v.id === c.version_vigente_id,
+      lecciones: v.version_lecciones.length, preguntas: v.version_preguntas.length, vigente: v.id === c.version_vigente_id, objetivos: v.objetivos ?? [],
     })),
     quitadoDelBorrador: {
       lecciones: modulos.flatMap((m) => m.lecciones.map((l) => ({ ...l, moduloRetirado: m.retirado })))
@@ -207,6 +219,7 @@ export function cambiosDelBorrador(c: CursoAdmin) {
     leccionesQuitadas: c.quitadoDelBorrador.lecciones.map((l) => l.titulo),
     preguntasNuevas: preguntas.filter((p) => !p.marca.enVigente).length,
     preguntasQuitadas: c.quitadoDelBorrador.preguntas.length,
+    objetivosCambian: Boolean(vigente) && JSON.stringify(vigente!.objetivos) !== JSON.stringify(c.objetivos),
     criterios: vigente && c.evaluacion
       ? { puntaje: [vigente.puntajeMinimo, c.evaluacion.puntajeMinimo] as const, intentos: [vigente.intentosPermitidos, c.evaluacion.intentosPermitidos] as const }
       : null,

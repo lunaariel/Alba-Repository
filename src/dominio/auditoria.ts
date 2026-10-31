@@ -57,6 +57,9 @@ const ACCIONES: Record<string, string> = {
   contenido_bloqueado: 'Bloqueó contenido en todas las versiones',
   contenido_desbloqueado: 'Desbloqueó contenido',
   material_actualizado: 'Cambió un material PDF',
+  correccion_menor: 'Hizo una corrección menor en contenido publicado',
+  leccion_reemplazada: 'Creó una lección de reemplazo en el borrador',
+  complemento_asociado: 'Cambió las versiones de un material complementario',
 };
 
 /** Grupos para filtrar el registro: cada uno reúne una o más tablas. */
@@ -82,7 +85,7 @@ const CAMPOS: Record<string, string> = {
   nombre: 'Nombre', correo_contacto: 'Correo de contacto', whatsapp: 'WhatsApp', textos: 'Textos del sitio',
   asunto: 'Asunto', cuerpo: 'Texto', codigo: 'Código', tipo: 'Tipo', valor: 'Valor', activo: 'Activo',
   vigente_desde: 'Desde', vigente_hasta: 'Hasta', usos_maximos: 'Usos máximos', motivo: 'Motivo', retirada: 'Retirada', retirado: 'Retirado', enunciado: 'Pregunta',
-  numero: 'Versión', resumen: 'Qué cambió', ajustados: 'Intentos mejorados', beneficiados: 'Intentos que mejorarían',
+  numero: 'Versión', resumen: 'Qué cambió', versiones: 'Versiones', tipo_correccion: 'Tipo de corrección', descripcion: 'Descripción', duracion_minutos: 'Duración', ajustados: 'Intentos mejorados', beneficiados: 'Intentos que mejorarían',
 };
 
 const ESTADOS: Record<string, string> = {

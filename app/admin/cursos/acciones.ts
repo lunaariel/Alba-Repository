@@ -141,6 +141,46 @@ export async function crearModulo(datos: FormData) {
   ir(ruta, { ok: 'modulo_agregado' });
 }
 
+/** Corrección menor del nombre de un módulo que está en una versión publicada. */
+export async function corregirModulo(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, curso: uuid, titulo: texto(140).min(2), tipo: texto(40), motivo: texto(500) })
+    .safeParse({ id: datos.get('id'), curso: datos.get('curso'), titulo: datos.get('titulo'), tipo: datos.get('tipo_correccion') ?? '', motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/temario`;
+  const { error } = await (await clienteSesion()).rpc('corregir_modulo_publicado', {
+    p_modulo: r.data.id, p_titulo: r.data.titulo, p_tipo: r.data.tipo, p_motivo: r.data.motivo,
+  });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'correccion_aplicada' });
+}
+
+/** Cambio sustancial: lección de reemplazo en el borrador; la original queda intacta en sus versiones. */
+export async function reemplazarLeccion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, curso: uuid }).safeParse({ id: datos.get('id'), curso: datos.get('curso') });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/temario/${r.data.id}`;
+  if (String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== 'REEMPLAZAR') ir(ruta, { error: 'confirmacion' });
+  const { data, error } = await (await clienteSesion()).rpc('reemplazar_leccion', { p_leccion: r.data.id });
+  if (error || !data) ir(ruta, { error: codigoError(error?.message) });
+  refrescar(r.data.curso);
+  ir(`/admin/cursos/${r.data.curso}/temario/${data as string}`, { ok: 'leccion_reemplazada' });
+}
+
+/** Material complementario: la admin elige a qué versiones se asocia (no cambia requisitos). */
+export async function asociarComplemento(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, versiones: z.array(uuid).max(50) }).safeParse({ id: datos.get('id'), versiones: datos.getAll('versiones') });
+  const ruta = volverSeguro(datos.get('volver'), '/admin/cursos');
+  if (!r.success) ir(ruta, { error: 'invalido' });
+  const { error } = await (await clienteSesion()).rpc('asociar_complemento', { p_recurso: r.data.id, p_versiones: r.data.versiones });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar();
+  ir(ruta, { ok: 'complemento_asociado' });
+}
+
 export async function renombrarModulo(datos: FormData) {
   await exigirAdminAccion();
   const r = z.object({ id: uuid, curso: uuid, titulo: texto(140).min(2) }).safeParse({ id: datos.get('id'), curso: datos.get('curso'), titulo: datos.get('titulo') });
@@ -180,8 +220,24 @@ export async function guardarLeccion(_: Estado, datos: FormData): Promise<Estado
   });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
+  const s = await clienteSesion();
+  // Lección de una versión publicada: solo una corrección menor declarada (la base lo exige).
+  const { count: enVersion } = await clienteServicio().from('version_lecciones').select('leccion_id', { count: 'exact', head: true }).eq('leccion_id', d.id);
+  if ((enVersion ?? 0) > 0) {
+    const tipo = String(datos.get('tipo_correccion') ?? '');
+    const motivo = String(datos.get('motivo') ?? '').trim().slice(0, 500);
+    if (!tipo) return { error: mensajeError('tipo_correccion_invalido'), campo: 'tipo_correccion' };
+    if (motivo.length < 10) return { error: mensajeError('motivo_requerido'), campo: 'motivo' };
+    const { error } = await s.rpc('corregir_leccion_publicada', {
+      p_leccion: d.id, p_titulo: d.titulo, p_descripcion: d.descripcion ?? '', p_duracion: d.duracion ? Number(d.duracion) || null : null,
+      p_video: d.video || null, p_tipo: tipo, p_motivo: motivo,
+    });
+    if (error) return { error: mensajeError(error.message) };
+    refrescar(d.curso);
+    return { ok: 'Corrección menor aplicada en todas las versiones y registrada con su tipo y motivo.' };
+  }
   // video_id se escribe pero no se lee desde el cliente (columna reservada al servidor).
-  const { error } = await (await clienteSesion()).from('lecciones').update({
+  const { error } = await s.from('lecciones').update({
     titulo: d.titulo, descripcion: d.descripcion, duracion_minutos: d.duracion ? Number(d.duracion) || null : null, video_id: d.video || null,
   }).eq('id', d.id);
   if (error) return { error: mensajeError(error.message) };
@@ -251,8 +307,10 @@ export async function prepararSubida(leccionId: string, nombre: string, tamano: 
 }
 
 /** Paso 2: se verifica lo subido (tamaño y que sea un PDF de verdad) y se registra en la lección. */
-export async function confirmarSubida(leccionId: string, ruta: string, titulo: string): Promise<{ ok: true } | { error: string }> {
+export async function confirmarSubida(leccionId: string, ruta: string, titulo: string, tipo: 'complementario' | 'programa'): Promise<{ ok: true } | { error: string }> {
   await exigirAdminAccion();
+  // No se asume ningún tipo: la admin elige si el PDF es complementario o parte del programa.
+  if (tipo !== 'complementario' && tipo !== 'programa') return { error: 'Elija si el material es complementario o parte del programa.' };
   const t = titulo.trim().slice(0, 140);
   if (!UUID.test(leccionId) || !ruta.startsWith('cursos/') || !ruta.includes(`/${leccionId}/`) || !/^[a-z0-9/-]+\.pdf$/i.test(ruta)) {
     return { error: 'Subida inválida.' };
@@ -275,6 +333,7 @@ export async function confirmarSubida(leccionId: string, ruta: string, titulo: s
   const { data: ultimo } = await s.from('recursos_leccion').select('orden').eq('leccion_id', leccionId).order('orden', { ascending: false }).limit(1).maybeSingle();
   const { error } = await s.from('recursos_leccion').insert({
     leccion_id: leccionId, titulo: t, ruta_almacenamiento: ruta, tipo_mime: 'application/pdf', tamano_bytes: tamano, orden: (ultimo?.orden ?? -1) + 1,
+    complementario: tipo === 'complementario',
   });
   if (error) {
     await almacen.remove([ruta]);
@@ -317,7 +376,12 @@ async function rutasDeMateriales(donde: { curso?: string; modulo?: string; lecci
 }
 
 async function borrarArchivos(rutas: string[]) {
-  if (rutas.length) await clienteServicio().storage.from('materiales').remove(rutas);
+  if (!rutas.length) return;
+  // Una lección de reemplazo reutiliza el mismo archivo: solo se borra si ningún material lo usa ya.
+  const { data: enUso } = await clienteServicio().from('recursos_leccion').select('ruta_almacenamiento').in('ruta_almacenamiento', rutas);
+  const usadas = new Set(((enUso ?? []) as { ruta_almacenamiento: string }[]).map((r) => r.ruta_almacenamiento));
+  const libres = rutas.filter((r) => !usadas.has(r));
+  if (libres.length) await clienteServicio().storage.from('materiales').remove(libres);
 }
 
 // ---------------------------------------------------------------- evaluación

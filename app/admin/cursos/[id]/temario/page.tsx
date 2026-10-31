@@ -6,7 +6,8 @@ import { AvisoAccion } from '@/ui/admin/campos';
 import { EstadoChip } from '@/ui/admin/estructura';
 import { BotonesOrden } from '@/ui/admin/BotonesOrden';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
-import { crearLeccion, crearModulo, eliminarElemento, renombrarModulo, retirarElemento } from '../../acciones';
+import { corregirModulo, crearLeccion, crearModulo, eliminarElemento, renombrarModulo, retirarElemento } from '../../acciones';
+import { TIPOS_CORRECCION } from '@/dominio/cursos-admin';
 
 export const metadata: Metadata = { title: 'Temario' };
 
@@ -83,14 +84,34 @@ function TarjetaModulo({ m, i, total, curso, volver, avisoNueva, versionado }: {
     <section aria-label={`Módulo ${i + 1}: ${m.titulo}`} className={`rounded-2xl border-[1.5px] border-borde-bandeja p-3 sm:p-4 ${m.retirado ? 'bg-[#F1EEE8]' : 'bg-blanco-calido'}`}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-1 pb-2">
         <BotonesOrden tabla="modulos" id={m.id} curso={curso} volver={volver} nombre={m.titulo} primero={i === 0} ultimo={i === total - 1} />
-        <form action={renombrarModulo} className="flex min-w-0 flex-[1_1_300px] items-center gap-2">
-          <input type="hidden" name="id" value={m.id} />
-          <input type="hidden" name="curso" value={curso} />
-          <label htmlFor={`modulo-${m.id}`} className="shrink-0 font-display text-[19px] font-semibold">Módulo {i + 1} ·</label>
-          <input id={`modulo-${m.id}`} name="titulo" defaultValue={m.titulo} required minLength={2} maxLength={140}
-            className="min-h-[44px] min-w-0 flex-1 rounded-md border-[1.5px] border-transparent bg-transparent px-2 font-display text-[19px] font-semibold text-marron hover:border-borde-bandeja focus:border-borde-control focus:bg-blanco-calido" />
-          <button type="submit" className="min-h-[40px] shrink-0 px-1 text-[15px] font-bold text-oliva-profundo underline underline-offset-4">Guardar nombre</button>
-        </form>
+        {m.lecciones.some((l) => l.marca.enAlgunaVersion) ? (
+          <div className="flex min-w-0 flex-[1_1_300px] flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 className="m-0 font-display text-[19px] font-semibold">Módulo {i + 1} · {m.titulo}</h2>
+            <ConfirmarAccion accion={corregirModulo} campos={{ id: m.id, curso }} textoBoton="Corregir nombre" titulo="Corrección menor del nombre" estilo="enlace" textoConfirmar="Aplicar corrección">
+              <p className="m-0">El módulo forma parte de una versión publicada: su nombre solo admite correcciones menores, que se ven en todas las versiones y quedan registradas.</p>
+              <label htmlFor={`titulo-${m.id}`} className="mt-1 text-[15px] font-bold">Nombre corregido</label>
+              <input id={`titulo-${m.id}`} name="titulo" defaultValue={m.titulo} required minLength={2} maxLength={140}
+                className="min-h-[48px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 text-marron" />
+              <label htmlFor={`tipo-${m.id}`} className="text-[15px] font-bold">Tipo de corrección</label>
+              <select id={`tipo-${m.id}`} name="tipo_correccion" required defaultValue="" className="min-h-[48px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 text-marron">
+                <option value="" disabled>Elija una opción</option>
+                {TIPOS_CORRECCION.filter((t) => !t.valor.includes('video') && t.valor !== 'calidad_audio_video').map((t) => <option key={t.valor} value={t.valor}>{t.texto}</option>)}
+              </select>
+              <label htmlFor={`motivo-${m.id}`} className="text-[15px] font-bold">Motivo (queda registrado)</label>
+              <textarea id={`motivo-${m.id}`} name="motivo" required minLength={10} maxLength={500} rows={2}
+                className="rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 py-2 text-marron" />
+            </ConfirmarAccion>
+          </div>
+        ) : (
+          <form action={renombrarModulo} className="flex min-w-0 flex-[1_1_300px] items-center gap-2">
+            <input type="hidden" name="id" value={m.id} />
+            <input type="hidden" name="curso" value={curso} />
+            <label htmlFor={`modulo-${m.id}`} className="shrink-0 font-display text-[19px] font-semibold">Módulo {i + 1} ·</label>
+            <input id={`modulo-${m.id}`} name="titulo" defaultValue={m.titulo} required minLength={2} maxLength={140}
+              className="min-h-[44px] min-w-0 flex-1 rounded-md border-[1.5px] border-transparent bg-transparent px-2 font-display text-[19px] font-semibold text-marron hover:border-borde-bandeja focus:border-borde-control focus:bg-blanco-calido" />
+            <button type="submit" className="min-h-[40px] shrink-0 px-1 text-[15px] font-bold text-oliva-profundo underline underline-offset-4">Guardar nombre</button>
+          </form>
+        )}
         <div className="flex items-center gap-x-3">
           {m.retirado && <EstadoChip estado="archivado" texto="Retirado" />}
           <AccionesRetiro tabla="modulos" id={m.id} curso={curso} volver={volver} nombre={m.titulo} retirado={m.retirado} historial={historial} tipo="el módulo"
@@ -138,7 +159,7 @@ export default async function Temario({ params, searchParams }: Props) {
         <p className="m-0 mb-5 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">
           Está editando el <b>borrador</b>. Agregar, retirar o reordenar lecciones no cambia nada para los alumnos hasta que publique una
           versión nueva en <Link href={`/admin/cursos/${c.id}/publicacion`} className="font-bold text-oliva-profundo">Publicación</Link>.
-          Las correcciones de títulos y descripciones se ven enseguida en todas las versiones.
+          Una lección o un módulo publicado solo admite correcciones menores declaradas (se ven en todas las versiones y quedan registradas); para cambiar su contenido se crea una lección de reemplazo.
         </p>
       ) : c.historial.alumnos > 0 && (
         <p className="m-0 mb-5 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">

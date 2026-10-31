@@ -100,6 +100,10 @@ try {
 
   await p.setInputFiles('#pdf', falso);
   await p.getByRole('button', { name: 'Subir PDF' }).click();
+  comprobar(await p.getByText('Elija si el material es complementario o parte del programa.').first().waitFor({ timeout: 10000 }).then(() => true, () => false),
+    'no se asume el tipo de material: hay que elegirlo');
+  await p.getByLabel(/Parte del programa\./).check();
+  await p.getByRole('button', { name: 'Subir PDF' }).click();
   await p.getByText(/no es un PDF válido|No se pudo/).first().waitFor({ timeout: 20000 });
   comprobar(true, 'un archivo que no es PDF se rechaza');
   await p.setInputFiles('#pdf', pdf);

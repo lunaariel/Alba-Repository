@@ -70,10 +70,15 @@ export const cursoPorSlug = cache(async (slug: string): Promise<CursoDetalle | n
   if (!c) return null;
 
   // Temario de la versión vigente publicada (nunca el borrador) y conteos públicos.
-  const [{ data: resumen }, { data: temario }] = await Promise.all([
+  const [{ data: resumen }, { data: temario }, { data: version }] = await Promise.all([
     db.rpc('resumen_publico_curso', { p_curso: c.id }),
     c.version_vigente_id ? db.rpc('temario_version', { p_version: c.version_vigente_id }) : Promise.resolve({ data: [] }),
+    c.version_vigente_id
+      ? db.from('versiones_curso').select('objetivos, requisitos').eq('id', c.version_vigente_id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  // Objetivos y requisitos de la versión vigente (lo que compra quien se inscribe hoy), no del borrador.
+  const programa = (version as { objetivos: string[]; requisitos: string | null } | null) ?? { objetivos: c.objetivos ?? [], requisitos: c.requisitos };
   const r = (resumen ?? {}) as { materiales?: number; evaluacion?: boolean };
 
   type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: number; leccion_titulo: string; duracion_minutos: number | null; orden: number };
@@ -88,7 +93,7 @@ export const cursoPorSlug = cache(async (slug: string): Promise<CursoDetalle | n
 
   return {
     ...aResumen(c as unknown as FilaCurso),
-    id: c.id, descripcion: c.descripcion, objetivos: c.objetivos ?? [], requisitos: c.requisitos,
+    id: c.id, descripcion: c.descripcion, objetivos: programa.objetivos ?? [], requisitos: programa.requisitos,
     videoPresentacionId: c.video_presentacion_id, modulos,
     cantidadMateriales: r.materiales ?? 0, tieneEvaluacion: r.evaluacion ?? false,
   };
