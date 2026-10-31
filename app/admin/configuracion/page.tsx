@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CabeceraAdmin, EstadoChip } from '@/ui/admin/estructura';
-import { mfaAdminObligatorio } from '@/datos/sesion';
+import { exigirAdmin, mfaAdminObligatorio } from '@/datos/sesion';
 
 export const metadata: Metadata = { title: 'Configuración' };
 
-export default function Configuracion() {
+// La página se verifica por sí misma (además del layout): Next puede renderizarla en paralelo al layout
+// y su contenido no debe viajar en la respuesta 404 a quien no es admin.
+export default async function Configuracion() {
+  await exigirAdmin();
   const mfa = mfaAdminObligatorio();
   return (
     <>

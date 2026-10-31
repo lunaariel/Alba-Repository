@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
 import { EnPreparacion } from '@/ui/admin/estructura';
+import { exigirAdmin } from '@/datos/sesion';
 
 export const metadata: Metadata = { title: 'Alumnos' };
 
-export default function Alumnos() {
+// Verificación propia además del layout: el contenido no viaja en la respuesta 404 a quien no es admin.
+export default async function Alumnos() {
+  await exigirAdmin();
   return (
     <EnPreparacion
       titulo="Alumnos"
