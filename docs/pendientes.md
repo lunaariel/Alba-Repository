@@ -55,6 +55,39 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 - **Reembolso confirmado** revoca automáticamente el acceso al curso; solicitado, pendiente o fallido no. Queda auditado. Antes de implementarlo se propondrá qué pasa con un certificado ya emitido para ese curso; no se revoca en silencio. Entregas 4 y 6.
 - **Duplicar talleres**: copia título, descripción, materiales y configuración; permite cambiar fecha, horario, precio y cupo; no copia inscriptos, pagos, enlaces de reunión ni asistencia; la copia nace en borrador. Entrega 3.
 
+## Lista de control permanente (pedido de la titular, 30/10/2026)
+
+Ninguna de estas medidas se considera implementada hasta que exista una prueba que lo demuestre.
+
+### Seguridad
+
+| Medida | Estado | Prueba que la demostrará |
+| --- | --- | --- |
+| MFA obligatorio para la administradora antes del lanzamiento | No implementado | Recorrido: sin segundo factor, `/admin` responde 404 |
+| Nueva verificación de identidad para operaciones muy sensibles | En evaluación | Recorrido: una operación sensible con sesión antigua pide verificar |
+| Responsable real de los cambios de rol, incluidos los hechos por scripts | Parcial (el script figura como "Sistema") | SQL: un cambio de rol sin responsable identificado se rechaza |
+| Validación de permisos en todas las acciones nuevas del panel | Vigente para las 19 acciones actuales (prueba estática + 404 + SQL) | Cada entrega nueva amplía la prueba; falta invocar una acción directamente con sesión de alumna |
+| Registro de auditoría de operaciones críticas | Vigente para cursos, temario, evaluaciones, talleres, roles, cupones, configuración | Cada operación crítica nueva suma su prueba SQL |
+
+### Integraciones (ninguna activa; no se activan proveedores pagos ni credenciales de producción sin autorización)
+
+| Integración | Estado |
+| --- | --- |
+| Validación real de Bunny Stream | Firma probada en prueba unitaria; sin cuenta real |
+| Subida de videos desde el panel | No implementada (se pega el id) |
+| Almacenamiento privado de PDF en el entorno definitivo | Probado en el Supabase local de CI; falta el proyecto real |
+| Correo transaccional | Adaptador simulado |
+| Cambio de correo y eliminación de cuenta | No implementados (decisión de la titular registrada arriba) |
+| Pagos reales y reembolsos | Adaptador simulado; ventas cerradas |
+| Facturación según la jurisdicción comercial (FEL en Guatemala) | Solo recibo comercial no fiscal |
+| Videoconferencias automáticas (Zoom o Meet) | Adaptador manual |
+
+## Planes presentados y en espera de aprobación (30/10/2026)
+
+- Versionado académico, vista previa de borradores y duplicación de cursos (documento «Albor · Versionado académico: diseño técnico»). No implementado.
+- Fase 5, entrega 3: talleres y eventos (documento «Albor · Fase 5, entrega 3: plan de talleres y eventos»). No implementado.
+- Defecto detectado al planificar: un pago aprobado después del vencimiento de la reserva, sin lugar disponible, deja la orden pendiente sin aviso. Su corrección está prevista en la entrega 3.
+
 ## Decisiones de negocio abiertas
 
 Pasarela de pago para Guatemala · certificador FEL · política de reembolsos · dominio y hosting · fotos y biografía reales de la maestra · presupuesto.
