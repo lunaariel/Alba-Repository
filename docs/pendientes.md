@@ -34,10 +34,10 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 
 | Pendiente | Estado | Qué falta | Cuándo |
 | --- | --- | --- | --- |
-| Vista previa del borrador "como alumno" desde el panel | Aprobada por la titular; **no implementada** (no es necesaria para la coherencia del versionado) | Página de vista previa del borrador; hoy la publicación muestra la lista de diferencias con la versión vigente | Bloque aparte, a autorizar |
-| Duplicar un curso | Aprobada por la titular; **no implementada** | Copiar curso, temario y evaluación como borrador nuevo, sin alumnos, versiones ni historial, con copia de los PDF | Bloque aparte, a autorizar |
+| Vista previa del borrador "como alumno" desde el panel | **Implementado** (pestaña Vista previa, solo lectura) | — | Hecho en la jornada autónoma |
+| Duplicar un curso | **Implementado (0020, local y CI)** | — | Hecho en la jornada autónoma |
 | Subir videos a Bunny desde el panel | Se pega el id del video subido a Bunny | Subida directa con la API de Bunny | Fase 6 |
-| Pestaña "Alumnos del curso" | No implementada; el editor muestra cuántos alumnos y certificados hay | Lista con avance por alumno | Entrega 4 |
+| Pestaña "Alumnos del curso" | **Implementada** por versión, con finalización, vencimiento y validación docente | Avance lección por lección | Entrega 4 |
 | Bucket `materiales` en el Supabase real | La migración lo crea si existe el esquema de Storage; la subida se probó en el Supabase local de CI | Confirmar en el proyecto real | Fase 7 |
 | Mover una lección a otro módulo | No implementado; se reordena dentro del módulo | Selector de módulo en la lección | A definir |
 
@@ -45,10 +45,10 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 
 | Pendiente | Estado | Qué falta | Cuándo |
 | --- | --- | --- | --- |
-| Bloqueo excepcional de un material PDF desde el panel | La base lo permite (`bloquear_contenido('recursos_leccion', …)`); el panel ofrece el bloqueo de lecciones y preguntas | Botón en cada material de la lección | A definir |
-| Diferencias de orden y de textos entre borrador y versión vigente | La publicación lista lecciones y preguntas nuevas o quitadas y cambios de criterios | Mostrar también los cambios de orden | A definir |
-| Lista de alumnos por versión | El historial de versiones muestra cuántos alumnos y certificados tiene cada una | Detalle por alumno (con la pestaña «Alumnos del curso») | Entrega 4 |
-| Descartar una revisión calculada y no aplicada | Queda en estado «calculada» sin efecto | Botón para descartarla (hoy simplemente no se aplica) | A definir |
+| Bloqueo excepcional de un material PDF desde el panel | **Implementado** (botón en cada material) | — | Hecho |
+| Diferencias de orden entre borrador y versión vigente | **Implementado** (lecciones y preguntas que cambian de lugar) | Diferencias de texto | A definir |
+| Lista de alumnos por versión | **Implementada** (pestaña Alumnos) | — | Hecho |
+| Descartar una revisión calculada y no aplicada | **Implementado** (con motivo y registro) | — | Hecho |
 | Migraciones 0014, 0015 y 0016 en una base real | Probadas solo en local y en CI (Supabase local efímero), con conciliación y reversión. **Aplicarlas en producción no está autorizado** | Presentar entorno exacto, respaldo verificable, plan, impacto, recuperación, pruebas posteriores y riesgos de reversión; pedir autorización específica | Cuando la titular lo autorice |
 
 ## Fase 5 · entrega 3 (talleres y eventos)
@@ -90,6 +90,27 @@ Implementado y probado **solo en local y en CI**. Nada de lo siguiente está con
 | MFA de la administradora | No implementado | Ver «Seguridad» | Antes del lanzamiento |
 | Integraciones reales y sus pruebas | Ninguna integración verificada contra un servicio real | Pruebas con cuentas reales | Fase 6 |
 
+## Jornada autónoma (01/11/2026, rama `desarrollo/jornada-autonoma`, migraciones 0018 a 0023)
+
+Implementado y probado **solo en local y en CI**. Nada integrado a `main` ni aplicado en una base real.
+
+| Pendiente | Estado | Qué falta | Quién decide |
+| --- | --- | --- | --- |
+| Rúbricas, consignas y actividades abiertas (texto o archivo) de la evaluación formativa | No implementado: no se inventaron. Hoy las actividades formativas son preguntas de opción, sin nota | Que la maestra defina las actividades; un tipo de entrega revisada por ella | Maestra |
+| Recompra o renovación de un curso vencido | `crear_orden` responde `ya_tiene_acceso` | Definir la regla comercial | Maestra |
+| Vencimiento de las concesiones (becas) | No vencen | Decidir si vencen | Maestra |
+| Aviso previo al vencimiento | No implementado | Servicio de correo (Fase 6) y anticipación | Maestra |
+| Unidad de la duración comercial | Meses calendario | Confirmar que no se prefieren semanas | Maestra |
+| Pasarela de pago | Investigada: Recurrente o Lemon Squeezy (`docs/investigacion-proveedores.md`) | Decisión y confirmación de condiciones por escrito | Maestra |
+| FEL y condición tributaria | Investigado; solo recibo no fiscal | Contador; decidir entre certificador o emisión manual | Maestra con contador |
+| Workspace Standard o Plus | Comparado (asistencia automática solo en Plus) | Decisión; no se contrata nada sin autorización | Maestra |
+| Presupuesto de Q500 | El conjunto mínimo queda en ≈ Q487 a Q562 al mes (detalle en la investigación) | Aceptar el límite o ampliarlo | Maestra |
+| Presentación de la maestra | Editable, con la trayectoria informada; **no publicada** hasta su aprobación | Revisión y aprobación; foto real | Maestra |
+| MFA de la administradora | Preparado (`ADMIN_MFA_OBLIGATORIO`), **no activo** | Pantallas de enrolamiento y verificación TOTP; registrar su factor; procedimiento de recuperación | Técnico, antes del lanzamiento |
+| CSP (política de seguridad de contenidos) | No configurada | Definirla y probarla en el despliegue | Técnico |
+| Error de hidratación de React (#418) visto una vez en las capturas públicas | Intermitente: apareció en 1 de 5 ejecuciones y no se reprodujo en las siguientes | Investigar la página que lo produce (el informe no la identifica) | Técnico |
+| Migraciones 0014 a 0023 en producción | Probadas en local y CI, con reversión ensayada. **No autorizadas** | Plan de ejecución (`docs/estrategia-migracion.md`) y autorización específica | Titular |
+
 ## Seguridad requerida por la titular (30/10/2026)
 
 | Requisito | Estado | Qué falta | Cuándo |
@@ -114,7 +135,7 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 | --- | --- | --- |
 | MFA obligatorio para la administradora antes del lanzamiento | No implementado | Recorrido: sin segundo factor, `/admin` responde 404 |
 | Nueva verificación de identidad para operaciones muy sensibles | En evaluación | Recorrido: una operación sensible con sesión antigua pide verificar |
-| Responsable real de los cambios de rol, incluidos los hechos por scripts | Parcial (el script figura como "Sistema") | SQL: un cambio de rol sin responsable identificado se rechaza |
+| Responsable real de los cambios de rol, incluidos los hechos por scripts | **Implementado (0023)**: sin responsable se rechaza | `90_panel_base.sql` |
 | Validación de permisos en todas las acciones nuevas del panel | Vigente para las 19 acciones actuales (prueba estática + 404 + SQL) | Cada entrega nueva amplía la prueba; falta invocar una acción directamente con sesión de alumna |
 | Registro de auditoría de operaciones críticas | Vigente para cursos, temario, evaluaciones, talleres, roles, cupones, configuración | Cada operación crítica nueva suma su prueba SQL |
 
