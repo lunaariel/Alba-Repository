@@ -80,7 +80,8 @@ try {
   await a.fill('#cupo', '1');
   await a.getByRole('button', { name: 'Guardar cambios' }).click();
   await a.getByText('Cambios guardados.').waitFor({ timeout: 15000 });
-  comprobar(true, 'se guardan descripción, precio gratuito y cupo');
+  comprobar(await a.getByLabel('Cupo limitado').isChecked() && await a.getByLabel('Gratuito').isChecked() && (await a.inputValue('#cupo')) === '1',
+    'se guardan descripción, precio gratuito y cupo, y el formulario muestra lo guardado');
   await a.screenshot({ path: `${SALIDA}/recorrido-talleres-1-datos.png`, fullPage: true });
   await a.goto(`${BASE}/admin/talleres/${id}/estado`, { waitUntil: 'networkidle' });
   await confirmar(a, a.getByRole('button', { name: 'Publicar el taller' }));

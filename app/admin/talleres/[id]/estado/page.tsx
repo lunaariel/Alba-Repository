@@ -152,7 +152,7 @@ export default async function EstadoTaller({ params, searchParams }: Props) {
           <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
             {t.reprogramaciones.map((r) => (
               <li key={r.creadoEn.toISOString()} className="rounded-xl bg-marfil px-4 py-3 text-[15px]">
-                {formatearHorario(r.iniciaAntes, t.zonaHoraria)} → <b>{formatearHorario(r.iniciaDespues, t.zonaHoraria)}</b> · {r.inscriptos} inscriptos
+                {formatearHorario(r.iniciaAntes, t.zonaHoraria)} → <b>{formatearHorario(r.iniciaDespues, t.zonaHoraria)}</b> · {r.inscriptos === 1 ? '1 inscripto' : `${r.inscriptos} inscriptos`}
                 <span className="block text-tinta-suave">Motivo: {r.motivo}</span>
               </li>
             ))}

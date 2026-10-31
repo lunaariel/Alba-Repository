@@ -27,7 +27,7 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 | Pendiente | Estado | Qué falta | Entrega prevista |
 | --- | --- | --- | --- |
 | Lectura de `opciones.es_correcta` desde el panel | La columna no es legible por clientes, tampoco por la admin | El editor de evaluaciones la leerá por el servidor (clave de servicio) después de `exigirAdmin()` | 2 |
-| Acciones de servidor del panel | Prueba estática: cada acción empieza con `exigirAdminAccion()`. Prueba directa en CI (`scripts/acciones-protegidas.mjs`): los formularios reales del panel reenviados con la sesión de una alumna y sin sesión no cambian la base (control positivo con la admin) | Repetir la prueba directa con las acciones de cada entrega nueva | 3 a 6 |
+| Acciones de servidor del panel | Prueba estática: cada acción empieza con `exigirAdminAccion()`. Pruebas directas en CI: `acciones-protegidas.mjs` (formularios reales del panel) y `acciones-sensibles.mjs` (26 acciones capturadas en el panel, incluidas eliminar, quitar y subir archivos, revisión favorable, bloqueo, publicar versión, criterios y talleres) reenviadas con la sesión de una alumna y sin sesión: 404 controlado y base y almacenamiento sin cambios; control positivo con la admin; API de datos y almacenamiento con el token de la alumna | Repetir con las acciones de cada entrega nueva | 4 a 6 |
 | Nombre de la persona en "Asignó el rol de administración" | El registro guarda el id, no lo muestra | Mostrar el nombre en la ficha del registro | 4 |
 
 ## Fase 5 · entrega 2 (cursos y evaluaciones)
@@ -49,7 +49,20 @@ Hasta hoy, ninguna funcionalidad está en el tercer estado.
 | Diferencias de orden y de textos entre borrador y versión vigente | La publicación lista lecciones y preguntas nuevas o quitadas y cambios de criterios | Mostrar también los cambios de orden | A definir |
 | Lista de alumnos por versión | El historial de versiones muestra cuántos alumnos y certificados tiene cada una | Detalle por alumno (con la pestaña «Alumnos del curso») | Entrega 4 |
 | Descartar una revisión calculada y no aplicada | Queda en estado «calculada» sin efecto | Botón para descartarla (hoy simplemente no se aplica) | A definir |
-| Migración 0014 en el Supabase real | Probada en local y en CI con datos de ejemplo, con conciliación y reversión | Respaldo verificable del proyecto real, aplicar, ejecutar `conciliar_versionado()` y guardar el informe | Antes del lanzamiento, con autorización |
+| Migraciones 0014, 0015 y 0016 en una base real | Probadas solo en local y en CI (Supabase local efímero), con conciliación y reversión. **Aplicarlas en producción no está autorizado** | Presentar entorno exacto, respaldo verificable, plan, impacto, recuperación, pruebas posteriores y riesgos de reversión; pedir autorización específica | Cuando la titular lo autorice |
+
+## Fase 5 · entrega 3 (talleres y eventos)
+
+| Pendiente | Estado | Qué falta | Cuándo |
+| --- | --- | --- | --- |
+| Venta de talleres pagos | Reserva de 15 minutos, pago simulado y pago tardío probados con el simulador | Pasarela real y política de reembolsos | Fase 6 |
+| Reembolsos (incidencias «requiere reembolso» y «reembolso pendiente») | Se registran y se ven en el panel; nunca figuran como hechos | Ejecutarlos con la pasarela y cerrar la incidencia con su confirmación | Fase 6 |
+| Envío real de correos (confirmación, recordatorios, reprogramación, cancelación) | Registrados como notificaciones pendientes; no se envía nada | Proveedor de correo transaccional | Fase 6 |
+| Zoom o Google Meet automáticos | Enlace cargado a mano (adaptador manual) | Elegir proveedor, cuenta y credenciales | Fase 6 (no autorizado todavía) |
+| Ejecución programada de `/api/procesos` | Ruta lista con clave; probada en CI llamándola dos veces | Configurar Vercel Cron o pg_cron al definir el hosting | Con el hosting |
+| Materiales descargables de talleres | No implementado (figuraba en el plan; no en el pedido de la entrega) | Tabla y subida privada, copia al duplicar | A definir |
+| Avisos en «Hoy» (talleres sin enlace a 48 h, incidencias) | La lista de talleres y la página de incidencias los muestran | Tablero «Hoy» | Entrega 4 |
+| Errores del proveedor de reuniones (reintentos) | Columnas de estado y error existen; sin proveedor no aplica | Reintentos y aviso urgente | Fase 6 |
 
 ## Seguridad requerida por la titular (30/10/2026)
 
@@ -94,8 +107,8 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 
 ## Planes presentados y en espera de aprobación (30/10/2026)
 
-- Versionado académico: **implementado** (31/10/2026, migración 0014), según la autorización de la titular. Vista previa de borradores y duplicación de cursos: aprobadas, sin implementar, como bloque aparte.
-- Fase 5, entrega 3: talleres y eventos (documento «Albor · Fase 5, entrega 3: plan de talleres y eventos»). Plan aprobado con ajustes (inscripción real a talleres gratuitos, visibilidad del enlace configurable con 24 h por defecto validada en el servidor, recordatorios configurables de 24 h y 1 h idempotentes ante reprogramaciones, estado «requiere reembolso»). **No implementado**: espera autorización para programarse.
+- Versionado académico: **implementado** (31/10/2026, migraciones 0014 y 0015), aprobado condicionalmente por la titular. Vista previa de borradores y duplicación de cursos: aprobadas, sin implementar, como bloque aparte.
+- Fase 5, entrega 3: talleres y eventos. **Implementada en local y en pruebas** (31/10/2026, migración 0016), a la espera de la aprobación de la titular. No se aplicó en ninguna base real.
 - Defecto detectado al planificar: un pago aprobado después del vencimiento de la reserva, sin lugar disponible, deja la orden pendiente sin aviso. Su corrección está prevista en la entrega 3.
 
 ## Decisiones de negocio abiertas

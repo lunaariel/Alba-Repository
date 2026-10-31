@@ -1,7 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
-import { Aviso, BotonEnviar } from '@/ui/Formulario';
+import { startTransition, useActionState, useState } from 'react';
+import { Aviso } from '@/ui/Formulario';
 import { AreaTexto, Entrada, Selector } from '@/ui/admin/campos';
 import { GuardiaCambios } from '@/ui/admin/GuardiaCambios';
 import { ZONAS_TALLER } from '@/dominio/talleres';
@@ -14,13 +14,18 @@ export interface DatosFormTaller {
 }
 
 export function FormTaller({ t, vistaPrevia }: { t: DatosFormTaller; vistaPrevia: string }) {
-  const [estado, accion] = useActionState<EstadoForm, FormData>(guardarTaller, undefined);
+  const [estado, accion, enviando] = useActionState<EstadoForm, FormData>(guardarTaller, undefined);
   const [tipo, setTipo] = useState(t.gratuito ? 'gratuito' : 'pago');
   const [cupoTipo, setCupoTipo] = useState(t.ilimitado ? 'ilimitado' : 'limitado');
   const err = (c: string) => (estado?.campo === c ? estado.error : undefined);
   const radio = 'mt-0.5 h-5 w-5 shrink-0 accent-[#4E6049]';
   return (
-    <form action={accion} className="flex max-w-[860px] flex-col gap-6">
+    // Envío sin el reinicio automático del formulario de React 19: los radios controlados quedarían
+    // desfasados de lo guardado (se vio en las capturas).
+    <form
+      onSubmit={(e) => { e.preventDefault(); const datos = new FormData(e.currentTarget); startTransition(() => accion(datos)); }}
+      className="flex max-w-[860px] flex-col gap-6"
+    >
       <GuardiaCambios />
       <input type="hidden" name="id" value={t.id} />
       <input type="hidden" name="conFecha" value={t.fechaEditable ? 'si' : 'no'} />
@@ -80,7 +85,11 @@ export function FormTaller({ t, vistaPrevia }: { t: DatosFormTaller; vistaPrevia
         <Entrada nombre="visible" etiqueta="Mostrar el enlace a los inscriptos desde (horas antes del inicio)" inputMode="numeric" defaultValue={t.visible} error={err('visible')}
           ayuda="Por defecto, 24 horas antes. Solo lo ven las personas con inscripción confirmada; lo controla el servidor." />
       </fieldset>
-      <div><BotonEnviar>Guardar cambios</BotonEnviar></div>
+      <div>
+        <button type="submit" disabled={enviando} className="min-h-[54px] rounded-md bg-oliva-profundo px-7 text-[17px] font-bold text-marfil transition-colors hover:bg-marron disabled:opacity-55">
+          {enviando ? 'Un momento…' : 'Guardar cambios'}
+        </button>
+      </div>
     </form>
   );
 }
