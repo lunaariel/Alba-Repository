@@ -312,9 +312,15 @@ try {
   }
 
   // 19. Registro de actividad.
-  await a.goto(`${BASE}/admin/configuracion/actividad?grupo=talleres`, { waitUntil: 'networkidle' });
-  comprobar(await a.getByText('Reprogramó un taller').first().isVisible() && await a.getByText('Canceló un taller').first().isVisible()
-    && await a.getByText('Duplicó un taller como borrador').first().isVisible(), 'el registro muestra reprogramar, cancelar y duplicar');
+  // El registro está paginado (30 por página): se leen las primeras páginas del grupo «Talleres».
+  let registro = '';
+  for (let pagina = 1; pagina <= 4; pagina++) {
+    await a.goto(`${BASE}/admin/configuracion/actividad?grupo=talleres&pagina=${pagina}`, { waitUntil: 'networkidle' });
+    registro += await a.locator('main').innerText();
+  }
+  comprobar(['Reprogramó un taller', 'Canceló un taller', 'Duplicó un taller como borrador', 'Una persona respondió a la reprogramación de un taller',
+    'Cambió el estado de la grabación de un taller', 'Registró la revisión de una grabación'].every((t) => registro.includes(t)),
+    'el registro muestra reprogramar, cancelar, duplicar, la respuesta de la alumna y los cambios de la grabación');
 
   // 20. Celular (390 px): sin desbordes en las pantallas de talleres.
   const { p: m } = await sesion(ADMIN_CORREO, ADMIN_CLAVE, { width: 390, height: 844 });
