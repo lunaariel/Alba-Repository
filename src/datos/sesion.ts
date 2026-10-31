@@ -1,5 +1,5 @@
 import 'server-only';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { clienteSesion } from './supabase';
 
 /** Persona con sesión verificada contra Supabase Auth (getUser valida el token en el servidor). */
@@ -23,8 +23,19 @@ export async function esAdmin(): Promise<boolean> {
   return !error && data === true;
 }
 
+/**
+ * Páginas del panel: quien no es admin (con o sin sesión) recibe el mismo "no encontrado"
+ * que una dirección inexistente, para no revelar que el panel existe.
+ */
 export async function exigirAdmin() {
-  const usuario = await exigirSesion('/admin');
-  if (!(await esAdmin())) redirect('/campus');
+  const usuario = await usuarioActual();
+  if (!usuario || !(await esAdmin())) notFound();
+  return usuario;
+}
+
+/** Acciones de servidor del panel: rechazan sin dar detalles. Cada acción la llama primero. */
+export async function exigirAdminAccion() {
+  const usuario = await usuarioActual();
+  if (!usuario || !(await esAdmin())) throw new Error('No autorizado.');
   return usuario;
 }

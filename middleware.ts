@@ -2,9 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Renueva la sesión en cada solicitud y bloquea /campus y /admin sin sesión.
- * El rol admin se vuelve a comprobar en el servidor de cada página y acción (exigirAdmin),
- * no solo aquí.
+ * Renueva la sesión en cada solicitud y lleva a ingresar a quien abre /campus sin sesión.
+ * /admin no redirige: su layout responde "no encontrado" a quien no es admin (exigirAdmin),
+ * para no revelar que existe. El rol se comprueba en el servidor de cada página y acción.
  */
 export async function middleware(request: NextRequest) {
   let respuesta = NextResponse.next({ request });
@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
   const ruta = request.nextUrl.pathname;
   const privada = ruta.startsWith('/campus') || ruta.startsWith('/admin');
 
-  if (privada && !data.user) {
+  if (ruta.startsWith('/campus') && !data.user) {
     const url = request.nextUrl.clone();
     url.pathname = '/ingresar';
     url.searchParams.set('siguiente', ruta);

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { exigirSesion } from '@/datos/sesion';
+import { esAdmin, exigirSesion } from '@/datos/sesion';
 import { configuracion } from '@/datos/publico';
 import { Contenedor } from '@/ui/estructura';
 import { IconoAlbor } from '@/ui/marca';
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: { default: 'Campus', template: '%s ·
 
 export default async function LayoutCampus({ children }: { children: React.ReactNode }) {
   await exigirSesion('/campus');
-  const config = await configuracion();
+  const [config, admin] = await Promise.all([configuracion(), esAdmin()]);
   return (
     <div className="flex min-h-screen flex-col">
       <header className="bg-arena">
@@ -32,6 +32,8 @@ export default async function LayoutCampus({ children }: { children: React.React
               { href: '/campus/talleres', texto: 'Mis talleres' },
               { href: '/campus/compras', texto: 'Compras' },
               { href: '/campus/cuenta', texto: 'Cuenta' },
+              // Solo la administradora ve este enlace; el panel igual vuelve a comprobar el rol.
+              ...(admin ? [{ href: '/admin', texto: 'Panel' }] : []),
             ]}
             accion={
               <form action={salir}>

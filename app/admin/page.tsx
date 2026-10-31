@@ -1,12 +1,25 @@
-import { exigirAdmin } from '@/datos/sesion';
+import type { Metadata } from 'next';
+import { EnPreparacion } from '@/ui/admin/estructura';
+import { EnlaceAccion } from '@/ui/acciones';
 
-// Fase 5 construye el panel. Por ahora solo comprueba que únicamente la admin entra.
-export default async function Admin() {
-  await exigirAdmin();
+export const metadata: Metadata = { title: 'Hoy' };
+
+export default function Hoy() {
   return (
-    <main className="mx-auto flex max-w-[860px] flex-col gap-6 px-5 py-16">
-      <h1 className="m-0 text-[40px]">Panel de administración</h1>
-      <p className="m-0">El panel se construye en la Fase 5.</p>
-    </main>
+    <EnPreparacion
+      titulo="Hoy"
+      entrega={6}
+      queHara={[
+        'Ver de un vistazo lo que pide atención: mensajes sin leer, cursos en borrador con lo que les falta, talleres próximos y pedidos de alumnos.',
+        'Crear un curso o un taller con un clic.',
+        'Ver pagos o correos con error, cuando estén conectados los servicios reales.',
+      ]}
+      mientras={
+        <>
+          <p className="m-0">Ya está disponible el registro de actividad: todo cambio importante queda anotado con su autora, la fecha y el antes y el después.</p>
+          <div className="mt-2"><EnlaceAccion href="/admin/configuracion/actividad">Abrir el registro de actividad</EnlaceAccion></div>
+        </>
+      }
+    />
   );
 }

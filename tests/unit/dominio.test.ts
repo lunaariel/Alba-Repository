@@ -94,3 +94,39 @@ test('respuestasDesdeFormulario solo acepta pares de uuid y sin duplicados', asy
   ]);
   assert.deepEqual(r, { [p]: [o1, o2] });
 });
+
+test('describirActividad traduce acciones y muestra solo lo que cambió', async () => {
+  const { describirActividad, grupoDesdeUrl } = await import('../../src/dominio/auditoria');
+  const d = describirActividad({
+    accion: 'taller_actualizado', entidad: 'talleres', entidadId: 'x',
+    antes: { titulo: 'Límites', cupo: 1, precio_centavos: 1500, estado: 'publicado' },
+    despues: { titulo: 'Límites', cupo: 12, precio_centavos: 1500, estado: 'publicado' },
+  });
+  assert.equal(d.titulo, 'Modificó un taller');
+  assert.equal(d.nombre, 'Límites');
+  assert.deepEqual(d.cambios, [{ campo: 'Cupo', antes: '1', despues: '12' }]);
+
+  const precio = describirActividad({
+    accion: 'curso_actualizado', entidad: 'cursos', entidadId: 'c',
+    antes: { precio_centavos: 4900, estado: 'borrador' }, despues: { precio_centavos: 5900, estado: 'publicado' },
+  });
+  assert.deepEqual(precio.cambios, [
+    { campo: 'Precio', antes: 'USD 49', despues: 'USD 59' },
+    { campo: 'Estado', antes: 'Borrador', despues: 'Publicado' },
+  ]);
+
+  const alta = describirActividad({ accion: 'cupon_creado', entidad: 'cupones', entidadId: 'k', antes: null, despues: { codigo: 'BECA50', valor: 50, activo: true } });
+  assert.equal(alta.nombre, 'BECA50');
+  assert.ok(alta.cambios.every((c) => c.antes === null));
+  assert.ok(alta.cambios.some((c) => c.campo === 'Activo' && c.despues === 'Sí'));
+
+  const textos = describirActividad({ accion: 'configuracion_actualizado', entidad: 'configuracion_academia', entidadId: null,
+    antes: { textos: { a: 1 } }, despues: { textos: { a: 2 } } });
+  assert.deepEqual(textos.cambios, [{ campo: 'Textos del sitio', antes: null, despues: 'modificado' }]);
+
+  const desconocida = describirActividad({ accion: 'algo_nuevo', entidad: 'x', entidadId: null, antes: null, despues: null });
+  assert.equal(desconocida.titulo, 'Acción: algo nuevo');
+  assert.equal(grupoDesdeUrl('talleres'), 'talleres');
+  assert.equal(grupoDesdeUrl('constructor'), null);
+  assert.equal(grupoDesdeUrl(undefined), null);
+});

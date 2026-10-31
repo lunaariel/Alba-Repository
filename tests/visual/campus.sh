@@ -54,6 +54,25 @@ begin
 end $$;
 SQL
 
+# Administradora de ejemplo y algo de actividad hecha "por ella" (para el registro de actividad).
+ADMIN_CORREO="maestra.demo@albor.invalid"
+ADMIN_CLAVE="clave-admin-de-ejemplo-123"
+curl -sf -X POST "$API_URL/auth/v1/admin/users" \
+  -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H "Content-Type: application/json" \
+  -d "{\"email\":\"$ADMIN_CORREO\",\"password\":\"$ADMIN_CLAVE\",\"email_confirm\":true,
+       \"user_metadata\":{\"nombre_completo\":\"Maestra (ejemplo)\",\"confirma_mayoria_edad\":true}}" >/dev/null
+psql "$DB" -v ON_ERROR_STOP=1 -q -v correo="'$ADMIN_CORREO'" -f scripts/asignar-admin.sql
+ADMIN_ID=$(psql "$DB" -tA -c "select id from auth.users where email = '$ADMIN_CORREO'")
+psql "$DB" -v ON_ERROR_STOP=1 -q <<SQL
+begin;
+set local request.jwt.claim.sub = '$ADMIN_ID';
+update public.talleres set cupo = 25 where slug = 'demo-taller-limites';
+update public.cursos set precio_centavos = 6500 where id = 'c1000000-0000-0000-0000-000000000003';
+insert into public.cupones (codigo, tipo, valor) values ('BIENVENIDA10', 'porcentaje', 10);
+update public.configuracion_academia set whatsapp = '+50200000000';
+commit;
+SQL
+
 q() { psql "$DB" -tA -c "$1"; }
 LECCION=$(q "select l.id from public.lecciones l join public.modulos m on m.id = l.modulo_id where m.curso_id = 'c1000000-0000-0000-0000-000000000001' order by m.orden, l.orden offset 1 limit 1")
 ORDEN=$(q "select id from public.ordenes where estado = 'aprobada' limit 1")
@@ -62,6 +81,8 @@ CODIGO=$(q "select codigo_verificacion from public.certificados limit 1")
 cat > campus.env <<EOF
 CORREO=$CORREO
 CLAVE=$CLAVE
+ADMIN_CORREO=$ADMIN_CORREO
+ADMIN_CLAVE=$ADMIN_CLAVE
 LECCION=$LECCION
 RUTAS_CAMPUS="/campus /campus/cursos/demo-montessori-en-casa /campus/cursos/demo-montessori-en-casa/lecciones/$LECCION /campus/cursos/demo-autonomia-0-3 /campus/cursos/demo-ambiente-3-6/evaluacion /campus/talleres /campus/compras /campus/compras/$ORDEN /campus/cuenta"
 RUTAS_VERIFICAR="/verificar /verificar/$CODIGO /verificar/NOEXISTE0000"
