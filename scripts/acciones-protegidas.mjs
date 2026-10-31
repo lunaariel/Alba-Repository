@@ -113,8 +113,18 @@ try {
     comprobar(r.status() === 200, `la admin abre ${pagina} (${r.status()})`);
     todos.push(...formularios(await r.text(), pagina));
   }
+  // Se descartan las acciones que la alumna también recibe en su campus (por ejemplo «Cerrar sesión»
+  // del encabezado común): son suyas y reenviarlas solo cerraría su propia sesión.
+  const propias = new Set();
+  for (const ruta of ['/campus', '/campus/cursos/demo-montessori-en-casa', '/campus/cuenta']) {
+    for (const f of formularios(await (await alumna.request.get(`${BASE}${ruta}`)).text(), ruta)) propias.add(f.id);
+  }
+  const delPanel = todos.filter((f) => f.id === 'ref' || !propias.has(f.id));
+  const descartados = todos.length - delPanel.length;
+  todos.length = 0; todos.push(...delPanel);
   const ids = new Set(todos.map((f) => f.id));
-  comprobar(todos.length >= 25 && ids.size >= 12, `formularios reales del panel: ${todos.length}, acciones distintas: ${ids.size}`);
+  comprobar(todos.length >= 25 && ids.size >= 9,
+    `formularios reales del panel: ${todos.length}, acciones distintas: ${ids.size} (${descartados} descartados por ser también del campus)`);
 
   // 1. Con la sesión de la alumna, ningún reenvío cambia la base.
   const antes = sql(HUELLA);
@@ -123,15 +133,18 @@ try {
     const estado = await enviar(alumna, f);
     estados.set(estado, (estados.get(estado) ?? 0) + 1);
     informe.push(`      alumna → ${estado} · ${f.descripcion}`);
-    comprobar(estado >= 400 || estado === 200, `alumna: ${f.descripcion} → ${estado}`);
+    comprobar(estado >= 400, `alumna: ${f.descripcion} → ${estado}`);
   }
   const despues = sql(HUELLA);
+  const sigue = await alumna.request.get(`${BASE}/campus`, { maxRedirects: 0 });
+  comprobar(sigue.status() === 200, `la sesión de la alumna siguió activa durante toda la prueba (${sigue.status()})`);
   comprobar(antes === despues, `la base no cambió tras ${todos.length} reenvíos de la alumna (huella ${antes.slice(0, 12)})`);
-  comprobar(!estados.has(303), `ninguna respuesta de la alumna fue una redirección de éxito (${JSON.stringify([...estados])})`);
+  comprobar(![...estados.keys()].some((e) => e < 400), `todas las respuestas a la alumna fueron rechazos (${JSON.stringify([...estados])})`);
 
   // 2. Lo mismo sin sesión.
   const anonimo = await navegador.newContext();
-  for (const f of todos.slice(0, 12)) await enviar(anonimo, f);
+  // A la portada (pública): sin sesión, el middleware del campus no la frenaría antes de la acción.
+  for (const f of todos.slice(0, 12)) await enviar(anonimo, f, '/');
   comprobar(sql(HUELLA) === antes, 'tampoco cambia sin sesión');
   await anonimo.close();
 
