@@ -67,7 +67,7 @@ curl -sf -X POST "$API_URL/auth/v1/admin/users" \
   -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H "Content-Type: application/json" \
   -d "{\"email\":\"$ADMIN_CORREO\",\"password\":\"$ADMIN_CLAVE\",\"email_confirm\":true,
        \"user_metadata\":{\"nombre_completo\":\"Maestra (ejemplo)\",\"confirma_mayoria_edad\":true}}" >/dev/null
-psql "$DB" -v ON_ERROR_STOP=1 -q -v correo="'$ADMIN_CORREO'" -f scripts/asignar-admin.sql
+psql "$DB" -v ON_ERROR_STOP=1 -q -v correo="'$ADMIN_CORREO'" -v responsable="'Verificación automática (CI)'" -f scripts/asignar-admin.sql
 ADMIN_ID=$(psql "$DB" -tA -c "select id from auth.users where email = '$ADMIN_CORREO'")
 psql "$DB" -v ON_ERROR_STOP=1 -q <<SQL
 begin;

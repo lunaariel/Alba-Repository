@@ -17,7 +17,10 @@ insert into auth.users (id, email, raw_user_meta_data) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@prueba.test', '{"nombre_completo": "Alumna A", "confirma_mayoria_edad": true}'),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'b@prueba.test', '{"nombre_completo": "Alumno B", "confirma_mayoria_edad": true, "acepta_promociones": true}'),
   ('adadadad-0000-0000-0000-000000000003', 'maestra@prueba.test', '{"nombre_completo": "Maestra", "confirma_mayoria_edad": true}');
+-- Responsable del alta (migración 0023); en bases anteriores la variable se ignora.
+select set_config('albor.responsable', 'Datos fijos de las pruebas', false);
 insert into public.roles_usuario (perfil_id, rol) values ('adadadad-0000-0000-0000-000000000003', 'admin');
+select set_config('albor.responsable', '', false);
 
 -- Curso con 1 módulo, 2 lecciones, 1 PDF y evaluación de 2 preguntas.
 insert into public.cursos (id, slug, titulo, precio_centavos) values

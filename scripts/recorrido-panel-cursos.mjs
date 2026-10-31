@@ -9,10 +9,11 @@ import { chromium } from 'playwright';
 const BASE = process.env.BASE ?? 'http://localhost:3000';
 const SALIDA = process.env.SALIDA ?? 'capturas';
 const DB = process.env.DB ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
-const { CORREO, CLAVE, ADMIN_CORREO, ADMIN_CLAVE, PREGUNTA_C3 } = process.env;
+const { CORREO, CLAVE, ADMIN_CORREO, ADMIN_CLAVE, PREGUNTA } = process.env;
 const sql = (q) => execFileSync('psql', [DB, '-q', '-v', 'ON_ERROR_STOP=1', '-tA', '-c', q], { encoding: 'utf8' }).trim();
 const C1 = 'c1000000-0000-0000-0000-000000000001';
-const C3 = 'c1000000-0000-0000-0000-000000000003';
+// C2: su pregunta no tiene revisiones aplicadas (el recorrido del editor aplica una en C3).
+const C2 = 'c1000000-0000-0000-0000-000000000002';
 
 await mkdir(SALIDA, { recursive: true });
 const navegador = await chromium.launch();
@@ -127,7 +128,7 @@ try {
   intercambiar();
 
   // 4. Revisión favorable calculada y descartada (con permisos).
-  await a.goto(`${BASE}/admin/cursos/${C3}/evaluacion/${PREGUNTA_C3}/revision`, { waitUntil: 'networkidle' });
+  await a.goto(`${BASE}/admin/cursos/${C2}/evaluacion/${PREGUNTA}/revision`, { waitUntil: 'networkidle' });
   await a.getByLabel('Incorrecta').check();
   await a.fill('#motivo', 'Cálculo de prueba que se va a descartar.');
   await Promise.all([a.waitForURL(/calculo=/), a.getByRole('button', { name: 'Calcular el impacto' }).click()]);
@@ -139,7 +140,7 @@ try {
       comprobar(estado === 404 && sql(`select estado from public.revisiones_evaluacion where id = '${revision}'`) === 'calculada', `${quien}: descartar se rechaza (${estado})`);
     }
   } else comprobar(false, 'se capturó la solicitud de descarte');
-  await a.goto(`${BASE}/admin/cursos/${C3}/evaluacion/${PREGUNTA_C3}/revision?calculo=${revision}`, { waitUntil: 'networkidle' });
+  await a.goto(`${BASE}/admin/cursos/${C2}/evaluacion/${PREGUNTA}/revision?calculo=${revision}`, { waitUntil: 'networkidle' });
   await confirmar(a, a.getByRole('button', { name: 'Descartar sin aplicar' }), { campos: { motivo: 'Fue un cálculo de prueba.' } });
   comprobar(await ve(a, /Revisión descartada/) && sql(`select estado from public.revisiones_evaluacion where id = '${revision}'`) === 'descartada'
     && await a.getByRole('heading', { name: 'Descartadas' }).isVisible(), 'la revisión queda descartada y listada, sin cambiar resultados');
@@ -154,7 +155,7 @@ try {
 
   // 6. Celular.
   const { p: m } = await sesion(ADMIN_CORREO, ADMIN_CLAVE, { width: 390, height: 844 });
-  for (const [ruta, nombre] of [[`/admin/cursos/${C1}/vista-previa`, 'vista-previa'], [`/admin/cursos/${C1}/alumnos`, 'alumnos'], [`/admin/cursos/${C3}/evaluacion/${PREGUNTA_C3}/revision`, 'revision']]) {
+  for (const [ruta, nombre] of [[`/admin/cursos/${C1}/vista-previa`, 'vista-previa'], [`/admin/cursos/${C1}/alumnos`, 'alumnos'], [`/admin/cursos/${C2}/evaluacion/${PREGUNTA}/revision`, 'revision']]) {
     await m.goto(`${BASE}${ruta}`, { waitUntil: 'networkidle' });
     comprobar(await sinDesborde(m), `celular, ${nombre}: sin desborde horizontal`);
     await m.screenshot({ path: `${SALIDA}/movil-panel-cursos-${nombre}.png`, fullPage: true });
