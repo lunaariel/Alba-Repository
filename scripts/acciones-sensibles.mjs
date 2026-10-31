@@ -41,6 +41,12 @@ const HUELLA = `select md5(string_agg(t, '|' order by t)) from (
   union all select 'cv'||id from public.cambios_version
   union all select 'au'||count(*) from public.auditoria
   union all select 'so'||count(*) from storage.objects
+  union all select 't'||id||estado||titulo||inicia_en||coalesce(cupo,-1)||precio_centavos||enlace_visible_horas from public.talleres
+  union all select 'it'||id||estado||coalesce(asistio::text,'') from public.inscripciones_taller
+  union all select 'ru'||id||enlace_participante||estado from public.reuniones
+  union all select 're'||id||minutos_antes from public.recordatorios
+  union all select 'in'||id||estado||coalesce(nota,'') from public.incidencias
+  union all select 'no'||count(*) from public.notificaciones
 ) x`;
 const huella = () => sql(HUELLA);
 
@@ -63,6 +69,12 @@ const REVISION = sql(`
   insert into public.revisiones_evaluacion (version_id, pregunta_id, opciones_correctas, opciones_clave, motivo, calculada_por)
     values ('${V1_C3}', '${PREGUNTA_C3}', array['${INCORRECTA}']::uuid[], '${INCORRECTA}', 'Revisión de prueba para permisos.', '${ADMIN_ID}') returning id;
 `).split('\n').pop();
+
+// Taller de prueba publicado, gratuito, sin inscriptos (se puede eliminar, reprogramar, cancelar).
+const TALLER = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, cupo, precio_centavos)
+  values ('permisos-taller', '[Prueba] Taller de permisos', 'Taller para probar permisos.', now() + interval '6 days', now() + interval '6 days 1 hour', 5, 0) returning id`).split('\n').pop();
+sql(`update public.talleres set estado = 'publicado' where id = '${TALLER}'`);
+const INCIDENCIA = sql(`insert into public.incidencias (tipo, taller_id, detalle) values ('pago_sin_cupo', '${TALLER}', '{"motivo":"sin_cupo"}') returning id`).split('\n').pop();
 
 const navegador = await chromium.launch();
 async function sesion(correo, clave) {
@@ -164,6 +176,20 @@ const pasos = [
     await ir(`/admin/cursos/${C1}/temario`);
     await confirmar(p, p.getByRole('button', { name: 'Corregir nombre' }), { textoConfirmar: 'Aplicar corrección', campos: { tipo_correccion: 'ortografia', motivo: 'Motivo suficiente para la prueba.' } });
   }],
+  ['Crear un taller', async () => { await ir('/admin/talleres'); await p.fill('#titulo', 'Taller no autorizado'); await p.fill('#fecha', '2030-01-10'); await p.fill('#hora', '18:00'); await p.getByRole('button', { name: 'Crear taller' }).click(); }],
+  ['Editar un taller', async () => { await ir(`/admin/talleres/${TALLER}`); await p.fill('#titulo', 'Título no autorizado'); await p.getByRole('button', { name: 'Guardar cambios' }).click(); }],
+  ['Eliminar un taller', async () => {
+    sql(`update public.talleres set estado = 'borrador' where id = '${TALLER}'`);
+    await ir(`/admin/talleres/${TALLER}/estado`); await confirmar(p, p.getByRole('button', { name: 'Eliminar el taller' }), { palabra: 'ELIMINAR' });
+    sql(`update public.talleres set estado = 'publicado' where id = '${TALLER}'`);
+  }],
+  ['Reprogramar un taller', async () => { await ir(`/admin/talleres/${TALLER}/estado`); await confirmar(p, p.getByRole('button', { name: 'Reprogramar' }), { palabra: 'REPROGRAMAR', campos: { fecha: '2030-02-10', motivo: 'Motivo suficiente para la prueba.' } }); }],
+  ['Cancelar un taller', async () => { await ir(`/admin/talleres/${TALLER}/estado`); await confirmar(p, p.getByRole('button', { name: 'Cancelar el taller' }), { palabra: 'CANCELAR', campos: { motivo: 'Motivo suficiente para la prueba.' } }); }],
+  ['Duplicar un taller', async () => { await ir(`/admin/talleres/${TALLER}/estado`); await confirmar(p, p.getByRole('button', { name: 'Duplicar el taller' }), { textoConfirmar: 'Crear la copia' }); }],
+  ['Cargar el enlace de una videollamada', async () => { await ir(`/admin/talleres/${TALLER}/videollamada`); await p.fill('#participante', 'https://intruso.example.invalid'); await p.getByRole('button', { name: 'Guardar enlace' }).click(); }],
+  ['Cambiar recordatorios', async () => { await ir(`/admin/talleres/${TALLER}/videollamada`); await p.getByLabel('7 días antes').check(); await p.getByRole('button', { name: 'Guardar recordatorios' }).click(); }],
+  ['Inscribir por cortesía', async () => { await ir(`/admin/talleres/${TALLER}/participantes`); await p.fill('#correo', CORREO); await p.fill('#motivo-cortesia', 'Motivo suficiente para la prueba.'); await p.getByRole('button', { name: 'Inscribir' }).click(); }],
+  ['Anotar una incidencia', async () => { await ir('/admin/talleres/incidencias'); await p.getByLabel('Nota interna').first().fill('Nota de prueba.'); await p.getByRole('button', { name: 'Guardar nota' }).first().click(); }],
   ['Crear un curso', async () => { await ir('/admin/cursos'); await p.fill('#titulo', 'Curso no autorizado'); await p.getByRole('button', { name: 'Crear curso' }).click(); }],
 ];
 
@@ -179,10 +205,12 @@ try {
       await p.screenshot({ path: `${SALIDA}/permisos-error-${capturadas.length}.png`, fullPage: true }).catch(() => {});
     }
   }
-  comprobar(new Set(capturadas.map(([, c]) => c.accion)).size >= 15, `acciones distintas capturadas: ${new Set(capturadas.map(([, c]) => c.accion)).size}`);
+  comprobar(new Set(capturadas.map(([, c]) => c.accion)).size >= 25, `acciones distintas capturadas: ${new Set(capturadas.map(([, c]) => c.accion)).size}`);
 
   for (const [nombre, c] of capturadas) {
-    for (const [quien, contexto, ruta] of [['alumna', alumna.contexto, '/campus'], ['alumna (ruta del panel)', alumna.contexto, c.ruta], ['visitante', anonimo, '/']]) {
+    // Se reenvía a la misma ruta del panel donde la acción está registrada (en otra ruta Next.js ni
+    // siquiera la ejecuta, y eso no probaría nada).
+    for (const [quien, contexto, ruta] of [['alumna', alumna.contexto, c.ruta], ['visitante', anonimo, c.ruta]]) {
       const antes = huella();
       const r = await reenviar(contexto, c, ruta);
       const despues = huella();
@@ -194,7 +222,7 @@ try {
   const bloqueo = capturadas.find(([n]) => n === 'Bloquear contenido');
   if (bloqueo) {
     const antes = huella();
-    const r = await reenviar(alumna.contexto, bloqueo[1], '/campus', Buffer.from(bloqueo[1].cuerpo.toString('utf8').replace(/\r\n\r\nsi\r\n/, '\r\n\r\nno\r\n')));
+    const r = await reenviar(alumna.contexto, bloqueo[1], bloqueo[1].ruta, Buffer.from(bloqueo[1].cuerpo.toString('utf8').replace(/\r\n\r\nsi\r\n/, '\r\n\r\nno\r\n')));
     comprobar(antes === huella() && r.estado === 404, 'alumna: desbloquear también se rechaza');
   }
 
@@ -259,7 +287,8 @@ try {
   comprobar(Boolean(cambio), 'se capturó la solicitud de cambio de versión');
   if (cambio) {
     const texto = cambio.cuerpo.toString('utf8');
-    const destino = texto.match(/name="(?:\d+_)?destino"\r\n\r\n([0-9a-f-]{36})/)?.[1];
+    informe.push(`      cuerpo capturado del cambio de versión: ${JSON.stringify(texto.slice(0, 700))}`);
+    const destino = texto.match(/destino"\r?\n\r?\n([0-9a-f-]{36})/)?.[1] ?? texto.match(/"destino"\s*[:,]\s*"([0-9a-f-]{36})"/)?.[1];
     comprobar(Boolean(destino), 'la solicitud capturada lleva el destino');
     if (!destino) throw new Error('sin destino en la solicitud capturada');
     const variantes = [

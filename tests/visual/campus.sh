@@ -89,7 +89,7 @@ PREGUNTA=$PREGUNTA
 PREGUNTA_C3=$PREGUNTA_C3
 CODIGO=$CODIGO
 RUTAS_CAMPUS="/campus /campus/cursos/demo-montessori-en-casa /campus/cursos/demo-montessori-en-casa/lecciones/$LECCION /campus/cursos/demo-autonomia-0-3 /campus/cursos/demo-ambiente-3-6/evaluacion /campus/talleres /campus/compras /campus/compras/$ORDEN /campus/cuenta"
-RUTAS_ADMIN="/admin /admin/cursos /admin/cursos/c1000000-0000-0000-0000-000000000001 /admin/cursos/c1000000-0000-0000-0000-000000000001/temario /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/$LECCION /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/$PREGUNTA /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion /admin/configuracion/actividad"
+RUTAS_ADMIN="/admin /admin/cursos /admin/cursos/c1000000-0000-0000-0000-000000000001 /admin/cursos/c1000000-0000-0000-0000-000000000001/temario /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/$LECCION /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/$PREGUNTA /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion /admin/talleres /admin/configuracion/actividad"
 RUTAS_VERIFICAR="/verificar /verificar/$CODIGO /verificar/NOEXISTE0000"
 CERTIFICADO=/campus/certificados/$CERT
 EOF

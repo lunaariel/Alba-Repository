@@ -80,6 +80,7 @@ jobs:
           set -a; . ./supabase.env; set +a
           export NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
           export NEXT_PUBLIC_URL_SITIO=http://localhost:3000
+          export PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789
           npm run build
           (npm start > servidor.log 2>&1 &)
           npx wait-on -t 60000 http://localhost:3000
@@ -99,6 +100,8 @@ jobs:
           node scripts/recorrido-admin.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- cursos en el panel" | tee -a capturas/informe.txt
           node scripts/recorrido-cursos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- talleres en el panel, el sitio y el campus" | tee -a capturas/informe.txt
+          PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789 node scripts/recorrido-talleres.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- acciones protegidas con la sesión de la alumna" | tee -a capturas/informe.txt
           node scripts/acciones-protegidas.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- acciones sensibles: alumna, visitante, API y almacenamiento" | tee -a capturas/informe.txt

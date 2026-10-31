@@ -76,3 +76,21 @@ test('textos editables: solo claves conocidas, lo demás por defecto', () => {
   assert.equal(enlaceWhatsApp('+502 5555-1234'), 'https://wa.me/50255551234');
   assert.equal(enlaceWhatsApp(''), null);
 });
+
+test('talleres: la hora escrita en la zona del taller se convierte bien, incluso con horario de verano', async () => {
+  const { instanteEnZona, partesEnZona, vistaPreviaHorario } = await import('../../src/dominio/talleres');
+  assert.equal(instanteEnZona('2026-11-09', '18:00', 'America/Guatemala')?.toISOString(), '2026-11-10T00:00:00.000Z');
+  assert.equal(instanteEnZona('2026-11-09', '18:00', 'America/Bogota')?.toISOString(), '2026-11-09T23:00:00.000Z');
+  assert.equal(instanteEnZona('2026-11-09', '18:00', 'America/Argentina/Buenos_Aires')?.toISOString(), '2026-11-09T21:00:00.000Z');
+  assert.equal(instanteEnZona('2026-07-01', '18:00', 'Europe/Madrid')?.toISOString(), '2026-07-01T16:00:00.000Z');   // verano: UTC+2
+  assert.equal(instanteEnZona('2026-12-01', '18:00', 'Europe/Madrid')?.toISOString(), '2026-12-01T17:00:00.000Z');   // invierno: UTC+1
+  assert.equal(instanteEnZona('2026-03-29', '02:30', 'Europe/Madrid'), null);   // hora que no existe (salto de verano)
+  assert.equal(instanteEnZona('2026-13-01', '18:00', 'America/Guatemala'), null);
+  assert.equal(instanteEnZona('2026-11-09', '18:00', 'Marte/Olympus'), null);
+  assert.deepEqual(partesEnZona(new Date('2026-11-10T00:00:00Z'), 'America/Guatemala'), { fecha: '2026-11-09', hora: '18:00' });
+  const vista = vistaPreviaHorario(new Date('2026-11-10T00:00:00Z'), 'America/Guatemala');
+  assert.match(vista, /18:00 \(hora de Guatemala\)/);
+  assert.match(vista, /19:00 en Bogotá/);
+  assert.match(vista, /21:00 en Buenos Aires/);
+  assert.match(vista, /01:00 en Madrid/);
+});

@@ -52,9 +52,9 @@ export function Selector(props: Comun & React.SelectHTMLAttributes<HTMLSelectEle
 
 /** Avisos que llegan por la dirección (?ok=código, ?error=código) después de una acción.
  *  Solo se muestran textos conocidos: nunca se imprime lo que venga en la dirección. */
-export function AvisoAccion(props: { ok?: string; error?: string }) {
-  const ok = mensajeOk(props.ok);
-  const error = props.error ? mensajeError(props.error) : undefined;
+export function AvisoAccion(props: { ok?: string; error?: string; textos?: { ok: (c?: string) => string | undefined; error: (c: string) => string } }) {
+  const ok = (props.textos?.ok ?? mensajeOk)(props.ok);
+  const error = props.error ? (props.textos?.error ?? mensajeError)(props.error) : undefined;
   if (!ok && !error) return null;
   return (
     <p role={error ? 'alert' : 'status'} className={`m-0 mb-5 max-w-[860px] rounded-xl border-[1.5px] px-5 py-3.5 font-bold ${error ? 'border-[#D9A592] bg-[#F6E1D9] text-error' : 'border-[#93A68A] bg-salvia-claro text-oliva-profundo'}`}>

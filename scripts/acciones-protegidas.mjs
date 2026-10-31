@@ -1,7 +1,8 @@
 // Prueba directa de las acciones protegidas del panel (CI, Supabase local).
 // Toma los formularios reales del panel (con la sesión de la admin), los reenvía tal cual con la
-// sesión de la alumna y comprueba que la base de datos no cambió en nada. Se envían a /campus, una
-// ruta que la alumna sí puede abrir: así no los frena la página del panel sino la propia acción.
+// sesión de la alumna y comprueba que la base de datos no cambió en nada y que la respuesta es un
+// 404 controlado. Se envían a la página del panel de donde salió cada formulario (donde Next.js
+// registra la acción): la acción se ejecuta y la rechaza exigirAdminAccion().
 // Control positivo: el mismo reenvío con la sesión de la admin sí cambia la base (bloqueo y desbloqueo).
 import { execFileSync } from 'node:child_process';
 import { writeFile } from 'node:fs/promises';
@@ -130,21 +131,21 @@ try {
   const antes = sql(HUELLA);
   const estados = new Map();
   for (const f of todos) {
-    const estado = await enviar(alumna, f);
+    // A la página del panel de donde salió el formulario: ahí la acción está registrada.
+    const estado = await enviar(alumna, f, f.pagina);
     estados.set(estado, (estados.get(estado) ?? 0) + 1);
     informe.push(`      alumna → ${estado} · ${f.descripcion}`);
-    comprobar(estado >= 400, `alumna: ${f.descripcion} → ${estado}`);
+    comprobar(estado === 404, `alumna: ${f.descripcion} → ${estado}`);
   }
   const despues = sql(HUELLA);
   const sigue = await alumna.request.get(`${BASE}/campus`, { maxRedirects: 0 });
   comprobar(sigue.status() === 200, `la sesión de la alumna siguió activa durante toda la prueba (${sigue.status()})`);
   comprobar(antes === despues, `la base no cambió tras ${todos.length} reenvíos de la alumna (huella ${antes.slice(0, 12)})`);
-  comprobar(![...estados.keys()].some((e) => e < 400), `todas las respuestas a la alumna fueron rechazos (${JSON.stringify([...estados])})`);
+  comprobar([...estados.keys()].every((e) => e === 404), `todas las respuestas a la alumna fueron un 404 controlado (${JSON.stringify([...estados])})`);
 
   // 2. Lo mismo sin sesión.
   const anonimo = await navegador.newContext();
-  // A la portada (pública): sin sesión, el middleware del campus no la frenaría antes de la acción.
-  for (const f of todos.slice(0, 12)) await enviar(anonimo, f, '/');
+  for (const f of todos.slice(0, 12)) await enviar(anonimo, f, f.pagina);
   comprobar(sql(HUELLA) === antes, 'tampoco cambia sin sesión');
   await anonimo.close();
 

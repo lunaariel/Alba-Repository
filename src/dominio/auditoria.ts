@@ -58,6 +58,18 @@ const ACCIONES: Record<string, string> = {
   contenido_desbloqueado: 'Desbloqueó contenido',
   material_actualizado: 'Cambió un material PDF',
   correccion_menor: 'Hizo una corrección menor en contenido publicado',
+  taller_duplicado: 'Duplicó un taller como borrador',
+  taller_reprogramado: 'Reprogramó un taller',
+  taller_cancelado: 'Canceló un taller',
+  inscripcion_cortesia: 'Inscribió a una persona por cortesía',
+  inscripcion_creado: 'Se registró una inscripción a un taller',
+  inscripcion_actualizado: 'Cambió una inscripción a un taller',
+  recordatorio_creado: 'Agregó un recordatorio a un taller',
+  recordatorio_eliminado: 'Quitó un recordatorio de un taller',
+  reunion_creado: 'Cargó el enlace de una videollamada',
+  reunion_actualizado: 'Cambió el enlace de una videollamada',
+  pago_requiere_reembolso: 'Un pago llegó sin lugar disponible: requiere reembolso',
+  incidencia_anotada: 'Anotó una incidencia',
   leccion_reemplazada: 'Creó una lección de reemplazo en el borrador',
   complemento_asociado: 'Cambió las versiones de un material complementario',
 };
@@ -66,7 +78,7 @@ const ACCIONES: Record<string, string> = {
 export const GRUPOS_ACTIVIDAD = {
   cursos: { texto: 'Cursos y temario', entidades: ['cursos', 'modulos', 'lecciones', 'recursos_leccion', 'versiones_curso'] },
   evaluaciones: { texto: 'Evaluaciones', entidades: ['evaluaciones', 'preguntas', 'opciones', 'revisiones_evaluacion'] },
-  talleres: { texto: 'Talleres', entidades: ['talleres'] },
+  talleres: { texto: 'Talleres', entidades: ['talleres', 'inscripciones_taller', 'recordatorios', 'reuniones', 'incidencias'] },
   accesos: { texto: 'Accesos y roles', entidades: ['accesos_curso', 'roles_usuario'] },
   ventas: { texto: 'Ventas y cupones', entidades: ['ordenes', 'cupones'] },
   contenido: { texto: 'Contenido y correos', entidades: ['articulos', 'plantillas_correo'] },
@@ -85,6 +97,7 @@ const CAMPOS: Record<string, string> = {
   nombre: 'Nombre', correo_contacto: 'Correo de contacto', whatsapp: 'WhatsApp', textos: 'Textos del sitio',
   asunto: 'Asunto', cuerpo: 'Texto', codigo: 'Código', tipo: 'Tipo', valor: 'Valor', activo: 'Activo',
   vigente_desde: 'Desde', vigente_hasta: 'Hasta', usos_maximos: 'Usos máximos', motivo: 'Motivo', retirada: 'Retirada', retirado: 'Retirado', enunciado: 'Pregunta',
+  minutos_antes: 'Anticipación (min)', origen: 'Origen', asistio: 'Asistió', proveedor: 'Proveedor',
   numero: 'Versión', resumen: 'Qué cambió', versiones: 'Versiones', tipo_correccion: 'Tipo de corrección', descripcion: 'Descripción', duracion_minutos: 'Duración', ajustados: 'Intentos mejorados', beneficiados: 'Intentos que mejorarían',
 };
 

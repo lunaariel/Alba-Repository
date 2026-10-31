@@ -7,9 +7,21 @@ import { INSCRIPCIONES_ABIERTAS } from '@/config/comercio';
 import { Contenedor } from '@/ui/estructura';
 import { EnlaceAccion, EnlaceBoton } from '@/ui/acciones';
 import { Parrafos } from '@/ui/contenido';
+import { Aviso } from '@/ui/Formulario';
+import { usuarioActual } from '@/datos/sesion';
+import { clienteSesion } from '@/datos/supabase';
+import { inscribirmeTaller } from '../../../campus/acciones';
 import { HoraLocal } from './HoraLocal';
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = { params: Promise<{ slug: string }>; searchParams: Promise<{ aviso?: string }> };
+
+const AVISOS: Record<string, string> = {
+  sin_cupo: 'Se ocupó el último lugar mientras se inscribía: el cupo está completo.',
+  ya_inscripto: 'Ya está inscripta o inscripto en este taller. Lo encuentra en Mis talleres.',
+  taller_no_disponible: 'Este taller ya no admite inscripciones.',
+  taller_pago: 'Este taller es pago: la inscripción abre al habilitarse las ventas.',
+  error: 'No se pudo completar la inscripción. Intente de nuevo.',
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const t = await tallerPorSlug((await params).slug);
@@ -18,14 +30,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 
-export default async function DetalleTaller({ params }: Props) {
-  const taller = await tallerPorSlug((await params).slug);
+export default async function DetalleTaller({ params, searchParams }: Props) {
+  const [{ slug }, { aviso }] = await Promise.all([params, searchParams]);
+  const taller = await tallerPorSlug(slug);
   if (!taller) notFound();
+  const gratuito = taller.precioCentavos === 0;
+  // Talleres gratuitos: inscripción real desde ya (decisión de la titular), con sesión iniciada.
+  const usuario = gratuito ? await usuarioActual() : null;
+  const inscripta = usuario
+    ? Boolean((await (await clienteSesion()).from('inscripciones_taller').select('id').eq('taller_id', taller.id).eq('estado', 'confirmada').maybeSingle()).data)
+    : false;
 
   const cupo = textoCupo(taller.cupo, taller.ocupados, taller.estado);
   const completo = taller.cupo !== null && taller.ocupados >= taller.cupo;
-  const terminado = taller.terminaEn.getTime() < Date.now();
-  const puedeInscribirse = INSCRIPCIONES_ABIERTAS && taller.estado === 'publicado' && !completo && !terminado;
+  const disponible = taller.estado === 'publicado' && !completo && taller.iniciaEn.getTime() > Date.now();
+  const puedeInscribirse = INSCRIPCIONES_ABIERTAS && disponible && !gratuito;
 
   return (
     <section aria-labelledby="titulo">
@@ -43,9 +62,28 @@ export default async function DetalleTaller({ params }: Props) {
           </p>
           <p className={`m-0 mt-3 font-bold ${taller.estado === 'cancelado' ? 'text-error' : 'text-oliva-profundo'}`}>{cupo}</p>
           <div className="mt-6">
-            {puedeInscribirse ? (
+            {aviso && AVISOS[aviso] && <div className="mb-4"><Aviso tipo="error">{AVISOS[aviso]}</Aviso></div>}
+            {gratuito && inscripta ? (
+              <>
+                <p className="m-0 font-bold">Ya está inscripta o inscripto.</p>
+                <div className="mt-2"><EnlaceAccion href="/campus/talleres">Ver en Mis talleres</EnlaceAccion></div>
+              </>
+            ) : gratuito && disponible ? (
+              usuario ? (
+                <form action={inscribirmeTaller}>
+                  <input type="hidden" name="taller" value={taller.id} />
+                  <input type="hidden" name="slug" value={taller.slug} />
+                  <button type="submit" className="min-h-[54px] rounded-md bg-oliva-profundo px-7 text-[17px] font-bold text-marfil hover:bg-marron">Inscribirme gratis</button>
+                </form>
+              ) : (
+                <>
+                  <EnlaceBoton href={`/ingresar?siguiente=${encodeURIComponent(`/talleres/${taller.slug}`)}`}>Ingresar para inscribirme</EnlaceBoton>
+                  <p className="m-0 mt-2 text-[15px]">¿No tiene cuenta? <a href="/registro" className="font-bold text-oliva-profundo">Regístrese</a>, es gratis.</p>
+                </>
+              )
+            ) : puedeInscribirse ? (
               <EnlaceBoton href={`/talleres/${taller.slug}/inscribirme`}>Inscribirme</EnlaceBoton>
-            ) : taller.estado === 'publicado' && !completo && !terminado ? (
+            ) : disponible && !gratuito ? (
               <>
                 <p className="m-0">Las inscripciones abren pronto.</p>
                 <div className="mt-2"><EnlaceAccion href="/contacto">Quiero recibir el aviso</EnlaceAccion></div>

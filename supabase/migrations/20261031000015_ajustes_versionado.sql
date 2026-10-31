@@ -87,8 +87,13 @@ grant execute on function public.asociar_complemento(uuid, uuid[]) to authentica
 
 -- ============================================================ 2. Objetivos y requisitos por versión
 alter table public.versiones_curso add column objetivos text[] not null default '{}', add column requisitos text;
+-- Las versiones existentes reciben los objetivos y requisitos vigentes al migrar (hasta hoy no se
+-- versionaban, así que son los mismos que veían sus alumnos). Es el único ajuste a versiones ya
+-- publicadas: completa una columna nueva; la inmutabilidad se reactiva en la misma transacción.
+alter table public.versiones_curso disable trigger versiones_inmutables;
 update public.versiones_curso v set objetivos = coalesce(c.objetivos, '{}'), requisitos = c.requisitos
   from public.cursos c where c.id = v.curso_id;
+alter table public.versiones_curso enable trigger versiones_inmutables;
 
 -- crear_version: los complementos no son requisitos (no entran en version_materiales); los de la
 -- versión vigente se mantienen en la nueva para las lecciones que siguen; se fijan objetivos y requisitos.

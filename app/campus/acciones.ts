@@ -137,3 +137,30 @@ export async function cambiarDeVersion(datos: FormData) {
   revalidatePath('/campus', 'layout');
   redirect(`/campus/cursos/${r.data.curso}?aviso=version-cambiada`);
 }
+
+/** Inscripción a un taller gratuito con la propia sesión. La base controla cupo y duplicados. */
+export async function inscribirmeTaller(datos: FormData) {
+  const r = z.object({ taller: uuid, slug }).safeParse({ taller: datos.get('taller'), slug: datos.get('slug') });
+  if (!r.success) redirect('/talleres');
+  await exigirSesion(`/talleres/${r.data.slug}`);
+  const { error } = await (await clienteSesion()).rpc('inscribirme_gratis', { p_taller: r.data.taller });
+  if (error) {
+    const codigo = ['sin_cupo', 'ya_inscripto', 'taller_no_disponible', 'taller_pago'].find((c) => error.message.startsWith(c)) ?? 'error';
+    redirect(`/talleres/${r.data.slug}?aviso=${codigo}`);
+  }
+  revalidatePath('/campus/talleres');
+  revalidatePath(`/talleres/${r.data.slug}`);
+  redirect('/campus/talleres?aviso=inscripcion');
+}
+
+/** Cancelar la propia inscripción gratuita o de cortesía antes del inicio (libera el lugar). */
+export async function cancelarInscripcionTaller(datos: FormData) {
+  await exigirSesion('/campus/talleres');
+  const r = z.object({ taller: uuid, entiendo: z.literal('si') }).safeParse({ taller: datos.get('taller'), entiendo: datos.get('entiendo') });
+  if (!r.success) redirect('/campus/talleres?aviso=error');
+  const { error } = await (await clienteSesion()).rpc('cancelar_mi_inscripcion', { p_taller: r.data.taller });
+  if (error) redirect('/campus/talleres?aviso=error');
+  revalidatePath('/campus/talleres');
+  revalidatePath('/talleres', 'layout');
+  redirect('/campus/talleres?aviso=cancelada');
+}

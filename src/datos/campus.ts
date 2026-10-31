@@ -193,41 +193,61 @@ export async function preguntasEvaluacion(evaluacionId: string, cursoId: string)
 }
 
 export interface TallerInscripto {
+  id: string;
   slug: string;
   titulo: string;
   iniciaEn: Date;
   terminaEn: Date;
   zonaHoraria: string;
   estado: string;
+  /** Estado de la inscripción: confirmada, cancelada, reembolso_pendiente, reembolsada. */
+  inscripcion: string;
+  origen: 'compra' | 'gratuita' | 'cortesia';
+  /** El servidor solo lo entrega a inscriptos confirmados y desde N horas antes (enlace_taller). */
   enlace: string | null;
+  enlaceDesde: Date;
+  reprogramadoDesde: Date | null;
+  motivoCancelacion: string | null;
 }
 
 type FilaInscripcion = {
+  estado: string; origen: TallerInscripto['origen']; creado_en: string;
   talleres: {
-    slug: string; titulo: string; inicia_en: string; termina_en: string; zona_horaria: string; estado: string;
-    reuniones: { enlace_participante: string; estado: string }[] | { enlace_participante: string; estado: string } | null;
+    id: string; slug: string; titulo: string; inicia_en: string; termina_en: string; zona_horaria: string; estado: string;
+    enlace_visible_horas: number; motivo_cancelacion: string | null;
   } | null;
 };
 
 export async function misTalleres(): Promise<TallerInscripto[]> {
   await exigirSesion('/campus/talleres');
   const supabase = await clienteSesion();
-  const { data, error } = await supabase
-    .from('inscripciones_taller')
-    .select('talleres(slug, titulo, inicia_en, termina_en, zona_horaria, estado, reuniones(enlace_participante, estado))')
-    .eq('estado', 'confirmada');
+  const [{ data, error }, { data: avisos }] = await Promise.all([
+    supabase.from('inscripciones_taller')
+      .select('estado, origen, creado_en, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, enlace_visible_horas, motivo_cancelacion)')
+      .in('estado', ['confirmada', 'reembolso_pendiente', 'reembolsada', 'cancelada'])
+      .order('creado_en', { ascending: false }),
+    supabase.from('notificaciones').select('taller_id, detalle, creado_en').eq('tipo', 'taller_reprogramado').order('creado_en', { ascending: false }),
+  ]);
   if (error) throw new Error(`No se pudieron leer sus talleres: ${error.message}`);
-  return ((data ?? []) as unknown as FilaInscripcion[])
-    .filter((f) => f.talleres)
-    .map(({ talleres: t }) => {
-      const r = Array.isArray(t!.reuniones) ? t!.reuniones[0] : t!.reuniones;
-      return {
-        slug: t!.slug, titulo: t!.titulo, iniciaEn: new Date(t!.inicia_en), terminaEn: new Date(t!.termina_en),
-        zonaHoraria: t!.zona_horaria, estado: t!.estado,
-        enlace: r && r.estado === 'activa' && t!.estado === 'publicado' ? r.enlace_participante : null,
-      };
-    })
-    .sort((a, b) => a.iniciaEn.getTime() - b.iniciaEn.getTime());
+  // Una fila por taller: la inscripción más reciente (alguien puede cancelar y volver a inscribirse).
+  const vistos = new Set<string>();
+  const filas = ((data ?? []) as unknown as FilaInscripcion[]).filter((f) => f.talleres && !vistos.has(f.talleres.id) && vistos.add(f.talleres.id));
+  const reprogramado = new Map<string, Date>();
+  for (const a of (avisos ?? []) as { taller_id: string; detalle: { inicia_antes?: string } }[]) {
+    if (!reprogramado.has(a.taller_id) && a.detalle?.inicia_antes) reprogramado.set(a.taller_id, new Date(a.detalle.inicia_antes));
+  }
+  const enlaces = await Promise.all(filas.map(async (f) =>
+    f.estado === 'confirmada' ? ((await supabase.rpc('enlace_taller', { p_taller: f.talleres!.id })).data as string | null) : null));
+  return filas.map((f, i) => {
+    const t = f.talleres!;
+    const inicio = new Date(t.inicia_en);
+    return {
+      id: t.id, slug: t.slug, titulo: t.titulo, iniciaEn: inicio, terminaEn: new Date(t.termina_en), zonaHoraria: t.zona_horaria,
+      estado: t.estado, inscripcion: f.estado, origen: f.origen, enlace: enlaces[i] ?? null,
+      enlaceDesde: new Date(inicio.getTime() - t.enlace_visible_horas * 3600 * 1000),
+      reprogramadoDesde: reprogramado.get(t.id) ?? null, motivoCancelacion: t.motivo_cancelacion,
+    };
+  }).sort((a, b) => a.iniciaEn.getTime() - b.iniciaEn.getTime());
 }
 
 export interface Compra {
