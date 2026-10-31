@@ -5,7 +5,8 @@ import { cursoAdmin } from '@/datos/admin-cursos';
 import { clienteSesion } from '@/datos/supabase';
 import { UUID } from '@/dominio/cursos-admin';
 import { AvisoAccion } from '@/ui/admin/campos';
-import { aplicarRevision, calcularRevision } from '../../../../acciones';
+import { aplicarRevision, calcularRevision, descartarRevision } from '../../../../acciones';
+import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
 
 export const metadata: Metadata = { title: 'Revisión favorable' };
 
@@ -14,7 +15,7 @@ type Props = { params: Promise<{ id: string; pregunta: string }>; searchParams: 
 type Impacto = { intento: string; nombre: string | null; numero: number; puntaje_original: number; puntaje_vigente: number; puntaje_corregido: number;
   aprobado_antes: boolean; aprobado_despues: boolean }[];
 type Revision = { id: string; version_id: string; opciones_correctas: string[]; motivo: string; estado: 'calculada' | 'aplicada' | 'descartada';
-  impacto: Impacto; calculada_en: string; aplicada_en: string | null };
+  impacto: Impacto; calculada_en: string; aplicada_en: string | null; descartada_en: string | null; motivo_descarte: string | null };
 
 const fecha = (d: string) => new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeStyle: 'short', timeZone: 'America/Guatemala' }).format(new Date(d));
 
@@ -31,11 +32,23 @@ export default async function RevisionFavorable({ params, searchParams }: Props)
   const numero = new Map(c.versiones.map((v) => [v.id, v.numero]));
   const texto = new Map(p.opciones.map((o) => [o.id, o.texto]));
   const { data } = await (await clienteSesion()).from('revisiones_evaluacion')
-    .select('id, version_id, opciones_correctas, motivo, estado, impacto, calculada_en, aplicada_en')
+    .select('id, version_id, opciones_correctas, motivo, estado, impacto, calculada_en, aplicada_en, descartada_en, motivo_descarte')
     .eq('pregunta_id', p.id).order('calculada_en', { ascending: false });
   const revisiones = (data ?? []) as Revision[];
   const calculo = aviso.calculo && UUID.test(aviso.calculo) ? revisiones.find((r) => r.id === aviso.calculo && r.estado === 'calculada') : undefined;
   const aplicadas = revisiones.filter((r) => r.estado === 'aplicada');
+  const pendientes = revisiones.filter((r) => r.estado === 'calculada' && r.id !== calculo?.id);
+  const descartadas = revisiones.filter((r) => r.estado === 'descartada');
+  const area = 'rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 py-2 text-marron';
+  const Descartar = ({ r }: { r: Revision }) => (
+    <ConfirmarAccion accion={descartarRevision} campos={{ curso: c.id, pregunta: p.id, revision: r.id }} textoBoton="Descartar sin aplicar"
+      titulo="¿Descartar esta revisión?" estilo="enlacePeligro" peligro>
+      <p className="m-0">No cambia ningún resultado: la revisión queda registrada como descartada y ya no se puede aplicar.</p>
+      <label className="flex flex-col gap-1 text-[15px] font-bold">Motivo (obligatorio)
+        <textarea name="motivo" required minLength={10} maxLength={500} rows={2} className={area} />
+      </label>
+    </ConfirmarAccion>
+  );
   const base = `/admin/cursos/${c.id}/evaluacion/${p.id}`;
 
   return (
@@ -98,6 +111,7 @@ export default async function RevisionFavorable({ params, searchParams }: Props)
               <Link href={`${base}/revision`} className="inline-flex min-h-[48px] items-center rounded-md border-2 border-oliva-profundo px-5 font-bold text-oliva-profundo no-underline">Volver sin aplicar</Link>
             </div>
           </form>
+          <div className="mt-4"><Descartar r={calculo} /></div>
         </section>
       ) : (
         <section aria-labelledby="calcular" className="max-w-[860px] rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6">
@@ -129,6 +143,39 @@ export default async function RevisionFavorable({ params, searchParams }: Props)
             </div>
             <div><button type="submit" className="min-h-[48px] rounded-md border-2 border-oliva-profundo bg-blanco-calido px-5 font-bold text-oliva-profundo hover:bg-arena">Calcular el impacto</button></div>
           </form>
+        </section>
+      )}
+
+      {pendientes.length > 0 && (
+        <section aria-labelledby="pendientes" className="mt-6 max-w-[860px]">
+          <h3 id="pendientes" className="m-0 text-[20px]">Calculadas y sin aplicar</h3>
+          <p className="m-0 mt-1 text-[15px] text-tinta-suave">No cambiaron ningún resultado. Puede revisarlas para aplicarlas o descartarlas.</p>
+          <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
+            {pendientes.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-marfil px-4 py-3 text-[15px]">
+                <span>Versión {numero.get(r.version_id)} · aceptaría también {r.opciones_correctas.map((o) => `«${texto.get(o) ?? o}»`).join(' y ')} · calculada el {fecha(r.calculada_en)}
+                  <span className="block text-tinta-suave">Motivo: {r.motivo}</span></span>
+                <span className="flex flex-wrap items-center gap-3">
+                  <Link href={`${base}/revision?calculo=${r.id}`} className="font-bold text-oliva-profundo">Revisar</Link>
+                  <Descartar r={r} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {descartadas.length > 0 && (
+        <section aria-labelledby="descartadas" className="mt-6 max-w-[860px]">
+          <h3 id="descartadas" className="m-0 text-[20px]">Descartadas</h3>
+          <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
+            {descartadas.map((r) => (
+              <li key={r.id} className="rounded-xl bg-marfil px-4 py-3 text-[15px] text-tinta-suave">
+                Versión {numero.get(r.version_id)} · {r.opciones_correctas.map((o) => `«${texto.get(o) ?? o}»`).join(' y ')}
+                {r.descartada_en ? ` · descartada el ${fecha(r.descartada_en)}` : ''}{r.motivo_descarte ? ` · ${r.motivo_descarte}` : ''}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

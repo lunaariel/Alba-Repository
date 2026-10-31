@@ -6,7 +6,7 @@ import { requisitosPublicacion } from '@/dominio/cursos-admin';
 import { formatearUSD } from '@/dominio/dinero';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
-import { cambiarEstadoCurso, eliminarCurso, publicarVersion } from '../../acciones';
+import { cambiarEstadoCurso, duplicarCurso, eliminarCurso, publicarVersion } from '../../acciones';
 
 export const metadata: Metadata = { title: 'Publicación' };
 
@@ -29,7 +29,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
   const h = c.historial;
   const cambios = cambiosDelBorrador(c);
   const hayCambios = cambios.leccionesNuevas.length + cambios.leccionesQuitadas.length + cambios.preguntasNuevas + cambios.preguntasQuitadas > 0
-    || cambios.objetivosCambian || cambios.modalidad.length > 0
+    || cambios.objetivosCambian || cambios.modalidad.length > 0 || cambios.ordenCambia.length > 0
     || (cambios.criterios !== null && (cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] || cambios.criterios.intentos[0] !== cambios.criterios.intentos[1]));
 
   return (
@@ -112,6 +112,15 @@ export default async function Publicacion({ params, searchParams }: Props) {
           )}
 
           <div className="mt-6 border-t border-borde-bandeja pt-4">
+            <ConfirmarAccion accion={duplicarCurso} campos={{ id: c.id }} textoBoton="Duplicar el curso" titulo="¿Duplicar el curso?" textoConfirmar="Crear la copia">
+              <p className="m-0">Se crea un curso nuevo en borrador con los datos, el temario, los PDF y la evaluación vigentes del borrador
+                (sin lo retirado ni lo bloqueado). No se copian alumnos, compras, avances, intentos, certificados, versiones ni historial.</p>
+              <label htmlFor="titulo-copia" className="mt-2 text-[15px] font-bold">Título de la copia</label>
+              <input id="titulo-copia" name="titulo" required minLength={3} maxLength={140} defaultValue={`${c.titulo} (copia)`}
+                className="min-h-[50px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-4 text-marron" />
+            </ConfirmarAccion>
+          </div>
+          <div className="mt-4 border-t border-borde-bandeja pt-4">
             {conHistorial ? (
               <p className="m-0 text-[14px] text-tinta-suave">Este curso tiene alumnos, compras o certificados: no se puede eliminar. Su historial se conserva.</p>
             ) : (
@@ -145,9 +154,14 @@ export default async function Publicacion({ params, searchParams }: Props) {
                   {cambios.modalidad.length === 0 && cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
                   {cambios.modalidad.length === 0 && cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
                   {cambios.modalidad.map((t) => <li key={t}>{t}</li>)}
+                  {cambios.ordenCambia.length > 0 && (
+                    <li>Cambios de orden:
+                      <ul className="m-0 mt-1 list-[circle] pl-5">{cambios.ordenCambia.map((t) => <li key={t}>{t}.</li>)}</ul>
+                    </li>
+                  )}
                 </ul>
               ) : (
-                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas, objetivos ni criterios. (Los cambios de orden y de precio no se listan aquí.)</p>
+                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas, orden, objetivos ni criterios. (El precio no forma parte de la versión.)</p>
               )}
               {c.estado === 'publicado' && (
                 <div className="mt-4">

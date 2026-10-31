@@ -549,3 +549,46 @@ export async function anularValidacion(datos: FormData) {
   refrescar(r.data.curso);
   ir(ruta, { ok: 'validacion_anulada' });
 }
+
+// ---------------------------------------------------------------- revisión: descartar
+
+/** Descarta una revisión favorable calculada y no aplicada. No cambia resultados; queda registrada con su motivo. */
+export async function descartarRevision(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, pregunta: uuid, revision: uuid, motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), pregunta: datos.get('pregunta'), revision: datos.get('revision'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/evaluacion/${r.data.pregunta}/revision`;
+  const { error } = await (await clienteSesion()).rpc('descartar_revision', { p_revision: r.data.revision, p_motivo: r.data.motivo });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'revision_descartada' });
+}
+
+// ---------------------------------------------------------------- duplicar
+
+/**
+ * Duplica un curso como borrador independiente (duplicar_curso) y copia sus PDF en el almacenamiento
+ * con rutas propias. Si un archivo no se puede copiar, ese material no queda en la copia y se avisa.
+ */
+export async function duplicarCurso(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, titulo: texto(140).min(3) }).safeParse({ id: datos.get('id'), titulo: datos.get('titulo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.id}/publicacion`;
+  const s = await clienteSesion();
+  const { data, error } = await s.rpc('duplicar_curso', { p_curso: r.data.id, p_titulo: r.data.titulo });
+  if (error || !data) ir(ruta, { error: codigoError(error?.message) });
+  const d = data as { curso: string; materiales: { id: string; origen: string; destino: string }[] };
+  const almacen = clienteServicio().storage.from('materiales');
+  let fallidos = 0;
+  for (const m of d.materiales) {
+    const { error: e } = await almacen.copy(m.origen, m.destino);
+    if (e) {
+      fallidos++;
+      await s.from('recursos_leccion').delete().eq('id', m.id);
+    }
+  }
+  refrescar(d.curso);
+  ir(`/admin/cursos/${d.curso}`, { ok: fallidos ? 'duplicado_sin_algunos_pdf' : 'duplicado' });
+}

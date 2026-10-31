@@ -120,6 +120,7 @@ const ERRORES: Record<string, string> = {
   ya_validada: 'Esta persona ya tiene una validación vigente en su versión.',
   certificado_emitido: 'Ya se emitió el certificado de esa versión: la validación no se puede anular.',
   sin_acceso: 'Esa persona no tiene acceso activo al curso.',
+  revision_no_descartable: 'Solo se descartan revisiones calculadas que no se aplicaron.',
   no_encontrado: 'No se encontró. Recargue la página.',
 };
 
@@ -159,6 +160,9 @@ const OKS: Record<string, string> = {
   correccion_aplicada: 'Corrección menor aplicada en todas las versiones. Quedó registrada con su tipo y motivo.',
   leccion_reemplazada: 'Se creó la lección de reemplazo en el borrador. La original se conserva intacta para quienes siguen las versiones publicadas.',
   complemento_asociado: 'Material complementario actualizado: lo ven los alumnos de las versiones elegidas. No cambia avances ni requisitos.',
+  revision_descartada: 'Revisión descartada. No cambió ningún resultado y quedó registrada con su motivo.',
+  duplicado: 'Copia creada como borrador independiente: sin alumnos, compras, intentos ni certificados. Revise el título y la dirección web.',
+  duplicado_sin_algunos_pdf: 'Copia creada como borrador. Algunos PDF no se pudieron copiar y quedaron fuera: súbalos de nuevo en el temario.',
   validada: 'Finalización validada. Quedó registrada con su nota; la persona ya puede obtener su certificado si cumplió lo demás.',
   validacion_anulada: 'Validación anulada. Quedó registrado el motivo.',
 };
@@ -191,3 +195,16 @@ export const TIPOS_CORRECCION = [
   { valor: 'video_mejorado', texto: 'Mismo video, versión técnicamente mejorada' },
   { valor: 'calidad_audio_video', texto: 'Calidad de sonido o imagen' },
 ] as const;
+
+/** Elementos presentes en ambas listas que cambian de posición (comparando solo los comunes). */
+export function cambiosDeOrden(antes: string[], despues: string[], titulos: Map<string, string>, tipo: string): string[] {
+  const comunes = new Set(antes.filter((id) => despues.includes(id)));
+  const a = antes.filter((id) => comunes.has(id));
+  const d = despues.filter((id) => comunes.has(id));
+  if (a.join() === d.join()) return [];
+  return d.flatMap((id, i) => {
+    const previo = a.indexOf(id);
+    return previo === i ? [] : [`${tipo} «${titulos.get(id) ?? '…'}»: del lugar ${previo + 1} al ${i + 1}`];
+  });
+}
+

@@ -106,6 +106,8 @@ jobs:
           (set -a; . ./supabase.env; set +a; node scripts/recorrido-evaluaciones.mjs) 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- vencimientos de cursos" | tee -a capturas/informe.txt
           node scripts/recorrido-vencimientos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- panel de cursos: duplicar, vista previa, orden, revisiones y bloqueos" | tee -a capturas/informe.txt
+          node scripts/recorrido-panel-cursos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- acciones protegidas con la sesión de la alumna" | tee -a capturas/informe.txt
           node scripts/acciones-protegidas.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- acciones sensibles: alumna, visitante, API y almacenamiento" | tee -a capturas/informe.txt

@@ -79,6 +79,8 @@ const ACCIONES: Record<string, string> = {
   incidencia_anotada: 'Anotó una incidencia',
   leccion_reemplazada: 'Creó una lección de reemplazo en el borrador',
   complemento_asociado: 'Cambió las versiones de un material complementario',
+  curso_duplicado: 'Duplicó un curso como borrador',
+  revision_descartada: 'Descartó una revisión favorable sin aplicarla',
   finalizacion_validada: 'Validó la finalización de un alumno (evaluación formativa)',
   validacion_anulada: 'Anuló una validación de finalización',
 };

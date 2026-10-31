@@ -5,7 +5,7 @@ import {
   CONFIG_PREDETERMINADA, aFinalizacion, configCoherente, consecuenciasCambio, faltaCriterioCertificacion, pendientesFinalizacion,
   requisitosParaAlumno, textoPendientes, usaPreguntas, type ConfigEvaluacion,
 } from '../../src/dominio/evaluacion';
-import { requisitosPublicacion } from '../../src/dominio/cursos-admin';
+import { cambiosDeOrden, requisitosPublicacion } from '../../src/dominio/cursos-admin';
 
 const formativa = (o: Partial<ConfigEvaluacion> = {}): ConfigEvaluacion => ({ ...CONFIG_PREDETERMINADA, modalidad: 'formativa', ...o });
 
@@ -62,4 +62,13 @@ test('evaluación: estado de finalización de la base y lo que falta', () => {
   assert.equal(aFinalizacion(null), null);
   const s = aFinalizacion({ modalidad: 'sumativa', lecciones_pendientes: 0, evaluacion_aprobada: true, finalizado: true, elegible_certificado: true });
   assert.deepEqual(pendientesFinalizacion(s!), []);
+});
+
+test('panel: cambios de orden entre la versión vigente y el borrador', () => {
+  const t = new Map([['a', 'Uno'], ['b', 'Dos'], ['c', 'Tres'], ['n', 'Nueva']]);
+  assert.deepEqual(cambiosDeOrden(['a', 'b', 'c'], ['a', 'b', 'c'], t, 'Lección'), []);
+  // Agregar o quitar no es un cambio de orden de lo que sigue.
+  assert.deepEqual(cambiosDeOrden(['a', 'b', 'c'], ['a', 'n', 'b'], t, 'Lección'), []);
+  assert.deepEqual(cambiosDeOrden(['a', 'b', 'c'], ['c', 'a', 'b'], t, 'Lección'),
+    ['Lección «Tres»: del lugar 3 al 1', 'Lección «Uno»: del lugar 1 al 2', 'Lección «Dos»: del lugar 2 al 3']);
 });

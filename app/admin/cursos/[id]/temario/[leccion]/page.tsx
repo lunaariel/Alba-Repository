@@ -68,7 +68,21 @@ export default async function EditarLeccion({ params, searchParams }: Props) {
                 <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-marfil px-3 py-2">
                   <span><b className={m.retirado ? 'text-tinta-suave line-through decoration-1' : ''}>{m.titulo}</b> <span className="text-[13.5px] text-tinta-suave">· {peso(m.tamanoBytes)}</span>
                     {' '}<span className="inline-flex items-center rounded-full border border-borde-bandeja bg-blanco-calido px-2.5 text-[12.5px]">{m.complementario ? 'Complementario' : 'Parte del programa'}</span>
-                    {m.retirado && <> <EstadoChip estado="archivado" texto="Retirado del borrador" /></>}</span>
+                    {m.retirado && <> <EstadoChip estado="archivado" texto="Retirado del borrador" /></>}
+                    {m.bloqueado && <> <EstadoChip estado="pendiente" texto="Bloqueado en todas las versiones" /></>}
+                    {m.bloqueado && m.bloqueoMotivo && <span className="block text-[13.5px] text-tinta-suave">Motivo: {m.bloqueoMotivo}</span>}</span>
+                  {(m.enVersion || m.complementoDe.length > 0) && (
+                    <ConfirmarAccion accion={bloquearContenido} campos={{ tabla: 'recursos_leccion', id: m.id, volver, bloquear: m.bloqueado ? 'no' : 'si' }}
+                      textoBoton={m.bloqueado ? 'Desbloquear' : 'Bloquear'} estilo={m.bloqueado ? 'enlace' : 'enlacePeligro'} peligro={!m.bloqueado}
+                      titulo={m.bloqueado ? '¿Desbloquear el material?' : '¿Bloquear el material en todas las versiones?'} palabra={m.bloqueado ? 'DESBLOQUEAR' : 'BLOQUEAR'}>
+                      <p className="m-0">{m.bloqueado
+                        ? `«${m.titulo}» vuelve a estar disponible en las versiones que lo incluyen.`
+                        : `«${m.titulo}» deja de estar disponible para todos los alumnos, en todas las versiones, y deja de contar como requisito. Solo para material erróneo o dañino; para cambios normales, retírelo del borrador.`}</p>
+                      <label htmlFor={`motivo-material-${m.id}`} className="mt-2 text-[15px] font-bold">Motivo (queda registrado)</label>
+                      <textarea id={`motivo-material-${m.id}`} name="motivo" required minLength={10} maxLength={500} rows={3}
+                        className="rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-4 py-3 text-marron" />
+                    </ConfirmarAccion>
+                  )}
                   {!m.retirado && (
                     <ConfirmarAccion accion={quitarMaterial} campos={{ id: m.id, volver }} textoBoton="Quitar" titulo="¿Quitar el material?" estilo="enlacePeligro" peligro textoConfirmar="Quitar">
                       <p className="m-0">{m.enVersion
