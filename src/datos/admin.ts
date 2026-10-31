@@ -28,6 +28,8 @@ export async function registroActividad(opciones: { pagina: number; grupo: Grupo
     .range(desde, desde + POR_PAGINA - 1);
   if (opciones.grupo) consulta = consulta.in('entidad', [...GRUPOS_ACTIVIDAD[opciones.grupo].entidades]);
   const { data, error, count } = await consulta;
+  // Una página más allá del final no es un error: se muestra vacía (PostgREST responde PGRST103).
+  if (error?.code === 'PGRST103') return { registros: [] as RegistroActividad[], total: count ?? 0, paginas: Math.max(1, Math.ceil((count ?? 0) / POR_PAGINA)) };
   if (error) throw new Error(`No se pudo leer el registro de actividad: ${error.message}`);
 
   type Fila = { id: number; actor_id: string | null; accion: string; entidad: string; entidad_id: string | null;

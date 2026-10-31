@@ -314,10 +314,12 @@ try {
   // 19. Registro de actividad.
   // El registro está paginado (30 por página): se leen las primeras páginas del grupo «Talleres».
   let registro = '';
-  for (let pagina = 1; pagina <= 4; pagina++) {
+  for (let pagina = 1; pagina <= 3; pagina++) {
     await a.goto(`${BASE}/admin/configuracion/actividad?grupo=talleres&pagina=${pagina}`, { waitUntil: 'networkidle' });
-    registro += await a.locator('main').innerText();
+    registro += await a.locator('body').innerText();
   }
+  const fuera = await a.goto(`${BASE}/admin/configuracion/actividad?grupo=talleres&pagina=999`, { waitUntil: 'networkidle' });
+  comprobar(fuera.status() === 200, `una página del registro más allá del final se muestra vacía, sin error (${fuera.status()})`);
   comprobar(['Reprogramó un taller', 'Canceló un taller', 'Duplicó un taller como borrador', 'Una persona respondió a la reprogramación de un taller',
     'Cambió el estado de la grabación de un taller', 'Registró la revisión de una grabación'].every((t) => registro.includes(t)),
     'el registro muestra reprogramar, cancelar, duplicar, la respuesta de la alumna y los cambios de la grabación');
