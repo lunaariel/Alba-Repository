@@ -27,7 +27,7 @@ export default async function DatosTaller({ params, searchParams }: Props) {
           id: t.id, titulo: t.titulo, slug: t.slug, descripcion: t.descripcion ?? '', zona: t.zonaHoraria, fecha: p.fecha, hora: p.hora,
           duracion: String(Math.round((t.terminaEn.getTime() - t.iniciaEn.getTime()) / 60000)),
           gratuito: t.precioCentavos === 0, precio: t.precioCentavos > 0 ? centavosATexto(t.precioCentavos) : '',
-          ilimitado: t.cupo === null, cupo: t.cupo ? String(t.cupo) : '', plataforma: t.plataforma, visible: String(t.enlaceVisibleHoras),
+          ilimitado: t.cupo === null, cupo: t.cupo ? String(t.cupo) : '', plataforma: t.plataforma, visible: String(t.enlaceVisibleHoras), cancelacion: String(t.cancelacionHoras),
           fechaEditable: !cerrado && t.confirmadas + t.reservas === 0, cerrado, minimoCupo: t.confirmadas + t.reservas,
         }}
       />

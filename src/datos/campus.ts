@@ -244,6 +244,8 @@ export interface TallerInscripto {
   canceladaPor: 'alumno' | 'academia' | null;
   /** Respuesta a la última reprogramación (null si no hubo). */
   respuesta: 'pendiente' | 'aceptada' | 'reembolso_solicitado' | 'no_asiste' | null;
+  /** Horas antes del inicio hasta las que puede cancelar (copiadas al inscribirse). */
+  plazoHoras: number;
   /** El servidor solo lo entrega a inscriptos confirmados (enlace_taller). */
   enlace: string | null;
   reprogramadoDesde: Date | null;
@@ -255,7 +257,7 @@ export interface AvisoCampus { id: string; tipo: string; tallerId: string | null
 
 type FilaInscripcion = {
   estado: string; origen: TallerInscripto['origen']; creado_en: string; item_orden_id: string | null;
-  cancelada_por: TallerInscripto['canceladaPor']; respuesta_reprogramacion: TallerInscripto['respuesta'];
+  cancelada_por: TallerInscripto['canceladaPor']; respuesta_reprogramacion: TallerInscripto['respuesta']; cancelacion_horas: number | null;
   talleres: {
     id: string; slug: string; titulo: string; inicia_en: string; termina_en: string; zona_horaria: string; estado: string;
     motivo_cancelacion: string | null;
@@ -267,7 +269,7 @@ export async function misTalleres(): Promise<TallerInscripto[]> {
   const supabase = await clienteSesion();
   const [{ data, error }, { data: avisos }, { data: grabaciones }] = await Promise.all([
     supabase.from('inscripciones_taller')
-      .select('estado, origen, creado_en, item_orden_id, cancelada_por, respuesta_reprogramacion, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, motivo_cancelacion)')
+      .select('estado, origen, creado_en, item_orden_id, cancelada_por, respuesta_reprogramacion, cancelacion_horas, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, motivo_cancelacion)')
       .in('estado', ['confirmada', 'reembolso_pendiente', 'reembolsada', 'cancelada'])
       .order('creado_en', { ascending: false }),
     supabase.from('notificaciones').select('taller_id, detalle, creado_en').eq('tipo', 'taller_reprogramado').order('creado_en', { ascending: false }),
@@ -290,7 +292,7 @@ export async function misTalleres(): Promise<TallerInscripto[]> {
     return {
       id: t.id, slug: t.slug, titulo: t.titulo, iniciaEn: new Date(t.inicia_en), terminaEn: new Date(t.termina_en), zonaHoraria: t.zona_horaria,
       estado: t.estado, inscripcion: f.estado, origen: f.origen, paga: f.origen === 'compra' || f.item_orden_id !== null,
-      canceladaPor: f.cancelada_por, respuesta: f.respuesta_reprogramacion, enlace: enlaces[i] ?? null,
+      canceladaPor: f.cancelada_por, respuesta: f.respuesta_reprogramacion, plazoHoras: f.cancelacion_horas ?? 24, enlace: enlaces[i] ?? null,
       reprogramadoDesde: reprogramado.get(t.id) ?? null, motivoCancelacion: t.motivo_cancelacion, grabacion: grab.get(t.id) ?? null,
     };
   }).sort((a, b) => a.iniciaEn.getTime() - b.iniciaEn.getTime());

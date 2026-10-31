@@ -39,9 +39,12 @@ antes=$(q "$HUELLA")
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000018_modalidad_evaluacion.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000019_vencimientos_cursos.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000020_panel_cursos.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000021_plazo_cancelacion.sql" >/dev/null
+[ "$(q "select count(*) from public.inscripciones_taller where cancelacion_horas is distinct from 24")" = "0" ] || { echo "FALLA      0021 cambió el plazo de inscripciones existentes"; exit 1; }
 [ "$(q "select count(*) from public.accesos_curso where vence_en is not null or inicia_en is null")" = "0" ] || { echo "FALLA      0019 asignó vencimientos retroactivos"; exit 1; }
 [ "$(q "select origen from public.inscripciones_taller limit 1")" = "compra" ] || { echo "FALLA      0016 no clasificó la inscripción existente"; exit 1; }
 [ "$(q "select count(*) from public.envios_recordatorio where para_inicio is not null")" = "1" ] || { echo "FALLA      0016 no completó para_inicio"; exit 1; }
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000021_plazo_cancelacion_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000020_panel_cursos_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000019_vencimientos_cursos_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000018_modalidad_evaluacion_down.sql" >/dev/null
@@ -87,4 +90,4 @@ if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000016_talleres_ges
   echo "FALLA      la reversión de 0016 debió negarse"; exit 1
 fi
 grep -q reversion_imposible /tmp/albor_rev16.log || { echo "FALLA      la reversión falló por otro motivo: $(head -2 /tmp/albor_rev16.log)"; exit 1; }
-echo "ok         reversión de 0015 a 0020: datos idénticos, se reaplican, y se niega cuando perdería información"
+echo "ok         reversión de 0015 a 0021: datos idénticos, se reaplican, y se niega cuando perdería información"

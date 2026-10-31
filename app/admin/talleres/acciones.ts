@@ -79,9 +79,12 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
     tipo: z.enum(['gratuito', 'pago'], { errorMap: () => ({ message: 'Indique si es gratuito o pago.' }) }),
     cupoTipo: z.enum(['limitado', 'ilimitado']),
     plataforma: z.enum(['zoom', 'meet']),
+    cancelacion: z.coerce.number({ invalid_type_error: 'El plazo de cancelación va de 0 a 336 horas (14 días).' }).int('Escriba un número entero de horas.')
+      .min(0, 'El plazo de cancelación va de 0 a 336 horas (14 días).').max(336, 'El plazo de cancelación va de 0 a 336 horas (14 días).'),
   }).safeParse({
     id: datos.get('id'), titulo: datos.get('titulo'), slug: datos.get('slug'), descripcion: datos.get('descripcion') ?? '',
     zona: datos.get('zona'), tipo: datos.get('tipo'), cupoTipo: datos.get('cupoTipo'), plataforma: datos.get('plataforma'),
+    cancelacion: datos.get('cancelacion') ?? '24',
   });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
@@ -99,7 +102,7 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
   }
   const cambios: Record<string, unknown> = {
     titulo: d.titulo, slug: d.slug, descripcion: d.descripcion || null, zona_horaria: d.zona, precio_centavos: precio, cupo,
-    plataforma: d.plataforma,
+    plataforma: d.plataforma, cancelacion_horas: d.cancelacion,
   };
   if (datos.get('conFecha') === 'si') {
     const h = horario(datos);

@@ -9,7 +9,7 @@ import { guardarTaller, type EstadoForm } from '../acciones';
 
 export interface DatosFormTaller {
   id: string; titulo: string; slug: string; descripcion: string; zona: string; fecha: string; hora: string; duracion: string;
-  gratuito: boolean; precio: string; ilimitado: boolean; cupo: string; plataforma: 'zoom' | 'meet'; visible: string;
+  gratuito: boolean; precio: string; ilimitado: boolean; cupo: string; plataforma: 'zoom' | 'meet'; visible: string; cancelacion: string;
   fechaEditable: boolean; cerrado: boolean; minimoCupo: number;
 }
 
@@ -77,6 +77,12 @@ export function FormTaller({ t, vistaPrevia }: { t: DatosFormTaller; vistaPrevia
           <Entrada nombre="cupo" etiqueta="Cupo (lugares)" inputMode="numeric" defaultValue={t.cupo} error={err('cupo')}
             ayuda={t.minimoCupo > 0 ? `Mínimo ${t.minimoCupo}: los lugares ya ocupados.` : undefined} />
         )}
+      </fieldset>
+
+      <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">
+        <legend className="mb-1 font-display text-[22px] font-semibold">Cancelación</legend>
+        <Entrada nombre="cancelacion" etiqueta="Las personas pueden cancelar hasta (horas antes del inicio)" inputMode="numeric" defaultValue={t.cancelacion} error={err('cancelacion')}
+          ayuda="Predeterminado: 24 horas. Vale para los talleres gratuitos; en los pagos, por ahora se cancela escribiendo a la academia. Un cambio rige para las inscripciones nuevas: quienes ya se inscribieron conservan su plazo." />
       </fieldset>
 
       <fieldset className="m-0 flex flex-col gap-4 border-0 p-0">

@@ -67,7 +67,7 @@ export interface GrabacionAdmin {
   accesos: { inscripcion: number; compra: number };
 }
 export interface TallerAdmin extends TallerListado {
-  descripcion: string | null; plataforma: 'zoom' | 'meet'; enlaceVisibleHoras: number; duplicadoDe: { id: string; titulo: string } | null;
+  descripcion: string | null; plataforma: 'zoom' | 'meet'; enlaceVisibleHoras: number; cancelacionHoras: number; duplicadoDe: { id: string; titulo: string } | null;
   motivoCancelacion: string | null; canceladoEn: Date | null;
   reunion: { proveedor: string; enlaceParticipante: string; enlaceAnfitrion: string | null; estado: string; ultimoError: string | null } | null;
   recordatorios: number[];
@@ -83,7 +83,7 @@ export const tallerAdmin = cache(async (id: string): Promise<TallerAdmin | null>
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const s = await clienteSesion();
   const { data: t } = await s.from('talleres')
-    .select('id, slug, titulo, descripcion, estado, inicia_en, termina_en, zona_horaria, cupo, precio_centavos, plataforma, enlace_visible_horas, duplicado_de, motivo_cancelacion, cancelado_en')
+    .select('id, slug, titulo, descripcion, estado, inicia_en, termina_en, zona_horaria, cupo, precio_centavos, plataforma, enlace_visible_horas, cancelacion_horas, duplicado_de, motivo_cancelacion, cancelado_en')
     .eq('id', id).maybeSingle();
   if (!t) return null;
   const servicio = clienteServicio();
@@ -117,7 +117,7 @@ export const tallerAdmin = cache(async (id: string): Promise<TallerAdmin | null>
   return {
     id: t.id, slug: t.slug, titulo: t.titulo, descripcion: t.descripcion, estado: t.estado as EstadoTaller,
     iniciaEn: new Date(t.inicia_en), terminaEn: new Date(t.termina_en), zonaHoraria: t.zona_horaria, cupo: t.cupo, precioCentavos: t.precio_centavos,
-    plataforma: t.plataforma, enlaceVisibleHoras: t.enlace_visible_horas, motivoCancelacion: t.motivo_cancelacion,
+    plataforma: t.plataforma, enlaceVisibleHoras: t.enlace_visible_horas, cancelacionHoras: t.cancelacion_horas ?? 24, motivoCancelacion: t.motivo_cancelacion,
     canceladoEn: t.cancelado_en ? new Date(t.cancelado_en) : null,
     duplicadoDe: (origen.data as { id: string; titulo: string } | null) ?? null,
     confirmadas, reservas: ((reservas.data ?? []) as { vence_en: string }[]).filter((x) => new Date(x.vence_en).getTime() > ahora).length,
