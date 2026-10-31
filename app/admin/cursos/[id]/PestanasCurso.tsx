@@ -10,6 +10,7 @@ export function PestanasCurso({ id }: { id: string }) {
     { href: base, texto: 'Datos y precio', activa: ruta === base },
     { href: `${base}/temario`, texto: 'Temario', activa: ruta.startsWith(`${base}/temario`) },
     { href: `${base}/evaluacion`, texto: 'Evaluación', activa: ruta.startsWith(`${base}/evaluacion`) },
+    { href: `${base}/alumnos`, texto: 'Alumnos', activa: ruta.startsWith(`${base}/alumnos`) },
     { href: `${base}/publicacion`, texto: 'Publicación', activa: ruta.startsWith(`${base}/publicacion`) },
   ];
   return (

@@ -1,3 +1,5 @@
+import { CONFIG_PREDETERMINADA, faltaCriterioCertificacion, usaPreguntas, type ConfigEvaluacion } from './evaluacion';
+
 /**
  * Reglas y textos del editor de cursos. La base de datos tiene la última palabra
  * (validar_publicacion_curso, proteger_historial…); esto solo explica y valida antes de enviar.
@@ -32,18 +34,30 @@ export interface EstadoContenido {
   leccionesVigentes: number;
   preguntasVigentes: number;
   preguntasSinCorrecta: number;
+  /** Modalidad del borrador. Sin ella se asume la sumativa (como la base cuando no hay evaluación configurada). */
+  evaluacion?: Pick<ConfigEvaluacion, 'modalidad' | 'requiereActividades' | 'requiereValidacion' | 'conCertificado'>;
 }
 
 export interface Requisito { clave: string; texto: string; cumplido: boolean; donde: 'datos' | 'temario' | 'evaluacion' }
 
-/** La misma lista que exige la base para publicar (validar_publicacion_curso). */
+/** La misma lista que exige la base para publicar (faltantes_publicacion). */
 export function requisitosPublicacion(e: EstadoContenido): Requisito[] {
-  return [
+  const ev = e.evaluacion ?? { modalidad: 'sumativa', requiereActividades: false, requiereValidacion: false, conCertificado: true };
+  const r: Requisito[] = [
     { clave: 'precio', texto: 'Precio en USD mayor que cero', cumplido: e.precioCentavos > 0, donde: 'datos' },
     { clave: 'lecciones', texto: 'Al menos una lección vigente', cumplido: e.leccionesVigentes > 0, donde: 'temario' },
-    { clave: 'evaluacion', texto: 'Evaluación final con al menos una pregunta', cumplido: e.preguntasVigentes > 0, donde: 'evaluacion' },
-    { clave: 'respuesta_correcta', texto: 'Cada pregunta con su respuesta correcta', cumplido: e.preguntasVigentes > 0 && e.preguntasSinCorrecta === 0, donde: 'evaluacion' },
   ];
+  if (usaPreguntas(ev)) {
+    r.push(ev.modalidad === 'sumativa'
+      ? { clave: 'evaluacion', texto: 'Evaluación final con al menos una pregunta', cumplido: e.preguntasVigentes > 0, donde: 'evaluacion' }
+      : { clave: 'actividades', texto: 'Actividades formativas con al menos una pregunta', cumplido: e.preguntasVigentes > 0, donde: 'evaluacion' });
+    r.push({ clave: 'respuesta_correcta', texto: 'Cada pregunta con su respuesta correcta', cumplido: e.preguntasVigentes > 0 && e.preguntasSinCorrecta === 0, donde: 'evaluacion' });
+  }
+  if (ev.modalidad === 'formativa' && ev.conCertificado) {
+    r.push({ clave: 'criterios_certificacion', texto: 'Un criterio para certificar además de las lecciones (actividades o validación docente)',
+      cumplido: !faltaCriterioCertificacion({ ...CONFIG_PREDETERMINADA, ...ev }), donde: 'evaluacion' });
+  }
+  return r;
 }
 
 /** Temas que tienen una sola pregunta vigente: informarlos revelaría cuál se falló. */
@@ -101,6 +115,12 @@ const ERRORES: Record<string, string> = {
   version_sin_leccion: 'Solo se puede asociar a versiones que incluyen esta lección.',
   leccion_no_publicada: 'Esta lección todavía no está en ninguna versión: edítela directamente.',
   leccion_retirada: 'La lección está retirada del borrador.',
+  nota_requerida: 'Escriba una nota (al menos 10 caracteres): queda registrada con la validación.',
+  validacion_no_corresponde: 'La versión que sigue esta persona no pide validación docente.',
+  ya_validada: 'Esta persona ya tiene una validación vigente en su versión.',
+  certificado_emitido: 'Ya se emitió el certificado de esa versión: la validación no se puede anular.',
+  sin_acceso: 'Esa persona no tiene acceso activo al curso.',
+  no_encontrado: 'No se encontró. Recargue la página.',
 };
 
 // La clave más larga que coincide gana: «confirmacion_incorrecta» no debe leerse como «confirmacion».
@@ -139,6 +159,8 @@ const OKS: Record<string, string> = {
   correccion_aplicada: 'Corrección menor aplicada en todas las versiones. Quedó registrada con su tipo y motivo.',
   leccion_reemplazada: 'Se creó la lección de reemplazo en el borrador. La original se conserva intacta para quienes siguen las versiones publicadas.',
   complemento_asociado: 'Material complementario actualizado: lo ven los alumnos de las versiones elegidas. No cambia avances ni requisitos.',
+  validada: 'Finalización validada. Quedó registrada con su nota; la persona ya puede obtener su certificado si cumplió lo demás.',
+  validacion_anulada: 'Validación anulada. Quedó registrado el motivo.',
 };
 
 /** Mensaje de un aviso de éxito; un código desconocido no muestra nada. */

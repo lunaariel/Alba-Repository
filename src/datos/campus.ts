@@ -4,6 +4,7 @@ import { clienteSesion, clienteServicio } from './supabase';
 import { exigirSesion } from './sesion';
 import { ordenarLecciones, porcentajeAvance, leccionParaContinuar } from '@/dominio/aprendizaje';
 import { proveedorVideo } from '@/servicios/video';
+import { aFinalizacion, type Finalizacion } from '@/dominio/evaluacion';
 
 /**
  * Lecturas del campus. Todo pasa por el cliente con sesión, así que RLS decide qué ve cada alumno.
@@ -114,6 +115,10 @@ export interface CursoCampusDetalle extends CursoCampus {
   materiales: MaterialCampus[];
   evaluacion: EvaluacionResumen | null;
   pendientes: number;
+  /** Modalidad y requisitos de la versión del alumno, y cuánto cumplió (la base decide). */
+  finalizacion: Finalizacion | null;
+  /** Actividades formativas de su versión (solo en la modalidad formativa con preguntas). */
+  actividades: { evaluacionId: string; preguntas: number; envios: number } | null;
 }
 
 /** Un curso del campus por slug, solo si la persona tiene acceso activo. Si no, null. */
@@ -122,17 +127,20 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
   if (!curso) return null;
   const supabase = await clienteSesion();
   const ids = curso.lecciones.map((l) => l.id);
-  const [{ data: materiales }, { data: ev }] = await Promise.all([
+  const [{ data: materiales }, { data: ev }, { data: fin }] = await Promise.all([
     ids.length
       ? supabase.from('recursos_leccion').select('id, titulo, leccion_id, tamano_bytes, orden, complementario').in('leccion_id', ids).order('orden')
       : Promise.resolve({ data: [] }),
     // Criterios e intentos de la versión del alumno, no del borrador.
     supabase.rpc('mi_evaluacion', { p_curso: curso.id }),
+    supabase.rpc('mi_finalizacion', { p_curso: curso.id }),
   ]);
   type Ev = { evaluacion_id: string | null; puntaje_minimo: number; intentos_permitidos: number | null; preguntas: number;
+    modalidad?: 'sumativa' | 'formativa'; envios_formativos?: number;
     aprobado_equivalente: boolean; intentos: { numero: number; puntaje: number; aprobado: boolean; revisado: boolean; entregado_en: string }[] };
   const e = ev as Ev | null;
-  const resumen: EvaluacionResumen | null = e?.evaluacion_id && e.preguntas > 0 ? {
+  const formativa = e?.modalidad === 'formativa';
+  const resumen: EvaluacionResumen | null = !formativa && e?.evaluacion_id && e.preguntas > 0 ? {
     id: e.evaluacion_id, puntajeMinimo: e.puntaje_minimo, intentosPermitidos: e.intentos_permitidos, preguntas: e.preguntas,
     aprobada: e.aprobado_equivalente,
     intentos: (e.intentos ?? []).map((i) => ({ numero: i.numero, puntaje: i.puntaje, aprobado: i.aprobado, revisado: i.revisado, entregadoEn: new Date(i.entregado_en) })),
@@ -143,6 +151,9 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
       .map((m) => ({ id: m.id, titulo: m.titulo, leccionId: m.leccion_id, tamanoBytes: m.tamano_bytes, complementario: m.complementario })),
     evaluacion: resumen,
     pendientes: curso.lecciones.filter((l) => !l.completada).length,
+    finalizacion: aFinalizacion(fin as Record<string, unknown> | null),
+    actividades: formativa && e?.evaluacion_id && e.preguntas > 0
+      ? { evaluacionId: e.evaluacion_id, preguntas: e.preguntas, envios: e.envios_formativos ?? 0 } : null,
   };
 });
 
@@ -343,7 +354,10 @@ export interface CambioVersion {
   intentosPermitidos: { antes: number | null; despues: number | null };
   evaluacionIgual: boolean;
   tieneCertificado: boolean;
+  /** Modalidad y requisitos antes y después (null si la base no los informa). */
+  requisitos: { antes: RequisitosVersion; despues: RequisitosVersion } | null;
 }
+export interface RequisitosVersion { modalidad: 'sumativa' | 'formativa'; requiereActividades: boolean; requiereValidacion: boolean; conCertificado: boolean }
 
 /** Qué cambiaría si el alumno pasa a la versión vigente del curso. null si ya está en ella. */
 export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | null> {
@@ -353,6 +367,7 @@ export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | 
     actual: { id: string; numero: number; publicada_en: string }; nueva: { id: string; numero: number; publicada_en: string; resumen: string | null };
     lecciones_nuevas: string[]; lecciones_quitadas: string[]; pendientes_despues: number; completadas_conservadas: number;
     puntaje_minimo: { antes: number; despues: number }; intentos_permitidos: { antes: number | null; despues: number | null };
+    requisitos?: { antes: FilaRequisitos; despues: FilaRequisitos };
     evaluacion_igual: boolean; tiene_certificado: boolean;
   };
   return {
@@ -362,5 +377,11 @@ export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | 
     pendientesDespues: d.pendientes_despues, completadasConservadas: d.completadas_conservadas,
     puntajeMinimo: d.puntaje_minimo, intentosPermitidos: d.intentos_permitidos,
     evaluacionIgual: d.evaluacion_igual, tieneCertificado: d.tiene_certificado,
+    requisitos: d.requisitos ? { antes: aRequisitos(d.requisitos.antes), despues: aRequisitos(d.requisitos.despues) } : null,
   };
 }
+
+type FilaRequisitos = { modalidad: 'sumativa' | 'formativa'; requiere_actividades: boolean; requiere_validacion: boolean; con_certificado: boolean };
+const aRequisitos = (r: FilaRequisitos): RequisitosVersion => ({
+  modalidad: r.modalidad, requiereActividades: r.requiere_actividades, requiereValidacion: r.requiere_validacion, conCertificado: r.con_certificado,
+});

@@ -29,7 +29,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
   const h = c.historial;
   const cambios = cambiosDelBorrador(c);
   const hayCambios = cambios.leccionesNuevas.length + cambios.leccionesQuitadas.length + cambios.preguntasNuevas + cambios.preguntasQuitadas > 0
-    || cambios.objetivosCambian
+    || cambios.objetivosCambian || cambios.modalidad.length > 0
     || (cambios.criterios !== null && (cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] || cambios.criterios.intentos[0] !== cambios.criterios.intentos[1]));
 
   return (
@@ -65,7 +65,9 @@ export default async function Publicacion({ params, searchParams }: Props) {
               <div className="mt-4">
                 {listo ? (
                   <ConfirmarAccion accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'publicado' }} textoBoton="Publicar el curso" titulo="¿Publicar el curso?" estilo="primario">
-                    <p className="m-0">«{c.titulo}» aparecerá en el sitio con precio {formatearUSD(c.precioCentavos)}, {e.leccionesVigentes === 1 ? '1 lección' : `${e.leccionesVigentes} lecciones`} y una evaluación de {e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`}.</p>
+                    <p className="m-0">«{c.titulo}» aparecerá en el sitio con precio {formatearUSD(c.precioCentavos)}, {e.leccionesVigentes === 1 ? '1 lección' : `${e.leccionesVigentes} lecciones`} y {e.evaluacion?.modalidad === 'formativa'
+                      ? 'evaluación formativa'
+                      : `una evaluación de ${e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`}`}.</p>
                     <p className="m-0 text-[15px] text-tinta-suave">Las ventas siguen cerradas hasta conectar la pasarela de pago (Fase 6).</p>
                   </ConfirmarAccion>
                 ) : (
@@ -134,8 +136,9 @@ export default async function Publicacion({ params, searchParams }: Props) {
                   {cambios.objetivosCambian && <li>Objetivos de aprendizaje modificados (Datos y precio).</li>}
                   {cambios.preguntasNuevas > 0 && <li>{plural(cambios.preguntasNuevas, 'pregunta nueva o reemplazada', 'preguntas nuevas o reemplazadas')}.</li>}
                   {cambios.preguntasQuitadas > 0 && <li>{plural(cambios.preguntasQuitadas, 'pregunta quitada', 'preguntas quitadas')}.</li>}
-                  {cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
-                  {cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
+                  {cambios.modalidad.length === 0 && cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
+                  {cambios.modalidad.length === 0 && cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
+                  {cambios.modalidad.map((t) => <li key={t}>{t}</li>)}
                 </ul>
               ) : (
                 <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas, objetivos ni criterios. (Los cambios de orden y de precio no se listan aquí.)</p>
@@ -178,7 +181,9 @@ export default async function Publicacion({ params, searchParams }: Props) {
                     <td className="py-2 pr-4 font-bold">{v.numero}{v.vigente && <span className="ml-2 rounded-full bg-oliva-profundo px-2 py-0.5 text-[12px] text-marfil">vigente</span>}</td>
                     <td className="py-2 pr-4">{fecha(v.publicadaEn)}</td>
                     <td className="py-2 pr-4">{plural(v.lecciones, 'lección', 'lecciones')} · {plural(v.preguntas, 'pregunta', 'preguntas')}</td>
-                    <td className="py-2 pr-4">mínimo {v.puntajeMinimo} · intentos {intentosTexto(v.intentosPermitidos)}</td>
+                    <td className="py-2 pr-4">{v.config.modalidad === 'sumativa'
+                      ? <>Evaluación final · mínimo {v.puntajeMinimo} · intentos {intentosTexto(v.intentosPermitidos)}</>
+                      : <>Formativa{v.config.requiereActividades ? ' · actividades' : ''}{v.config.requiereValidacion ? ' · validación docente' : ''}{v.config.conCertificado ? '' : ' · sin certificado'}</>}</td>
                     <td className="py-2 pr-4">{v.alumnos} · {plural(v.certificados, 'certificado', 'certificados')}</td>
                     <td className="py-2">{v.resumen ?? '—'}</td>
                   </tr>

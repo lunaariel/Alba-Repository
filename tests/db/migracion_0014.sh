@@ -13,7 +13,7 @@ q() { "${PSQL[@]}" -d "$DB" -tA -c "$1"; }
 "${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB encoding 'UTF8' template template0" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/supabase_stub.sql" >/dev/null
 for m in "$RAIZ"/supabase/migrations/*.sql; do
-  case "$(basename "$m")" in 20261031000014_*|2026103100001[5-9]_*) continue;; esac
+  n=$(basename "$m"); [ $((10#${n:8:6})) -ge 14 ] && continue
   "${PSQL[@]}" -d "$DB" -f "$m" >/dev/null
 done
 

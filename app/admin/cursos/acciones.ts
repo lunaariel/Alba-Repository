@@ -390,23 +390,29 @@ export async function guardarCriterios(_: Estado, datos: FormData): Promise<Esta
   await exigirAdminAccion();
   const r = z.object({
     curso: uuid,
+    modalidad: z.enum(['sumativa', 'formativa'], { errorMap: () => ({ message: 'Elija la forma de evaluar.' }) }),
     puntaje: z.coerce.number({ invalid_type_error: 'El puntaje mínimo va de 0 a 100.' }).int().min(0, 'El puntaje mínimo va de 0 a 100.').max(100, 'El puntaje mínimo va de 0 a 100.'),
     intentos: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) > 0), 'Los intentos van de 1 a 99, o vacío para no limitar.'),
     aprobado: texto(300).min(2, 'Escriba el mensaje para quien aprueba.'),
     desaprobado: texto(300).min(2, 'Escriba el mensaje para quien no aprueba.'),
   }).safeParse({
-    curso: datos.get('curso'), puntaje: datos.get('puntaje'), intentos: datos.get('intentos') ?? '',
+    curso: datos.get('curso'), modalidad: datos.get('modalidad') ?? 'sumativa', puntaje: datos.get('puntaje'), intentos: datos.get('intentos') ?? '',
     aprobado: datos.get('aprobado'), desaprobado: datos.get('desaprobado'),
   });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
+  // La sumativa no usa requisitos formativos (la base lo exige con una restricción).
+  const formativa = d.modalidad === 'formativa';
   const { error } = await (await clienteSesion()).from('evaluaciones').upsert({
     curso_id: d.curso, puntaje_minimo: d.puntaje, intentos_permitidos: d.intentos ? Number(d.intentos) : null,
-    mensaje_aprobado: d.aprobado, mensaje_desaprobado: d.desaprobado,
+    mensaje_aprobado: d.aprobado, mensaje_desaprobado: d.desaprobado, modalidad: d.modalidad,
+    requiere_actividades: formativa && datos.get('actividades') === 'si',
+    requiere_validacion: formativa && datos.get('validacion') === 'si',
+    con_certificado: !formativa || datos.get('certificado') === 'si',
   }, { onConflict: 'curso_id' });
   if (error) return { error: mensajeError(error.message) };
   refrescar(d.curso);
-  return { ok: 'Criterios guardados. Valen para los próximos intentos.' };
+  return { ok: formativa ? 'Configuración guardada.' : 'Criterios guardados. Valen para los próximos intentos.' };
 }
 
 const opcionesEsquema = z.array(z.object({
@@ -510,4 +516,32 @@ export async function bloquearContenido(datos: FormData) {
   if (error) ir(ruta, { error: codigoError(error.message) });
   refrescar();
   ir(ruta, { ok: r.data.bloquear === 'si' ? 'bloqueado' : 'desbloqueado' });
+}
+
+// ---------------------------------------------------------------- seguimiento formativo
+
+/** La maestra valida la finalización de una persona (modalidad formativa). La base exige admin y nota. */
+export async function validarFinalizacion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, perfil: uuid, nota: texto(1000) })
+    .safeParse({ curso: datos.get('curso'), perfil: datos.get('perfil'), nota: datos.get('nota') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
+  const { error } = await (await clienteSesion()).rpc('validar_finalizacion', { p_perfil: r.data.perfil, p_curso: r.data.curso, p_nota: r.data.nota });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'validada' });
+}
+
+/** Anula una validación hecha por error (solo si todavía no hay certificado de esa versión). */
+export async function anularValidacion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, validacion: uuid, motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), validacion: datos.get('validacion'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
+  const { error } = await (await clienteSesion()).rpc('anular_validacion', { p_validacion: r.data.validacion, p_motivo: r.data.motivo });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'validacion_anulada' });
 }

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cambioDeVersion, cursoCampus } from '@/datos/campus';
 import { estadoCertificado, textoAvance } from '@/dominio/aprendizaje';
+import { requisitosParaAlumno, textoPendientes } from '@/dominio/evaluacion';
 import { Contenedor } from '@/ui/estructura';
 import { BarraAvance, EncabezadoCampus, TemarioCampus } from '@/ui/campus';
 import { EnlaceAccion, EnlaceBoton } from '@/ui/acciones';
@@ -39,7 +40,16 @@ export default async function CursoCampus({ params, searchParams }: Props) {
   const cambio = await cambioDeVersion(curso.id);
   const fechaVersion = (d: Date) => new Intl.DateTimeFormat('es-GT', { month: 'long', year: 'numeric', timeZone: 'America/Guatemala' }).format(d);
   const sinIntentos = ev?.intentosPermitidos != null && ev.intentos.length >= ev.intentosPermitidos;
-  const cert = estadoCertificado({ accesoActivo: true, leccionesPendientes: curso.pendientes, evaluacionAprobada: aprobada });
+  const fin = curso.finalizacion;
+  // La base decide (estado_finalizacion_de); sin ese dato, la regla anterior de la sumativa.
+  const cert = fin
+    ? (fin.elegibleCertificado ? { disponible: true as const }
+      : { disponible: false as const, mensaje: fin.finalizado && !fin.conCertificado ? 'Este curso no entrega certificado.' : textoPendientes(fin) })
+    : estadoCertificado({ accesoActivo: true, leccionesPendientes: curso.pendientes, evaluacionAprobada: aprobada });
+  const requisitos = fin ? requisitosParaAlumno({
+    modalidad: fin.modalidad, requiereActividades: fin.requiereActividades, requiereValidacion: fin.requiereValidacion, conCertificado: fin.conCertificado,
+    puntajeMinimo: ev?.puntajeMinimo ?? 70, intentosPermitidos: ev ? ev.intentosPermitidos : null,
+  }) : [];
   const leccionesDeMaterial = new Map(curso.lecciones.map((l) => [l.id, l.titulo]));
 
   return (
@@ -99,6 +109,28 @@ export default async function CursoCampus({ params, searchParams }: Props) {
             </Tarjeta>
           )}
 
+          {fin && (
+            <Tarjeta titulo="Para terminar el curso">
+              <ol className="m-0 flex list-decimal flex-col gap-1.5 pl-5 text-[15px]">{requisitos.map((r) => <li key={r}>{r}</li>)}</ol>
+              {fin.finalizado
+                ? <p className="m-0 mt-3 font-bold text-oliva-profundo">Cumplió todos los requisitos.</p>
+                : fin.modalidad === 'formativa' && fin.requiereValidacion && !fin.validada && fin.leccionesPendientes === 0 && (!fin.requiereActividades || fin.actividadesCompletas)
+                  ? <p className="m-0 mt-3 text-[15px]">La maestra revisa su recorrido y confirma la finalización. No hace falta que haga nada más.</p>
+                  : null}
+            </Tarjeta>
+          )}
+
+          {curso.actividades && (
+            <Tarjeta titulo="Actividades formativas">
+              <p className="m-0">{fin?.actividadesCompletas
+                ? 'Ya las completó. Puede volver a hacerlas cuando quiera.'
+                : `${curso.actividades.preguntas === 1 ? '1 actividad' : `${curso.actividades.preguntas} actividades`}, sin nota. Le sugieren temas para repasar.`}</p>
+              <div className="mt-4"><EnlaceBoton href={`/campus/cursos/${curso.slug}/actividades`} tamano="compacto">
+                {fin?.actividadesCompletas ? 'Volver a hacerlas' : curso.actividades.envios > 0 ? 'Completar las actividades' : 'Hacer las actividades'}
+              </EnlaceBoton></div>
+            </Tarjeta>
+          )}
+
           {ev && (
             <Tarjeta titulo="Evaluación final">
               {aprobada ? (
@@ -106,7 +138,7 @@ export default async function CursoCampus({ params, searchParams }: Props) {
                   ? `Aprobada con ${Math.max(...ev.intentos.filter((i) => i.aprobado).map((i) => i.puntaje))} puntos${ev.intentos.some((i) => i.aprobado && i.revisado) ? ' (resultado revisado a su favor)' : ''}.`
                   : 'Aprobada en la versión anterior del programa, con la misma evaluación.'}</p>
               ) : curso.pendientes > 0 ? (
-                <p className="m-0">Se habilita cuando complete todas las lecciones. {cert.disponible ? '' : cert.mensaje}</p>
+                <p className="m-0">Se habilita cuando complete todas las lecciones.</p>
               ) : sinIntentos ? (
                 <p className="m-0">Usó los {ev.intentosPermitidos} intentos disponibles. <Link href="/contacto" className="font-bold text-oliva-profundo">Escríbanos</Link> y lo ayudamos.</p>
               ) : (

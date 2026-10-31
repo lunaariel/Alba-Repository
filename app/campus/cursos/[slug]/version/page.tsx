@@ -5,6 +5,7 @@ import { Contenedor } from '@/ui/estructura';
 import { EncabezadoCampus } from '@/ui/campus';
 import { Aviso } from '@/ui/Formulario';
 import { cambiarDeVersion } from '../../../acciones';
+import { requisitosParaAlumno } from '@/dominio/evaluacion';
 
 export const metadata: Metadata = { title: 'Versión más reciente' };
 
@@ -20,6 +21,7 @@ export default async function CambiarVersion({ params, searchParams }: Props) {
   const c = await cambioDeVersion(curso.id);
   if (!c) redirect(`/campus/cursos/${slug}`);
   const intentos = (n: number | null) => (n === null ? 'sin límite' : n === 1 ? '1 intento' : `${n} intentos`);
+  const modalidadCambia = c.requisitos ? c.requisitos.antes.modalidad !== c.requisitos.despues.modalidad : false;
   const criteriosCambian = c.puntajeMinimo.antes !== c.puntajeMinimo.despues || c.intentosPermitidos.antes !== c.intentosPermitidos.despues;
 
   return (
@@ -47,12 +49,22 @@ export default async function CambiarVersion({ params, searchParams }: Props) {
               </li>
               {c.leccionesQuitadas.length > 0 && <li>Ya no forman parte del programa: {c.leccionesQuitadas.join(', ')}.</li>}
               <li>Conserva {c.completadasConservadas === 1 ? '1 lección completada' : `${c.completadasConservadas} lecciones completadas`} que siguen en la versión nueva.</li>
-              <li>
-                {c.evaluacionIgual
-                  ? 'La evaluación final es la misma: si ya la aprobó, su aprobación se reconoce.'
-                  : 'La evaluación final cambió: para el certificado de la versión nueva deberá aprobarla de nuevo.'}
-              </li>
-              {criteriosCambian && (
+              {modalidadCambia ? (
+                <li>
+                  Cambia la forma de evaluar: {c.requisitos!.despues.modalidad === 'formativa' ? 'pasa a ser formativa, sin nota' : 'pasa a ser una evaluación final con puntaje'}.
+                  {' '}Para terminar la versión nueva deberá cumplir: {requisitosParaAlumno({ ...c.requisitos!.despues, puntajeMinimo: c.puntajeMinimo.despues, intentosPermitidos: c.intentosPermitidos.despues })
+                    .slice(1).join(' ')}
+                </li>
+              ) : c.requisitos?.despues.modalidad === 'formativa' ? (
+                <li>Para terminar la versión nueva: {requisitosParaAlumno({ ...c.requisitos.despues, puntajeMinimo: c.puntajeMinimo.despues, intentosPermitidos: c.intentosPermitidos.despues }).join(' ')}</li>
+              ) : (
+                <li>
+                  {c.evaluacionIgual
+                    ? 'La evaluación final es la misma: si ya la aprobó, su aprobación se reconoce.'
+                    : 'La evaluación final cambió: para el certificado de la versión nueva deberá aprobarla de nuevo.'}
+                </li>
+              )}
+              {!modalidadCambia && c.requisitos?.despues.modalidad !== 'formativa' && criteriosCambian && (
                 <li>Criterios: puntaje mínimo {c.puntajeMinimo.antes} → {c.puntajeMinimo.despues}; intentos {intentos(c.intentosPermitidos.antes)} → {intentos(c.intentosPermitidos.despues)}.</li>
               )}
             </ul>

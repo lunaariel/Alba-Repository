@@ -69,6 +69,30 @@ export async function rendirEvaluacion(_: ResultadoEvaluacion, datos: FormData):
 }
 
 /** Emite el certificado (o devuelve el existente). La base valida las tres condiciones. */
+export type ResultadoActividades =
+  | { completo: boolean; respondidas: number; total: number; temasAReforzar: string[] }
+  | { error: string }
+  | undefined;
+
+/**
+ * Envía las actividades formativas. Sin nota: la base registra el envío, dice si está completo
+ * (todas las preguntas respondidas) y sugiere temas para repasar. No revela respuestas correctas.
+ */
+export async function enviarActividades(_: ResultadoActividades, datos: FormData): Promise<ResultadoActividades> {
+  const usuario = await exigirSesion('/campus');
+  const cursoSlug = slug.safeParse(datos.get('curso'));
+  if (!cursoSlug.success) return { error: 'No encontramos el curso.' };
+  const curso = await cursoCampus(cursoSlug.data);
+  if (!curso?.actividades) return { error: 'Este curso no tiene actividades formativas en su versión.' };
+  const { data, error } = await clienteServicio().rpc('registrar_actividad_formativa', {
+    p_perfil: usuario.id, p_evaluacion: curso.actividades.evaluacionId, p_respuestas: respuestasDesdeFormulario(datos.entries()),
+  });
+  if (error) return { error: 'No pudimos registrar sus respuestas. Intente de nuevo en unos minutos.' };
+  const d = data as { completo: boolean; respondidas: number; total: number; temas_a_reforzar: string[] };
+  revalidatePath(`/campus/cursos/${cursoSlug.data}`);
+  return { completo: d.completo, respondidas: d.respondidas, total: d.total, temasAReforzar: d.temas_a_reforzar ?? [] };
+}
+
 export async function obtenerCertificado(datos: FormData) {
   const usuario = await exigirSesion('/campus');
   const cursoSlug = slug.safeParse(datos.get('curso'));
