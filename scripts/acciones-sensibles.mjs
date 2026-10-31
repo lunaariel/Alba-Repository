@@ -393,6 +393,8 @@ try {
     comprobar(Boolean(marcar) && sinLeer() === n && n !== '0', `marcar avisos ajenos como leídos (segunda alumna): sin cambios (${n} sin leer)`);
   } else comprobar(false, 'la alumna debería tener avisos sin leer');
   // Cancelación: se captura la de un taller gratuito y se cambia por el taller pago.
+  await pa1.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
+  await pa1.screenshot({ path: `${SALIDA}/permisos-campus-talleres.png`, fullPage: true });
   const filaLibre = pa1.locator('li', { hasText: '[Prueba] Gratuito' });
   const cancelar = await capturar(pa1, async () => {
     await filaLibre.getByText('Cancelar mi inscripción').click();
@@ -415,6 +417,7 @@ try {
   comprobar(ajena.status() === 404, `página de cambio de un curso sin acceso: ${ajena.status()}`);
 } catch (e) {
   comprobar(false, String(e.message).split('\n').slice(0, 6).join(' | '));
+  await alumna.p.screenshot({ path: `${SALIDA}/permisos-error-alumna.png`, fullPage: true }).catch(() => {});
 }
 await writeFile(`${SALIDA}/acciones-sensibles.txt`, informe.join('\n') + '\n');
 await navegador.close();

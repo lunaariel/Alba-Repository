@@ -233,7 +233,7 @@ try {
   await confirmar(a, a.getByRole('button', { name: 'Reprogramar' }), { palabra: 'REPROGRAMAR', campos: { fecha: enDias(9), hora: '10:00', motivo: 'Cambio de agenda de la maestra.' } });
   comprobar(await ve(a, /Taller reprogramado/), 'se reprograma el taller pago');
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
-  comprobar(await filaPago.getByText('Prefiero el reembolso').isVisible() && (await filaPago.getByText('No puedo asistir').count()) === 0, 'pago reprogramado: se ofrece pedir el reembolso');
+  comprobar(await filaPago.locator('summary', { hasText: 'Prefiero el reembolso' }).isVisible() && (await filaPago.getByText('No puedo asistir').count()) === 0, 'pago reprogramado: se ofrece pedir el reembolso');
   await filaPago.getByText('Prefiero el reembolso', { exact: true }).first().click();
   await filaPago.getByLabel(/gestionará el reembolso/).check();
   await Promise.all([al.waitForURL(/aviso=respuesta_reembolso_solicitado/), filaPago.getByRole('button', { name: 'Prefiero el reembolso' }).click()]);
