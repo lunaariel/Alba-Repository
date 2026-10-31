@@ -52,6 +52,12 @@ export default async function Publicacion({ params, searchParams }: Props) {
               </li>
             ))}
           </ul>
+          {c.duracionComercialMeses === null && (
+            <p className="m-0 mt-4 rounded-lg border-[1.5px] border-[#D9C48C] bg-[#F5EBCF] px-3 py-2 text-[14px] text-[#6B5420]">
+              Falta la duración comercial (en <Link href={base} className="font-bold text-[#6B5420]">Datos y precio</Link>): sin ella el curso se puede publicar,
+              pero nadie puede comprarlo, porque las condiciones de acceso se muestran antes de pagar.
+            </p>
+          )}
           <p className="m-0 mt-4 text-[14px] text-tinta-suave">
             {e.leccionesVigentes === 1 ? '1 lección vigente' : `${e.leccionesVigentes} lecciones vigentes`} · {e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`} · {c.precioCentavos > 0 ? formatearUSD(c.precioCentavos) : 'sin precio'}
           </p>

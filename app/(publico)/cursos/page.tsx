@@ -21,7 +21,7 @@ export default async function Cursos({ searchParams }: { searchParams: Promise<{
         <div className="flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
           <div className="max-w-[560px]">
             <h1 id="titulo" className="m-0 text-[clamp(36px,4vw,56px)] leading-[1.1]">Cursos</h1>
-            <p className="m-0 mt-3.5">Grabados, para ver a su ritmo, con materiales descargables y acceso sin vencimiento.</p>
+            <p className="m-0 mt-3.5">Grabados, para ver a su ritmo, con materiales descargables y un período de acceso que se informa en cada curso.</p>
           </div>
           {cursos.length > 0 && <ChipsFiltro actual={filtro} ruta="/cursos" />}
         </div>

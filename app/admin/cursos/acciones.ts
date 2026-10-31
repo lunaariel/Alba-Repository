@@ -71,12 +71,15 @@ export async function guardarDatosCurso(_: Estado, datos: FormData): Promise<Est
     edadHasta: z.coerce.number().int().min(0).max(6),
     duracionHoras: z.string().trim().refine((v) => v === '' || /^\d{1,3}([.,]\d)?$/.test(v), 'Escriba la duración en horas, por ejemplo 4 o 4.5.'),
     video: z.string().trim().refine((v) => v === '' || UUID.test(v), 'El id de video de Bunny tiene el formato 8-4-4-4-12 (letras y números).'),
+    duracionComercial: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) >= 1 && Number(v) <= 60),
+      'La duración comercial va de 1 a 60 meses (o vacía mientras no la defina).'),
   }).refine((d) => d.edadDesde <= d.edadHasta, { message: 'La edad "desde" no puede ser mayor que la edad "hasta".', path: ['edadDesde'] })
     .safeParse({
       id: datos.get('id'), titulo: datos.get('titulo'), slug: datos.get('slug'), resumen: datos.get('resumen') ?? '',
       descripcion: datos.get('descripcion') ?? '', requisitos: datos.get('requisitos') ?? '', objetivos: datos.get('objetivos') ?? '',
       publico: datos.getAll('publico'), edadDesde: datos.get('edadDesde'), edadHasta: datos.get('edadHasta'),
       duracionHoras: datos.get('duracionHoras') ?? '', video: datos.get('video') ?? '',
+      duracionComercial: datos.get('duracionComercial') ?? '',
     });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const precio = precioACentavos(String(datos.get('precio') ?? ''));
@@ -89,6 +92,7 @@ export async function guardarDatosCurso(_: Estado, datos: FormData): Promise<Est
     publico: d.publico, edad_desde_meses: d.edadDesde * 12, edad_hasta_meses: d.edadHasta * 12,
     duracion_minutos: d.duracionHoras ? Math.round(Number(d.duracionHoras.replace(',', '.')) * 60) || null : null,
     precio_centavos: precio, video_presentacion_id: d.video || null,
+    duracion_comercial_meses: d.duracionComercial ? Number(d.duracionComercial) : null,
   }).eq('id', d.id);
   if (error) return { error: mensajeError(error.message), campo: error.message.includes('slug') ? 'slug' : undefined };
   refrescar(d.id);

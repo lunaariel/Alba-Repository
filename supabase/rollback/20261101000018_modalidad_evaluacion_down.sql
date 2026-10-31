@@ -20,6 +20,14 @@ drop function public.mi_finalizacion(uuid);
 drop function public.estado_finalizacion_de(uuid, uuid);
 
 -- Funciones anteriores (0014 y 0015).
+create or replace function public.pregunta_visible_alumno(p_pregunta uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.version_preguntas vp join public.preguntas p on p.id = vp.pregunta_id
+                 where vp.pregunta_id = p_pregunta and not p.bloqueada
+                   and vp.version_id = public.version_de(auth.uid(), public.curso_de_pregunta(p_pregunta)))
+     and public.lecciones_pendientes(public.curso_de_pregunta(p_pregunta)) = 0;
+$$;
+
 create or replace function public.vista_cambio_version(p_curso uuid)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 declare v_act public.versiones_curso%rowtype; v_nueva public.versiones_curso%rowtype; v_uid uuid := auth.uid();

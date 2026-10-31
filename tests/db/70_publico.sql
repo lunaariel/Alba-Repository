@@ -19,8 +19,10 @@ values ('7a000000-0000-0000-0000-000000000009', 'borrador', 'Borrador', now() + 
 set local role anon;
 select pruebas.afirmar(public.lugares_ocupados('7a000000-0000-0000-0000-000000000009') is null, 'Un taller en borrador no devuelve datos');
 
-select pruebas.afirmar(public.resumen_publico_curso('c0000000-0000-0000-0000-000000000001') = '{"materiales": 1, "evaluacion": true}'::jsonb,
-  'Resumen público del curso: 1 material y evaluación');
+select pruebas.afirmar(public.resumen_publico_curso('c0000000-0000-0000-0000-000000000001') @> '{"materiales": 1, "evaluacion": true, "modalidad": "sumativa", "con_certificado": true}'::jsonb,
+  'Resumen público del curso: 1 material, evaluación sumativa con certificado');
+select pruebas.afirmar(public.resumen_publico_curso('c0000000-0000-0000-0000-000000000001') @> '{"duracion_comercial_meses": 3, "meses_adicionales": 5}'::jsonb,
+  'Resumen público: condiciones de acceso visibles antes de comprar');
 select pruebas.afirmar(public.resumen_publico_curso('c0000000-0000-0000-0000-000000000099') is null, 'Curso inexistente o en borrador: nada');
 
 rollback;

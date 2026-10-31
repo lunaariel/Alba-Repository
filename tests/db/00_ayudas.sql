@@ -49,6 +49,14 @@ insert into public.talleres (id, slug, titulo, inicia_en, termina_en, cupo, prec
 insert into public.reuniones (taller_id, proveedor, enlace_participante, enlace_anfitrion) values
   ('7a000000-0000-0000-0000-000000000001', 'manual', 'https://reunion.test/participante', 'https://reunion.test/anfitrion');
 
+-- Duración comercial del curso (migración 0019): sin ella no se vende. Condicional, porque algunos
+-- ensayos de migración cargan estas ayudas sobre una base anterior.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'cursos' and column_name = 'duracion_comercial_meses') then
+    update public.cursos set duracion_comercial_meses = 3 where id = 'c0000000-0000-0000-0000-000000000001';
+  end if;
+end $$;
+
 -- A compra el curso (vía las funciones del servidor). B no tiene acceso.
 do $$
 declare v_orden uuid;

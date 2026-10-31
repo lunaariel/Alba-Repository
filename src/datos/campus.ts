@@ -33,6 +33,8 @@ export interface CursoCampus {
   certificado: { id: string; codigo: string } | null;
   certificadoAnterior: { id: string; codigo: string } | null;
   version: { id: string; numero: number; publicadaEn: Date } | null;
+  /** Fin del acceso (calculado por el servidor al comprar). null: sin vencimiento (accesos anteriores o concesiones). */
+  venceEn: Date | null;
 }
 
 type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: number; leccion_id: string; leccion_titulo: string; duracion_minutos: number | null; orden: number };
@@ -63,16 +65,18 @@ async function leccionesConProgreso(versiones: { cursoId: string; versionId: str
   return resultado;
 }
 
-type FilaAcceso = { curso_id: string; version_id: string; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
+type FilaAcceso = { curso_id: string; version_id: string; vence_en: string | null; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
+const vigente = (a: { vence_en: string | null }) => !a.vence_en || new Date(a.vence_en).getTime() > Date.now();
 
-/** Cursos con acceso activo, con su avance según la versión de cada uno. El acceso no vence. */
+/** Cursos con acceso vigente, con su avance según la versión de cada uno. Los vencidos van aparte (misCursosVencidos). */
 export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   await exigirSesion('/campus');
   const supabase = await clienteSesion();
   const { data: accesos, error } = await supabase
-    .from('accesos_curso').select('curso_id, version_id, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
+    .from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
   if (error) throw new Error(`No se pudieron leer sus cursos: ${error.message}`);
-  const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos);
+  // La base protege el contenido al vencer (tiene_acceso, version_de); aquí solo se ordena la vista.
+  const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos && vigente(a));
   if (filas.length === 0) return [];
   const ids = filas.map((a) => a.curso_id);
   const [lecciones, { data: certs }, { data: versiones }] = await Promise.all([
@@ -83,7 +87,7 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   type Cert = { id: string; curso_id: string; version_id: string; codigo_verificacion: string };
   const listaCerts = (certs ?? []) as Cert[];
   const versionPorId = new Map(((versiones ?? []) as { id: string; numero: number; publicada_en: string }[]).map((v) => [v.id, v]));
-  return filas.map(({ cursos: c, version_id }) => {
+  return filas.map(({ cursos: c, version_id, vence_en }) => {
     const ls = lecciones.get(c!.id) ?? [];
     // El certificado de la versión actual; si no hay, el último obtenido (de una versión anterior).
     const cert = listaCerts.find((x) => x.curso_id === c!.id && x.version_id === version_id) ?? null;
@@ -95,8 +99,29 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
       certificado: cert ? { id: cert.id, codigo: cert.codigo_verificacion } : null,
       certificadoAnterior: anterior ? { id: anterior.id, codigo: anterior.codigo_verificacion } : null,
       version: v ? { id: version_id, numero: v.numero, publicadaEn: new Date(v.publicada_en) } : null,
+      venceEn: vence_en ? new Date(vence_en) : null,
     };
   });
+});
+
+export interface CursoVencido {
+  id: string; titulo: string; venceEn: Date;
+  certificados: { id: string; codigo: string }[];
+}
+
+/** Cursos cuyo acceso venció: sin contenido, pero con sus certificados (siguen siendo válidos). */
+export const misCursosVencidos = cache(async (): Promise<CursoVencido[]> => {
+  await exigirSesion('/campus');
+  const supabase = await clienteSesion();
+  const { data } = await supabase.from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo');
+  const filas = ((data ?? []) as unknown as FilaAcceso[]).filter((a) => a.cursos && !vigente(a));
+  if (!filas.length) return [];
+  const { data: certs } = await supabase.from('certificados').select('id, curso_id, codigo_verificacion').in('curso_id', filas.map((f) => f.curso_id));
+  return filas.map((f) => ({
+    id: f.curso_id, titulo: f.cursos!.titulo, venceEn: new Date(f.vence_en!),
+    certificados: ((certs ?? []) as { id: string; curso_id: string; codigo_verificacion: string }[])
+      .filter((c) => c.curso_id === f.curso_id).map((c) => ({ id: c.id, codigo: c.codigo_verificacion })),
+  }));
 });
 
 export interface MaterialCampus { id: string; titulo: string; leccionId: string; tamanoBytes: number; complementario: boolean }

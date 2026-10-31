@@ -113,6 +113,7 @@ const CAMPOS: Record<string, string> = {
   acceso_compra_dias: 'Días de acceso (compra)', acceso_compra_sin_vencimiento: 'Sin vencimiento (compra)',
   modalidad: 'Forma de evaluar', requiere_actividades: 'Exige actividades formativas', requiere_validacion: 'Exige validación docente',
   con_certificado: 'Entrega certificado', nota: 'Nota',
+  duracion_comercial_meses: 'Duración comercial (meses)',
   inicia_antes: 'Fecha anterior', inicia_despues: 'Fecha nueva', accesos_otorgados: 'Accesos otorgados',
 };
 

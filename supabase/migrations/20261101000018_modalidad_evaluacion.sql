@@ -507,3 +507,15 @@ begin
     'tiene_certificado', exists (select 1 from public.certificados where perfil_id = v_uid and curso_id = p_curso and version_id = v_act.id));
 end; $$;
 grant execute on function public.vista_cambio_version(uuid) to authenticated;
+
+-- ============================================================ 13. Actividades formativas visibles desde el principio
+create or replace function public.pregunta_visible_alumno(p_pregunta uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.version_preguntas vp join public.preguntas p on p.id = vp.pregunta_id
+                  join public.versiones_curso v on v.id = vp.version_id
+                 where vp.pregunta_id = p_pregunta and not p.bloqueada
+                   and vp.version_id = public.version_de(auth.uid(), public.curso_de_pregunta(p_pregunta))
+                   -- Sumativa: la evaluación final se ve al completar las lecciones. Formativa: las actividades
+                   -- acompañan el recorrido y se ven desde el principio.
+                   and (v.modalidad = 'formativa' or public.lecciones_pendientes(public.curso_de_pregunta(p_pregunta)) = 0));
+$$;

@@ -71,6 +71,8 @@ export interface CursoAdmin {
   id: string; slug: string; titulo: string; resumen: string | null; descripcion: string | null;
   publico: string[]; edadDesdeMeses: number | null; edadHastaMeses: number | null; duracionMinutos: number | null;
   objetivos: string[]; requisitos: string | null; precioCentavos: number; videoPresentacionId: string | null;
+  /** Meses de la duración comercial (el acceso dura esto + 5). null: sin definir, no se puede vender. */
+  duracionComercialMeses: number | null;
   estado: EstadoCurso; publicadoEn: Date | null;
   modulos: ModuloAdmin[]; evaluacion: EvaluacionAdmin | null;
   historial: { alumnos: number; alumnosSinCertificado: number; certificados: number; ordenes: number };
@@ -86,7 +88,7 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
   const s = await clienteSesion();
   const { data: c } = await s.from('cursos')
     .select(`id, slug, titulo, resumen, descripcion, publico, edad_desde_meses, edad_hasta_meses, duracion_minutos, objetivos,
-             requisitos, precio_centavos, video_presentacion_id, estado, publicado_en, version_vigente_id,
+             requisitos, precio_centavos, video_presentacion_id, estado, publicado_en, version_vigente_id, duracion_comercial_meses,
              modulos(id, titulo, orden, retirado, lecciones(id, titulo, descripcion, duracion_minutos, orden, retirada,
                recursos_leccion(id, titulo, ruta_almacenamiento, tamano_bytes, orden, retirado, complementario))),
              evaluaciones(id, puntaje_minimo, intentos_permitidos, mensaje_aprobado, mensaje_desaprobado,
@@ -165,7 +167,7 @@ export const cursoAdmin = cache(async (id: string): Promise<CursoAdmin | null> =
     id: c.id, slug: c.slug, titulo: c.titulo, resumen: c.resumen, descripcion: c.descripcion, publico: c.publico ?? [],
     edadDesdeMeses: c.edad_desde_meses, edadHastaMeses: c.edad_hasta_meses, duracionMinutos: c.duracion_minutos,
     objetivos: c.objetivos ?? [], requisitos: c.requisitos, precioCentavos: c.precio_centavos,
-    videoPresentacionId: c.video_presentacion_id, estado: c.estado, publicadoEn: c.publicado_en ? new Date(c.publicado_en) : null,
+    videoPresentacionId: c.video_presentacion_id, duracionComercialMeses: c.duracion_comercial_meses ?? null, estado: c.estado, publicadoEn: c.publicado_en ? new Date(c.publicado_en) : null,
     modulos: [...modulos].sort(porOrden).map((m) => ({
       id: m.id, titulo: m.titulo, orden: m.orden, retirado: m.retirado,
       lecciones: [...m.lecciones].sort(porOrden).map((l) => ({
@@ -260,6 +262,7 @@ export function tieneHistorial(c: CursoAdmin) {
 export interface AlumnoSeguimiento {
   perfilId: string; nombre: string; version: number; finalizacion: Finalizacion | null;
   enviosFormativos: number; ultimoEnvio: Date | null; validacionId: string | null; tieneCertificado: boolean;
+  iniciaEn: Date | null; venceEn: Date | null;
 }
 
 /** Alumnos con acceso activo, por versión, con su estado de finalización (seguimiento_curso, solo admin). */
@@ -268,10 +271,11 @@ export async function seguimientoCurso(cursoId: string): Promise<AlumnoSeguimien
   const { data, error } = await (await clienteSesion()).rpc('seguimiento_curso', { p_curso: cursoId });
   if (error) throw new Error(`No se pudo leer el seguimiento: ${error.message}`);
   type F = { perfil_id: string; nombre: string; version: number; estado: Record<string, unknown> | null; envios_formativos: number;
-    ultimo_envio: string | null; validacion_id: string | null; tiene_certificado: boolean };
+    ultimo_envio: string | null; validacion_id: string | null; tiene_certificado: boolean; inicia_en?: string | null; vence_en?: string | null };
   return ((data ?? []) as F[]).map((f) => ({
     perfilId: f.perfil_id, nombre: f.nombre, version: f.version, finalizacion: aFinalizacion(f.estado),
     enviosFormativos: f.envios_formativos, ultimoEnvio: f.ultimo_envio ? new Date(f.ultimo_envio) : null,
     validacionId: f.validacion_id, tieneCertificado: f.tiene_certificado,
+    iniciaEn: f.inicia_en ? new Date(f.inicia_en) : null, venceEn: f.vence_en ? new Date(f.vence_en) : null,
   }));
 }

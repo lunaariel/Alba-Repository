@@ -87,6 +87,9 @@ export default async function CursoCampus({ params, searchParams }: Props) {
           <Tarjeta titulo="Su avance">
             <BarraAvance valor={curso.avance} etiqueta="Avance del curso" />
             <p className="m-0 mt-2 text-[15px] text-tinta-suave">{textoAvance(hechas, curso.lecciones.length)} · {curso.avance} %</p>
+            {curso.venceEn && (
+              <p className="m-0 mt-1 text-[15px] text-tinta-suave">Acceso hasta el <span className="font-bold text-marron">{new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'America/Guatemala' }).format(curso.venceEn)}</span>.</p>
+            )}
             {curso.continuar && (
               <div className="mt-4">
                 <EnlaceBoton href={`/campus/cursos/${curso.slug}/lecciones/${curso.continuar.id}`} tamano="compacto">

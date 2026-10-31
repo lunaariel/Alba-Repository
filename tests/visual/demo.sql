@@ -10,6 +10,8 @@ values
    'Movimiento, lenguaje y vida cotidiana en los primeros años.', array['familias','cuidadores'], 0, 36, 300, 5900, '{}'),
   ('c1000000-0000-0000-0000-000000000003', 'demo-ambiente-3-6', '[Ejemplo] El ambiente preparado de 3 a 6 años',
    'Organizar materiales y espacios para el trabajo independiente.', array['docentes','familias'], 36, 72, 360, 6900, '{}');
+-- Duración comercial de ejemplo (el acceso dura esto + 5 meses desde la compra). Valores de demostración.
+update public.cursos set duracion_comercial_meses = 3 where id::text like 'c1000000-%';
 
 do $$
 declare c uuid; m uuid; e uuid; p uuid;

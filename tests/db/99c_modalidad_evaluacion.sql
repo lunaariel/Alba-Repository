@@ -145,6 +145,19 @@ begin
   perform set_config('request.jwt.claim.sub', '', true);
 end $$;
 
+-- Actividades formativas visibles antes de completar las lecciones (D sigue la versión 1 formativa).
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('dddddddd-0000-0000-0000-000000000018', 'd18@prueba.test', '{"nombre_completo": "Alumna D", "confirma_mayoria_edad": true}');
+-- La versión 1 es formativa con actividades: se asigna a D directamente (prueba).
+insert into public.accesos_curso (perfil_id, curso_id, origen, motivo, version_id)
+select 'dddddddd-0000-0000-0000-000000000018', '18000000-0000-0000-0000-000000000001', 'concesion', 'Prueba de visibilidad',
+       (select id from public.versiones_curso where curso_id = '18000000-0000-0000-0000-000000000001' and numero = 1);
+set local role authenticated;
+set local request.jwt.claim.sub = 'dddddddd-0000-0000-0000-000000000018';
+select pruebas.afirmar((select count(*) from public.preguntas where id = '18000000-0000-0000-0000-000000000006') = 1,
+  'En la formativa, las actividades se ven sin haber completado las lecciones');
+reset role;
+
 -- El alumno ve su propio estado; no el de otra persona ni el seguimiento del curso.
 set local role authenticated;
 set local request.jwt.claim.sub = 'cccccccc-0000-0000-0000-000000000018';
@@ -169,6 +182,6 @@ exception when insufficient_privilege then null;
 end $$;
 reset role;
 set local request.jwt.claim.sub = 'adadadad-0000-0000-0000-000000000003';
-select pruebas.afirmar((select count(*) from public.seguimiento_curso('18000000-0000-0000-0000-000000000001')) = 3, 'La admin ve el seguimiento de los tres alumnos');
+select pruebas.afirmar((select count(*) from public.seguimiento_curso('18000000-0000-0000-0000-000000000001')) = 4, 'La admin ve el seguimiento de los cuatro alumnos');
 
 rollback;

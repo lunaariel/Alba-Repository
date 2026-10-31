@@ -66,6 +66,7 @@ export default async function Alumnos({ params, searchParams }: Props) {
                             {v.config.requiereActividades && <span>· actividades: {f?.actividadesCompletas ? 'completas' : a.enviosFormativos ? `${a.enviosFormativos} envío(s), incompletas` : 'sin envíos'}</span>}
                             {a.ultimoEnvio && <span>· último envío {fecha(a.ultimoEnvio)}</span>}
                             {f?.modalidad === 'sumativa' && <span>· evaluación {f.evaluacionAprobada ? 'aprobada' : 'pendiente'}</span>}
+                            <span>· {a.venceEn ? `${a.venceEn.getTime() <= Date.now() ? 'acceso vencido el' : 'acceso hasta el'} ${fecha(a.venceEn)}` : 'acceso sin vencimiento'}</span>
                           </div>
                           {!a.tieneCertificado && falta.length > 0 && <p className="m-0 mt-1 text-[14px]">Le falta: {falta.join(' ')}</p>}
                         </div>

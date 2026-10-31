@@ -76,3 +76,19 @@ export function metadatosCurso(c: CursoResumen): string {
     .filter(Boolean)
     .join(' · ');
 }
+
+/**
+ * Condiciones de acceso que se muestran antes de comprar: duración comercial + meses adicionales,
+ * contados desde la compra. Sin duración definida, el curso no se puede comprar.
+ */
+export function textoAcceso(a: { duracionMeses: number | null; mesesAdicionales: number }): string {
+  if (!a.duracionMeses) return 'Condiciones de acceso por definir';
+  const meses = (n: number) => (n === 1 ? '1 mes' : `${n} meses`);
+  return `Acceso por ${meses(a.duracionMeses + a.mesesAdicionales)} desde la compra (${meses(a.duracionMeses)} del curso + ${meses(a.mesesAdicionales)} adicionales)`;
+}
+
+/** Cómo se evalúa y si hay certificado, para la ficha pública. */
+export function textoEvaluacion(c: { modalidad: 'sumativa' | 'formativa'; conCertificado: boolean; tieneEvaluacion: boolean }): string | null {
+  if (c.modalidad === 'formativa') return c.conCertificado ? 'Evaluación formativa, sin nota, y certificado de finalización' : 'Evaluación formativa, sin nota (sin certificado)';
+  return c.tieneEvaluacion ? 'Evaluación final y certificado de finalización' : null;
+}
