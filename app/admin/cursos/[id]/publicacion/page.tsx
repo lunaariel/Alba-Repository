@@ -28,7 +28,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
   return (
     <>
       <AvisoAccion ok={aviso.ok} error={aviso.error} />
-      <div className="grid max-w-[1100px] items-start gap-6 lg:grid-cols-2">
+      <div className="grid max-w-[1100px] grid-cols-1 items-start gap-6 lg:grid-cols-2">
         <section aria-labelledby="requisitos" className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6">
           <h2 id="requisitos" className="m-0 text-[22px]">Para publicar</h2>
           <p className="m-0 mt-1 text-[14px] text-tinta-suave">La base de datos verifica exactamente lo mismo al publicar.</p>

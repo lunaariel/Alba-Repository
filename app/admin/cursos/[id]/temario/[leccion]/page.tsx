@@ -33,7 +33,7 @@ export default async function EditarLeccion({ params, searchParams }: Props) {
         {l.retirada && <EstadoChip estado="archivado" texto="Retirada" />}
         <span className="text-[15px] text-tinta-suave">Módulo: {modulo.titulo}{l.vistas > 0 ? ` · vista por ${l.vistas}, completada por ${l.completadas}` : ''}</span>
       </div>
-      <div className="grid items-start gap-8 xl:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[1fr_380px]">
         <FormLeccion leccion={{ id: l.id, curso: c.id, titulo: l.titulo, descripcion: l.descripcion ?? '', duracion: l.duracionMinutos ? String(l.duracionMinutos) : '', video: l.videoId ?? '' }} />
         <section aria-labelledby="materiales" className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6">
           <h3 id="materiales" className="m-0 text-[22px]">Materiales PDF</h3>

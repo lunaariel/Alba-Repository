@@ -65,7 +65,7 @@ export function SubirMaterial({ leccionId }: { leccionId: string }) {
       {ok && <Aviso tipo="ok">Material agregado.</Aviso>}
       <div className="flex flex-col gap-1.5">
         <label htmlFor="pdf" className="text-[15px] font-bold">Archivo (PDF, hasta 25 MB)</label>
-        <input id="pdf" ref={archivoRef} type="file" accept="application/pdf,.pdf" required className="min-h-[44px] text-[15px]" />
+        <input id="pdf" ref={archivoRef} type="file" accept="application/pdf,.pdf" required className="min-h-[44px] w-full max-w-full text-[15px]" />
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="pdf-titulo" className="text-[15px] font-bold">Nombre para los alumnos</label>

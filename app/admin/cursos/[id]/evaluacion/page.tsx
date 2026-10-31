@@ -31,7 +31,7 @@ export default async function Evaluacion({ params, searchParams }: Props) {
           los puntajes y certificados anteriores no se recalculan. Las preguntas respondidas se pueden retirar, no eliminar.
         </p>
       )}
-      <div className="grid items-start gap-8 xl:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[1fr_380px]">
         <section aria-labelledby="preguntas">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 id="preguntas" className="m-0 text-[24px]">Preguntas</h2>

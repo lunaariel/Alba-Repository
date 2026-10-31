@@ -14,7 +14,7 @@ export default async function Cursos({ searchParams }: { searchParams: Promise<{
     <>
       <CabeceraAdmin titulo="Cursos" bajada="Cree, edite y publique los cursos. Un curso con alumnos se archiva en lugar de eliminarse." />
       <AvisoAccion ok={aviso.ok} error={aviso.error} />
-      <div className="grid items-start gap-6 xl:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_360px]">
         <section aria-labelledby="lista">
           <h2 id="lista" className="sr-only">Lista de cursos</h2>
           {cursos.length === 0 ? (

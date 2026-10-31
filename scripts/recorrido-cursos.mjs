@@ -32,10 +32,11 @@ async function ingresar(contexto, correo, clave) {
 }
 // Abre la confirmación de un botón, escribe la palabra si hace falta y confirma.
 async function confirmar(p, boton, { palabra, textoConfirmar } = {}) {
-  await boton.click();
+  const texto = (await boton.first().textContent()).trim();
+  await boton.first().click();
   const dialogo = p.locator('dialog[open]');
   if (palabra) await dialogo.locator('input[name=confirmacion]').fill(palabra);
-  await dialogo.getByRole('button', { name: textoConfirmar ?? (await boton.textContent()).trim() }).click();
+  await dialogo.getByRole('button', { name: textoConfirmar ?? texto, exact: true }).click();
   await p.waitForLoadState('networkidle');
 }
 // Espera a que aparezca un aviso con ese texto (hasta 15 s). Devuelve si apareció.
@@ -57,7 +58,7 @@ try {
   await Promise.all([p.waitForURL(/\/admin\/cursos\/[0-9a-f-]{36}\?ok=creado/), p.getByRole('button', { name: 'Crear curso' }).click()]);
   const id = new URL(p.url()).pathname.split('/').pop();
   const base = `/admin/cursos/${id}`;
-  comprobar(await p.getByText('Borrador', { exact: true }).first().isVisible(), 'el curso nuevo nace en borrador');
+  comprobar(await p.locator('main').getByText(/Borrador/).first().isVisible(), 'el curso nuevo nace en borrador');
 
   // 2. Datos y precio.
   await p.fill('#resumen', 'Un curso creado por el recorrido automático.');
