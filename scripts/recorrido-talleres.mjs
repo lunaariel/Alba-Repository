@@ -172,8 +172,7 @@ try {
   comprobar(sql(`select count(*) from public.respuestas_reprogramacion r join public.inscripciones_taller i on i.id = r.inscripcion_id where i.taller_id = '${id}' and r.respuesta = 'aceptada'`) === '1'
     && sql(`select count(*) from public.auditoria where accion = 'reprogramacion_respondida'`) !== '0', 'la decisión queda registrada y auditada');
   await al.getByRole('button', { name: 'Marcar como leídos' }).click();
-  await al.waitForLoadState('networkidle');
-  comprobar((await al.getByRole('heading', { name: 'Avisos' }).count()) === 0, 'los avisos se marcan como leídos');
+  comprobar(await al.getByRole('heading', { name: 'Avisos' }).waitFor({ state: 'detached', timeout: 15000 }).then(() => true, () => false), 'los avisos se marcan como leídos');
 
   // 16 y 17. Procesos programados: recordatorios con la fecha vigente, una sola vez.
   const sinClave = await ctxPublico.request.post(`${BASE}/api/procesos`);
@@ -215,7 +214,7 @@ try {
   const alumna = sql(`select id from auth.users where email = '${CORREO}'`);
   const pronto = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
     values ('recorrido-pronto', '[Ejemplo] Taller en 12 horas', 'Gratuito que empieza pronto.', now() + interval '12 hours', now() + interval '13 hours', 'publicado') returning id`).split('\n').pop();
-  sql(`insert into public.inscripciones_taller (taller_id, perfil_id) values ('${pronto}', '${alumna}')`);
+  sql(`insert into public.inscripciones_taller (taller_id, perfil_id, origen) values ('${pronto}', '${alumna}', 'gratuita')`);
   // Pago: inscripción confirmada por un pago simulado aprobado.
   const pago = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, precio_centavos, estado)
     values ('recorrido-pago', '[Ejemplo] Taller pago', 'Taller pago de prueba.', now() + interval '6 days', now() + interval '6 days 1 hour', 2500, 'publicado') returning id`).split('\n').pop();
@@ -232,6 +231,7 @@ try {
   // Reprogramar el pago: la alumna puede pedir el reembolso (sin calcular montos ni ejecutar nada).
   await a.goto(`${BASE}/admin/talleres/${pago}/estado`, { waitUntil: 'networkidle' });
   await confirmar(a, a.getByRole('button', { name: 'Reprogramar' }), { palabra: 'REPROGRAMAR', campos: { fecha: enDias(9), hora: '10:00', motivo: 'Cambio de agenda de la maestra.' } });
+  comprobar(await ve(a, /Taller reprogramado/), 'se reprograma el taller pago');
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });
   comprobar(await filaPago.getByText('Prefiero el reembolso').isVisible() && (await filaPago.getByText('No puedo asistir').count()) === 0, 'pago reprogramado: se ofrece pedir el reembolso');
   await filaPago.getByText('Prefiero el reembolso', { exact: true }).first().click();
@@ -245,23 +245,25 @@ try {
   // Grabación: estados con revisión (un taller ya realizado con la alumna inscripta).
   const realizado = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, estado)
     values ('recorrido-realizado', '[Ejemplo] Taller realizado', 'Taller ya realizado.', now() - interval '3 days', now() - interval '3 days' + interval '1 hour', 'finalizado') returning id`).split('\n').pop();
-  sql(`insert into public.inscripciones_taller (taller_id, perfil_id, asistio) values ('${realizado}', '${alumna}', false)`);
+  sql(`insert into public.inscripciones_taller (taller_id, perfil_id, origen, asistio) values ('${realizado}', '${alumna}', 'gratuita', false)`);
   await a.goto(`${BASE}/admin/talleres/${realizado}/grabacion`, { waitUntil: 'networkidle' });
   comprobar(await a.getByText('Prevista').first().isVisible() && await a.getByText(/nunca se publica/).isVisible(), 'la grabación nace prevista y explica la regla de privacidad');
   comprobar((await a.getByRole('button', { name: 'Publicar la grabación' }).count()) === 0, 'sin verificar no se ofrece publicar');
   await confirmar(a, a.getByRole('button', { name: 'Marcar original recibida' }));
-  comprobar(await ve(a, /recibida/i), 'original recibida');
+  comprobar(await ve(a, /marcada como recibida/i), 'original recibida');
   await confirmar(a, a.getByRole('button', { name: 'Pasar a revisión' }));
+  comprobar(await ve(a, /Grabación en revisión/), 'en revisión');
   for (const t of [/Sin imagen de participantes/, /Sin voces/, /Sin nombres/, /Contenido final verificado/]) await a.getByLabel(t).check();
   await a.getByRole('button', { name: 'Guardar revisión' }).click();
-  comprobar(await ve(a, /Revisión/i), 'se registra la revisión');
+  comprobar(await ve(a, /Revisión guardada/), 'se registra la revisión');
   await confirmar(a, a.getByRole('button', { name: 'Marcar verificada' }));
+  comprobar(await ve(a, /Grabación verificada/), 'verificada');
   await a.getByLabel('Durante una cantidad de días').check();
   await a.locator('input[name=incluidoDias]').fill('30');
   await a.getByRole('button', { name: 'Guardar condiciones' }).click();
-  comprobar(await ve(a, /ondiciones/), 'se guardan las condiciones de acceso');
+  comprobar(await ve(a, /Condiciones guardadas/), 'se guardan las condiciones de acceso');
   await confirmar(a, a.getByRole('button', { name: 'Publicar la grabación' }), { palabra: 'PUBLICAR' });
-  comprobar(await ve(a, /publicada/i) && sql(`select count(*) from public.accesos_grabacion g join public.grabaciones_taller t on t.id = g.grabacion_id where t.taller_id = '${realizado}' and g.perfil_id = '${alumna}'`) === '1',
+  comprobar(await ve(a, /Grabación publicada/) && sql(`select count(*) from public.accesos_grabacion g join public.grabaciones_taller t on t.id = g.grabacion_id where t.taller_id = '${realizado}' and g.perfil_id = '${alumna}'`) === '1',
     'al publicar, la alumna inscripta (aunque no asistió) recibe el acceso, con sus condiciones');
   await a.screenshot({ path: `${SALIDA}/recorrido-talleres-8-grabacion.png`, fullPage: true });
   await al.goto(`${BASE}/campus/talleres`, { waitUntil: 'networkidle' });

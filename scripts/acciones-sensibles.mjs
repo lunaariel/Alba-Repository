@@ -98,7 +98,7 @@ const LIBRE = sql(`insert into public.talleres (slug, titulo, descripcion, inici
   values ('permisos-libre', '[Prueba] Gratuito', 'Taller de prueba.', now() + interval '7 days', now() + interval '7 days 1 hour', 'publicado') returning id`).split('\n').pop();
 const PAGO = sql(`insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, precio_centavos, estado)
   values ('permisos-pago', '[Prueba] Pago', 'Taller pago de prueba.', now() + interval '8 days', now() + interval '8 days 1 hour', 2000, 'publicado') returning id`).split('\n').pop();
-sql(`insert into public.inscripciones_taller (taller_id, perfil_id) values ('${REPRO}', '${ALUMNA_ID}'), ('${LIBRE}', '${ALUMNA_ID}')`);
+sql(`insert into public.inscripciones_taller (taller_id, perfil_id, origen) values ('${REPRO}', '${ALUMNA_ID}', 'gratuita'), ('${LIBRE}', '${ALUMNA_ID}', 'gratuita')`);
 const ORDEN_PAGO = sql(`select public.crear_orden('${ALUMNA_ID}', 'taller', '${PAGO}')`);
 sql(`select public.procesar_evento_pago('simulado', 'perm-pago', 'pago', '{}', '${ORDEN_PAGO}', 'perm-pago', 'aprobado', 2000)`);
 sql(`select set_config('request.jwt.claim.sub', '${ADMIN_ID}', true);

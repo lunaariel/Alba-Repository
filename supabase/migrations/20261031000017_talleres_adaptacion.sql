@@ -112,8 +112,9 @@ begin
   select * into v_r from public.reprogramaciones_taller where taller_id = p_taller order by creado_en desc limit 1;
   if (select inicia_en from public.talleres where id = p_taller) <= now() then raise exception 'taller_ya_empezo' using errcode = 'P0001'; end if;
   -- Reembolso solo si pagó; quien no pagó y no puede asistir libera su lugar.
-  if p_respuesta = 'reembolso_solicitado' and v_i.item_orden_id is null then raise exception 'inscripcion_sin_pago' using errcode = 'P0001'; end if;
-  if p_respuesta = 'no_asiste' and v_i.item_orden_id is not null then raise exception 'inscripcion_paga' using errcode = 'P0001'; end if;
+  -- Paga = origen «compra» o con ítem de orden (mismo criterio que la cancelación voluntaria).
+  if p_respuesta = 'reembolso_solicitado' and v_i.origen <> 'compra' and v_i.item_orden_id is null then raise exception 'inscripcion_sin_pago' using errcode = 'P0001'; end if;
+  if p_respuesta = 'no_asiste' and (v_i.origen = 'compra' or v_i.item_orden_id is not null) then raise exception 'inscripcion_paga' using errcode = 'P0001'; end if;
 
   insert into public.respuestas_reprogramacion (inscripcion_id, reprogramacion_id, perfil_id, respuesta, confirmacion, inicia_antes, inicia_despues)
   values (v_i.id, v_r.id, auth.uid(), p_respuesta, btrim(p_confirmacion), v_r.inicia_antes, v_r.inicia_despues);

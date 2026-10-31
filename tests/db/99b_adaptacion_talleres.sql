@@ -248,4 +248,28 @@ select pruebas.afirmar((select count(*) from public.notificaciones where leida_e
   'No marca como leídas las de otras personas');
 select pruebas.afirmar((select count(*) from public.notificaciones where leida_en is not null and estado = 'enviada') = 0, 'Leída en el campus no significa correo enviado');
 
+-- Criterio único de «paga»: origen compra (aunque no tenga ítem de orden) no puede «no asistir» ni cancelar.
+do $$
+declare A constant uuid := 'aaaaaaaa-0000-0000-0000-000000000001'; ADMIN constant uuid := 'adadadad-0000-0000-0000-000000000003'; t uuid; fallo text;
+begin
+  insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, precio_centavos, estado)
+  values ('adap-compra-sin-item', 'Compra sin ítem', 'Taller pago de prueba.', now() + interval '5 days', now() + interval '5 days 1 hour', 1500, 'borrador') returning id into t;
+  update public.talleres set estado = 'publicado' where id = t;
+  insert into public.inscripciones_taller (taller_id, perfil_id, origen) values (t, A, 'compra');
+  perform set_config('request.jwt.claim.sub', ADMIN::text, true);
+  perform public.reprogramar_taller(t, now() + interval '6 days', now() + interval '6 days 1 hour', 'Motivo suficiente para la prueba.');
+  perform set_config('request.jwt.claim.sub', A::text, true);
+  begin perform public.responder_reprogramacion(t, 'no_asiste', 'No puedo asistir a la nueva fecha.'); fallo := 'no falló';
+  exception when others then fallo := sqlerrm; end;
+  perform pruebas.afirmar(fallo = 'inscripcion_paga', 'Una inscripción de origen compra no se libera como gratuita: ' || fallo);
+  begin perform public.cancelar_mi_inscripcion(t); fallo := 'no falló';
+  exception when others then fallo := sqlerrm; end;
+  perform pruebas.afirmar(fallo = 'inscripcion_paga', 'Ni se cancela desde el campus: ' || fallo);
+  perform public.responder_reprogramacion(t, 'reembolso_solicitado', 'Solicito el reembolso por el cambio.');
+  perform pruebas.afirmar((select estado from public.inscripciones_taller where taller_id = t and perfil_id = A) = 'reembolso_pendiente'
+    and (select count(*) from public.incidencias where taller_id = t and tipo = 'reembolso_por_reprogramacion') = 1,
+    'Puede pedir el reembolso: queda pendiente con incidencia');
+  perform set_config('request.jwt.claim.sub', '', true);
+end $$;
+
 rollback;
