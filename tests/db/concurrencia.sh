@@ -148,3 +148,24 @@ if [ "$duplicados" = "1" ] && [ "$periodos" = "1" ]; then
 else
   echo "FALLA      concurrencia del mismo aviso: duplicados=$duplicados períodos=$periodos"; cat /tmp/albor_mismo_1 /tmp/albor_mismo_2; exit 1
 fi
+
+# Reembolsos parciales (0025): el mismo aviso dos veces a la vez se registra una sola vez; dos avisos distintos
+# a la vez se registran los dos, acumulados en una sola incidencia, sin tocar el acceso.
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-parcial', 'reembolso', '{}', '$OC', 'conc-mismo', 'reembolsado', 1000); select pg_sleep(0.8); commit;" > /tmp/albor_parcial_$n 2>&1 ) &
+done
+wait
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-parcial-$n', 'reembolso', '{}', '$OC', 'conc-mismo', 'reembolsado', 500); select pg_sleep(0.5); commit;" > /tmp/albor_parcial_d$n 2>&1 ) &
+done
+wait
+reembolsos=$("${PSQL[@]}" -c "select count(*) || ':' || sum(r.monto_centavos) from public.reembolsos r join public.pagos p on p.id = r.pago_id where p.id_externo = 'conc-mismo'")
+incid=$("${PSQL[@]}" -c "select count(*) || ':' || max((detalle ->> 'reembolsado_centavos')::int) from public.incidencias where tipo = 'reembolso_parcial' and orden_id = '$OC'")
+acceso=$("${PSQL[@]}" -c "select count(*) from public.periodos_acceso where perfil_id = '$Z2' and estado = 'activo'")
+pago=$("${PSQL[@]}" -c "select estado || ':' || monto_centavos from public.pagos where id_externo = 'conc-mismo'")
+if [ "$reembolsos" = "3:2000" ] && [ "$incid" = "1:2000" ] && [ "$acceso" = "1" ] && [ "$pago" = "aprobado:4900" ]; then
+  echo "ok         concurrencia: reembolsos parciales simultáneos, registrados una vez cada uno y sin tocar el acceso"
+else
+  echo "FALLA      concurrencia de reembolsos parciales: reembolsos=$reembolsos incidencia=$incid acceso=$acceso pago=$pago"
+  cat /tmp/albor_parcial_*; exit 1
+fi

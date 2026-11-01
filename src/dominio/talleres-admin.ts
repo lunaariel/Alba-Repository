@@ -24,6 +24,8 @@ const ERRORES: Record<string, string> = {
   enlace_invalido: 'Pegue un enlace completo que empiece con https://.',
   correo_invalido: 'Escriba un correo válido y el motivo de la cortesía.',
   nota_requerida: 'Escriba una nota (al menos 5 caracteres).',
+  resolucion_requerida: 'Escriba la resolución (al menos 20 caracteres): queda registrada.',
+  incidencia_resuelta: 'Esa incidencia ya estaba resuelta.',
   confirmacion: 'Para confirmar, escriba la palabra que se pide.',
   slug_repetido: 'Ya existe otro taller con esa dirección web.',
   invalido: 'No se pudo completar la acción. Recargue la página e intente de nuevo.',
@@ -71,6 +73,7 @@ const OKS: Record<string, string> = {
   grabacion_faltante: 'Grabación marcada como faltante.',
   grabacion_retirada: 'Grabación retirada: nadie la ve. Los derechos se conservan.',
   incidencia_anotada: 'Nota guardada. La incidencia queda en revisión hasta que la pasarela confirme el reembolso (Fase 6).',
+  reembolso_parcial_resuelto: 'Resolución registrada. El acceso de la persona no cambió.',
   otorgamiento_recuperado: 'Acceso otorgado. La incidencia quedó resuelta y registrada.',
   otorgamiento_pendiente: 'Todavía no se pudo otorgar el acceso. La incidencia sigue abierta con el detalle del error.',
 };

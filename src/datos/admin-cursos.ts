@@ -276,6 +276,8 @@ export interface AlumnoSeguimiento {
   perfilId: string; nombre: string; version: number; finalizacion: Finalizacion | null;
   enviosFormativos: number; ultimoEnvio: Date | null; validacionId: string | null; tieneCertificado: boolean;
   iniciaEn: Date | null; venceEn: Date | null;
+  /** Un período cubre este momento; si no, puede haber uno futuro ya concedido (proximoInicio). */
+  vigente: boolean; proximoInicio: Date | null;
 }
 
 /** Alumnos con acceso activo, por versión, con su estado de finalización (seguimiento_curso, solo admin). */
@@ -284,12 +286,15 @@ export async function seguimientoCurso(cursoId: string): Promise<AlumnoSeguimien
   const { data, error } = await (await clienteSesion()).rpc('seguimiento_curso', { p_curso: cursoId });
   if (error) throw new Error(`No se pudo leer el seguimiento: ${error.message}`);
   type F = { perfil_id: string; nombre: string; version: number; estado: Record<string, unknown> | null; envios_formativos: number;
-    ultimo_envio: string | null; validacion_id: string | null; tiene_certificado: boolean; inicia_en?: string | null; vence_en?: string | null };
+    ultimo_envio: string | null; validacion_id: string | null; tiene_certificado: boolean; inicia_en?: string | null; vence_en?: string | null;
+    vigente?: boolean; proximo_inicio?: string | null };
   return ((data ?? []) as F[]).map((f) => ({
     perfilId: f.perfil_id, nombre: f.nombre, version: f.version, finalizacion: aFinalizacion(f.estado),
     enviosFormativos: f.envios_formativos, ultimoEnvio: f.ultimo_envio ? new Date(f.ultimo_envio) : null,
     validacionId: f.validacion_id, tieneCertificado: f.tiene_certificado,
     iniciaEn: f.inicia_en ? new Date(f.inicia_en) : null, venceEn: f.vence_en ? new Date(f.vence_en) : null,
+    vigente: f.vigente ?? (!f.vence_en || new Date(f.vence_en).getTime() > Date.now()),
+    proximoInicio: f.proximo_inicio ? new Date(f.proximo_inicio) : null,
   }));
 }
 

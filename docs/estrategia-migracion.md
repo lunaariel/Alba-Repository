@@ -17,18 +17,19 @@
 | 0022 | Área laboral y estudios | Ninguno | Ensayada; se niega con datos cargados |
 | 0023 | Responsable de roles, permisos | Ninguno; no quita roles | Ensayada |
 | 0024 | Períodos de acceso, becas, talleres no ofrecidos | Un período histórico por acceso, con sus mismas fechas y condiciones. Órdenes de curso pendientes sin condiciones: vencidas con incidencia. Talleres apagados para el público | Ensayada sobre datos representativos; exacta (incluida la orden clasificada); se niega después de cualquier uso |
+| 0025 | Renovaciones futuras (acceso por cobertura) y reembolsos parciales a revisión | Ninguno: con datos sin intervalos, el acceso calculado es el mismo (verificado) | Ensayada; se niega si ya hay reembolsos parciales registrados o resueltos |
 
 **Ensayos automáticos:**
 
 - `tests/db/migracion_0014.sh`;
-- `tests/db/reversion_posteriores.sh` (0015 a 0024);
-- `tests/db/migracion_0024.sh` (datos históricos, conciliación y negativa).
+- `tests/db/reversion_posteriores.sh` (0015 a 0025);
+- `tests/db/migracion_0024.sh` (datos históricos, conciliación y negativa; también 0025).
 
 Comprueban que los datos previos quedan idénticos, que las migraciones se pueden volver a aplicar después de revertir y que la reversión se niega cuando perdería información.
 
 ## Dependencias y orden
 
-Orden obligatorio: **0014 → 0015 → … → 0024**, de a una.
+Orden obligatorio: **0014 → 0015 → … → 0025**, de a una.
 
 - 0015 a 0019 dependen de las versiones de 0014.
 - 0018 redefine funciones de 0014 y 0016.
@@ -36,6 +37,7 @@ Orden obligatorio: **0014 → 0015 → … → 0024**, de a una.
 - 0021 depende de los talleres de 0016 y 0017.
 - 0023 depende del panel de 0012.
 - 0024 depende de 0019 (condiciones y vencimientos), 0016 y 0017 (incidencias y talleres) y 0014 (versiones).
+- 0025 depende de 0024 (períodos) y redefine funciones de 0019 y 0024.
 
 ## Estrategia transaccional
 
@@ -57,7 +59,7 @@ Orden obligatorio: **0014 → 0015 → … → 0024**, de a una.
    - Conteos por tabla y suma de `items_orden.precio_centavos`.
    - Certificados; accesos por estado.
    - Órdenes de curso pendientes con y sin condiciones (las segundas serán clasificadas por 0024).
-5. **Ensayar en una copia.** Restaurar el respaldo en un proyecto de prueba y aplicar 0014 a 0024 con `--single-transaction`. Después:
+5. **Ensayar en una copia.** Restaurar el respaldo en un proyecto de prueba y aplicar 0014 a 0025 con `--single-transaction`. Después:
    - `select public.conciliar_versionado();`, tras 0014;
    - `select count(*) from public.conciliar_periodos();`, tras 0024, que debe dar 0;
    - las pruebas SQL adaptadas a esos datos;

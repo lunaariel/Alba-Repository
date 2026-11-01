@@ -66,7 +66,17 @@ async function leccionesConProgreso(versiones: { cursoId: string; versionId: str
 }
 
 type FilaAcceso = { curso_id: string; version_id: string; vence_en: string | null; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
-const vigente = (a: { vence_en: string | null }) => !a.vence_en || new Date(a.vence_en).getTime() > Date.now();
+
+/**
+ * Cobertura de cada acceso propio, calculada por la base (mis_accesos): hay acceso si un período cubre este
+ * momento. Un derecho futuro ya concedido (por ejemplo, una renovación después de un período revocado)
+ * no da acceso hasta su fecha: se informa como «programado».
+ */
+const coberturas = cache(async (): Promise<Map<string, { vigente: boolean; proximoInicio: Date | null }>> => {
+  const { data } = await (await clienteSesion()).rpc('mis_accesos');
+  return new Map(((data ?? []) as { curso_id: string; vigente: boolean; proximo_inicio: string | null }[])
+    .map((f) => [f.curso_id, { vigente: f.vigente === true, proximoInicio: f.proximo_inicio ? new Date(f.proximo_inicio) : null }]));
+});
 
 /** Cursos con acceso vigente, con su avance según la versión de cada uno. Los vencidos van aparte (misCursosVencidos). */
 export const misCursos = cache(async (): Promise<CursoCampus[]> => {
@@ -76,7 +86,8 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
     .from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
   if (error) throw new Error(`No se pudieron leer sus cursos: ${error.message}`);
   // La base protege el contenido al vencer (tiene_acceso, version_de); aquí solo se ordena la vista.
-  const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos && vigente(a));
+  const cobertura = await coberturas();
+  const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos && cobertura.get(a.curso_id)?.vigente === true);
   if (filas.length === 0) return [];
   const ids = filas.map((a) => a.curso_id);
   const [lecciones, { data: certs }, { data: versiones }] = await Promise.all([
@@ -111,6 +122,8 @@ export interface OfertaRenovacion {
 
 export interface CursoVencido {
   id: string; slug: string; titulo: string; venceEn: Date;
+  /** Inicio de un período futuro ya concedido; mientras tanto no hay acceso al contenido. */
+  proximoInicio: Date | null;
   certificados: { id: string; codigo: string }[];
   /** Cumplió todo antes de vencer y todavía no pidió el certificado de su versión. */
   puedeObtenerCertificado: boolean;
@@ -123,7 +136,8 @@ export const misCursosVencidos = cache(async (): Promise<CursoVencido[]> => {
   await exigirSesion('/campus');
   const supabase = await clienteSesion();
   const { data } = await supabase.from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo');
-  const filas = ((data ?? []) as unknown as FilaAcceso[]).filter((a) => a.cursos && !vigente(a));
+  const cobertura = await coberturas();
+  const filas = ((data ?? []) as unknown as FilaAcceso[]).filter((a) => a.cursos && cobertura.get(a.curso_id)?.vigente !== true);
   if (!filas.length) return [];
   const { data: certs } = await supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion').in('curso_id', filas.map((f) => f.curso_id));
   const certificados = (certs ?? []) as { id: string; curso_id: string; version_id: string | null; codigo_verificacion: string }[];
@@ -140,6 +154,7 @@ export const misCursosVencidos = cache(async (): Promise<CursoVencido[]> => {
     const { fin, oferta } = extras[i]!;
     return {
       id: f.curso_id, slug: f.cursos!.slug, titulo: f.cursos!.titulo, venceEn: new Date(f.vence_en!),
+      proximoInicio: cobertura.get(f.curso_id)?.proximoInicio ?? null,
       certificados: propios.map((c) => ({ id: c.id, codigo: c.codigo_verificacion })),
       puedeObtenerCertificado: fin?.elegible_certificado === true && !propios.some((c) => c.version_id === fin.version_id),
       oferta: oferta ? {

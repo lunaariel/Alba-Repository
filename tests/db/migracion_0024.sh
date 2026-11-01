@@ -103,4 +103,16 @@ if "${PSQL[@]}" -d "$DB" --single-transaction -f "$RAIZ/supabase/rollback/202611
   falla "la reversión debió negarse después de una renovación"
 fi
 grep -q reversion_imposible /tmp/albor_rev24.log || falla "la reversión falló por otro motivo: $(head -2 /tmp/albor_rev24.log)"
-echo "ok         migración 0024: datos históricos conciliados e intactos, sin vencimientos retroactivos, reversión exacta y negada tras usarla"
+# 0025 sobre los mismos datos: concilia, se revierte limpia y se niega tras registrar un reembolso parcial.
+M25="$RAIZ/supabase/migrations/20261101000025_periodos_futuros_reembolsos_parciales.sql"
+R25="$RAIZ/supabase/rollback/20261101000025_periodos_futuros_reembolsos_parciales_down.sql"
+"${PSQL[@]}" -d "$DB" --single-transaction -f "$M25" >/dev/null
+[ "$(q "select count(*) from public.conciliar_periodos()")" = "0" ] || falla "0025 no concilia"
+[ "$(q "select count(*) from public.accesos_curso a where a.estado = 'activo' and public.acceso_cubierto(a.id) <> (a.vence_en is null or a.vence_en > now())")" = "0" ] \
+  || falla "0025 cambió el acceso de datos sin intervalos"
+"${PSQL[@]}" -d "$DB" --single-transaction -f "$R25" >/dev/null
+"${PSQL[@]}" -d "$DB" --single-transaction -f "$M25" >/dev/null
+q "select public.procesar_evento_pago('simulado', 'h-parcial', 'reembolso', '{}', (select orden_id from public.pagos where id_externo = 'h-v-ren'), 'h-v-ren', 'reembolsado', 1000)" >/dev/null
+if "${PSQL[@]}" -d "$DB" --single-transaction -f "$R25" >/dev/null 2>/tmp/albor_rev25.log; then falla "la reversión de 0025 debió negarse"; fi
+grep -q reversion_imposible /tmp/albor_rev25.log || falla "la reversión de 0025 falló por otro motivo: $(head -2 /tmp/albor_rev25.log)"
+echo "ok         migración 0024: datos históricos conciliados e intactos, sin vencimientos retroactivos, reversión exacta y negada tras usarla (también 0025)"

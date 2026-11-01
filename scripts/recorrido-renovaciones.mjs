@@ -162,6 +162,72 @@ try {
     comprobar(!r1.ok && Array.isArray(filas) && filas.length === 0 && !r3.ok, `una alumna no se otorga becas (${r1.status}), no lee períodos ni busca personas (${r3.status})`);
   } else comprobar(false, 'faltan API_URL y ANON_KEY');
 
+  // ---------------------------------------------------------------- 5b. Decisión A: revocar un período con una renovación futura
+  // Dos compras: la nueva (A, vigente) y un pago tardío de una orden anterior (B, encadenada). Se reembolsa A.
+  const ordenA1 = sql(`select public.crear_orden('${alumna2}', 'curso', '${C1}')`);
+  sql(`update public.cursos set precio_centavos = 5000 where id = '${C1}'`);
+  const ordenA2 = sql(`select public.crear_orden('${alumna2}', 'curso', '${C1}')`);
+  sql(`update public.cursos set precio_centavos = 4900 where id = '${C1}'`);
+  sql(`select public.procesar_evento_pago('simulado', 'fut-a', 'pago', '{}', '${ordenA2}', 'fut-a', 'aprobado', 5000)`);
+  sql(`select public.procesar_evento_pago('simulado', 'fut-b', 'pago', '{}', '${ordenA1}', 'fut-b', 'aprobado', 4900)`);
+  const fechasB = () => sql(`select inicia_en || '|' || vence_en from public.periodos_acceso where item_orden_id = (select id from public.items_orden where orden_id = '${ordenA1}')`);
+  const bAntes = fechasB();
+  sql(`select public.procesar_evento_pago('simulado', 'fut-a-reemb', 'reembolso', '{}', '${ordenA2}', 'fut-a', 'reembolsado', 5000)`);
+  comprobar(fechasB() === bAntes, 'revocar el período vigente no adelanta la renovación: conserva sus fechas');
+  await al2.goto(`${BASE}/campus`, { waitUntil: 'networkidle' });
+  const programado = al2.locator('li', { hasText: 'Montessori en casa' });
+  comprobar(await al2.getByRole('heading', { name: 'Cursos con acceso programado' }).isVisible() && await programado.getByText(/Su acceso se reanuda el/).isVisible()
+    && (await programado.getByText('Renovar el acceso').count()) === 0, 'el campus muestra el derecho futuro, sin ofrecer comprar');
+  const enHueco = await ctx2.request.get(`${BASE}/campus/cursos/demo-montessori-en-casa`);
+  comprobar(enHueco.status() === 404, `en el intervalo sin cobertura el contenido está bloqueado (${enHueco.status()})`);
+  await al2.screenshot({ path: `${SALIDA}/recorrido-renovaciones-6-programado.png`, fullPage: true });
+  await a.goto(`${BASE}/admin/cursos/${C1}/alumnos`, { waitUntil: 'networkidle' });
+  comprobar(await a.getByText(/sin acceso hasta el .* \(período ya concedido/).first().isVisible(), 'el panel muestra el intervalo sin acceso y el período concedido');
+  // Llegada la fecha de B (paso del tiempo de prueba), el acceso se activa solo.
+  const dias = sql(`select ceil(extract(epoch from (inicia_en - now())) / 86400)::int + 1 from public.periodos_acceso where item_orden_id = (select id from public.items_orden where orden_id = '${ordenA1}')`);
+  sql(`begin;
+    alter table public.periodos_acceso disable trigger periodos_inmutables;
+    update public.periodos_acceso set inicia_en = inicia_en - interval '${dias} days', vence_en = vence_en - interval '${dias} days' where perfil_id = '${alumna2}' and curso_id = '${C1}';
+    alter table public.periodos_acceso enable trigger periodos_inmutables;
+    select set_config('albor.ajuste_vencimiento', 'si', true);
+    update public.accesos_curso set inicia_en = inicia_en - interval '${dias} days', vence_en = vence_en - interval '${dias} days' where perfil_id = '${alumna2}' and curso_id = '${C1}';
+    commit;`);
+  const activo = await ctx2.request.get(`${BASE}/campus/cursos/demo-montessori-en-casa`);
+  await al2.goto(`${BASE}/campus`, { waitUntil: 'networkidle' });
+  comprobar(activo.status() === 200 && await al2.locator('li', { hasText: 'Montessori en casa' }).getByText(/Acceso hasta el/).first().isVisible(),
+    `al llegar la fecha del período futuro, el acceso se activa (${activo.status()})`);
+  comprobar(sql(`select version_id from public.accesos_curso where id = '${accesoId}'`) === version, 'la renovación no cambia la versión académica');
+
+  // ---------------------------------------------------------------- 5c. Decisión B: reembolso parcial a revisión administrativa
+  const venceAntes = sql(`select vence_en from public.accesos_curso where id = '${accesoId}'`);
+  const parcial = sql(`select public.procesar_evento_pago('simulado', 'parcial-1', 'reembolso', '{}', '${ordenA1}', 'fut-b', 'reembolsado', 1500)`);
+  comprobar(parcial === 'requiere_revision' && sql(`select vence_en from public.accesos_curso where id = '${accesoId}'`) === venceAntes
+    && sql(`select estado || ':' || monto_centavos from public.pagos where id_externo = 'fut-b'`) === 'aprobado:4900',
+  'un reembolso parcial no cambia el acceso ni el importe original del pago');
+  await a.goto(`${BASE}/admin/talleres/incidencias`, { waitUntil: 'networkidle' });
+  const caso = a.locator('li', { hasText: 'Reembolso parcial confirmado' });
+  comprobar(await caso.getByText(/Importe original USD 49 · reembolsado USD 15/).isVisible(), 'la incidencia muestra el importe original y el reembolsado');
+  let pedidoResolucion = null;
+  const oirResolucion = (req) => { if (!pedidoResolucion && req.method() === 'POST' && req.headers()['next-action']) pedidoResolucion = { url: req.url(), cabeceras: req.headers(), cuerpo: req.postDataBuffer() }; };
+  a.on('request', oirResolucion);
+  await caso.locator('input[name=resolucion]').fill('Se mantiene el acceso: devolución por un cargo bancario duplicado.');
+  await caso.getByRole('button', { name: 'Registrar resolución' }).click();
+  comprobar(await a.getByText(/Resolución registrada/).first().waitFor({ timeout: 15000 }).then(() => true, () => false), 'la admin registra la resolución por escrito');
+  a.off('request', oirResolucion);
+  comprobar(sql(`select estado from public.incidencias where tipo = 'reembolso_parcial' and orden_id = '${ordenA1}'`) === 'resuelta'
+    && sql(`select vence_en from public.accesos_curso where id = '${accesoId}'`) === venceAntes, 'resolver no modifica el acceso');
+  await a.screenshot({ path: `${SALIDA}/recorrido-renovaciones-7-reembolso-parcial.png`, fullPage: true });
+  // La misma acción, reenviada por la alumna, se rechaza (vuelve a abrir el caso antes, para tener qué resolver).
+  sql(`select public.procesar_evento_pago('simulado', 'parcial-2', 'reembolso', '{}', '${ordenA1}', 'fut-b', 'reembolsado', 500)`);
+  let estadoResolucion = 0;
+  if (pedidoResolucion) {
+    const r = await ctx2.request.fetch(pedidoResolucion.url, { method: 'POST', maxRedirects: 0, data: pedidoResolucion.cuerpo, headers: {
+      'Next-Action': pedidoResolucion.cabeceras['next-action'], 'Content-Type': pedidoResolucion.cabeceras['content-type'], Accept: 'text/x-component', Origin: BASE } });
+    estadoResolucion = r.status();
+  }
+  comprobar(estadoResolucion === 404 && sql(`select estado from public.incidencias where tipo = 'reembolso_parcial' and orden_id = '${ordenA1}'`) === 'abierta',
+    `una alumna no resuelve reembolsos parciales (${estadoResolucion}) y la incidencia sigue pendiente`);
+
   // ---------------------------------------------------------------- 6. Talleres apagados para el público
   sql(`update public.configuracion_academia set talleres_publicos = false`);
   const pub = await (await navegador.newContext()).newPage();

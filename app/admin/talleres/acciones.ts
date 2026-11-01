@@ -299,6 +299,20 @@ export async function anotarIncidencia(datos: FormData) {
   ir('/admin/talleres/incidencias', { ok: 'incidencia_anotada' });
 }
 
+/**
+ * Registra por escrito cómo se resolvió un reembolso parcial. No modifica accesos, períodos ni compras: la
+ * política comercial para reembolsos parciales todavía no está aprobada (decisión B, 01/11/2026).
+ */
+export async function resolverReembolsoParcial(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, resolucion: texto(1000) }).safeParse({ id: datos.get('id'), resolucion: datos.get('resolucion') ?? '' });
+  if (!r.success) redirect('/admin/talleres/incidencias');
+  const { error } = await (await clienteSesion()).rpc('resolver_reembolso_parcial', { p_incidencia: r.data.id, p_resolucion: r.data.resolucion });
+  if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
+  revalidatePath('/admin/talleres/incidencias');
+  ir('/admin/talleres/incidencias', { ok: 'reembolso_parcial_resuelto' });
+}
+
 /** Reintenta dar el acceso de un pago confirmado cuyo otorgamiento falló. Idempotente; lo registra la base. */
 export async function reintentarOtorgamiento(datos: FormData) {
   await exigirAdminAccion();

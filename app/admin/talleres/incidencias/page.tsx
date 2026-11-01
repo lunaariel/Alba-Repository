@@ -5,7 +5,7 @@ import { formatearUSD } from '@/dominio/dinero';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { CabeceraAdmin, EstadoChip } from '@/ui/admin/estructura';
 import { TEXTOS_TALLER } from '@/ui/admin/talleres';
-import { anotarIncidencia, reintentarOtorgamiento } from '../acciones';
+import { anotarIncidencia, reintentarOtorgamiento, resolverReembolsoParcial } from '../acciones';
 
 export const metadata: Metadata = { title: 'Incidencias' };
 
@@ -17,7 +17,7 @@ const TIPOS: Record<string, string> = {
   pago_sin_condiciones: 'Pago de una orden sin condiciones registradas: no se otorgó acceso, decida cómo seguir',
   compra_con_acceso_vigente: 'Compra confirmada con un acceso vigente: el período nuevo se encadenó, decida si mantenerlo o reembolsarlo',
   orden_sin_condiciones: 'Orden antigua sin condiciones registradas: se dio por vencida, revisar',
-  reembolso_parcial: 'Reembolso parcial confirmado: el acceso se mantuvo, decida cómo seguir',
+  reembolso_parcial: 'Reembolso parcial confirmado: pendiente de revisión administrativa (el acceso se mantiene)',
   revisar_periodos: 'Se revocó un período con otro encadenado después: revise las fechas',
 };
 const MOTIVOS: Record<string, string> = {
@@ -58,6 +58,25 @@ export default async function Incidencias({ searchParams }: { searchParams: Prom
                 {typeof i.detalle.pago_externo === 'string' && ` · Pago ${i.detalle.pago_externo}`}
               </p>
               {i.nota && <p className="m-0 mt-2 text-[15px]"><b>Nota:</b> {i.nota}</p>}
+              {i.tipo === 'reembolso_parcial' && (
+                <div className="mt-3 rounded-xl bg-arena px-4 py-3 text-[15px]">
+                  <p className="m-0">
+                    Importe original {typeof i.detalle.importe_original_centavos === 'number' ? formatearUSD(i.detalle.importe_original_centavos) : '—'} ·
+                    reembolsado {typeof i.detalle.reembolsado_centavos === 'number' ? formatearUSD(i.detalle.reembolsado_centavos) : '—'}
+                    {i.detalle.excede_lo_pagado === true ? ' · un aviso posterior excedía lo pagado y no se registró' : ''}
+                  </p>
+                  <p className="m-0 mt-1 text-[14px] text-tinta-suave">El acceso no cambia por un reembolso parcial. La política para estos casos todavía no está aprobada: registre aquí su resolución cuando la tenga.</p>
+                  {i.estado !== 'resuelta' && (
+                    <form action={resolverReembolsoParcial} className="mt-2 flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="id" value={i.id} />
+                      <label className="flex min-w-0 flex-[1_1_280px] flex-col gap-1 text-[14px] font-bold">Resolución (no modifica el acceso)
+                        <input name="resolucion" required minLength={20} maxLength={1000} className="min-h-[44px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 font-normal text-marron" />
+                      </label>
+                      <button type="submit" className="min-h-[44px] rounded-md border-2 border-oliva-profundo bg-blanco-calido px-4 font-bold text-oliva-profundo hover:bg-arena">Registrar resolución</button>
+                    </form>
+                  )}
+                </div>
+              )}
               {i.tipo === 'otorgamiento_fallido' && i.estado !== 'resuelta' && (
                 <form action={reintentarOtorgamiento} className="mt-3 flex flex-wrap items-end gap-2">
                   <input type="hidden" name="id" value={i.id} />

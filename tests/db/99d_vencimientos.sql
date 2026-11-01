@@ -80,10 +80,16 @@ begin
   perform public.cambiar_version(C, K, v2, 'Entiendo qué cambia y quiero pasar.');
   perform pruebas.afirmar((select vence_en from public.accesos_curso where id = a.id) = a.vence_en, 'Cambiar de versión no cambia el vencimiento');
 
-  -- Simulación de vencimiento (solo en pruebas, con el ajuste explícito).
+  -- Simulación de vencimiento (solo en pruebas, con el ajuste explícito). Desde 0024/0025 el acceso se decide
+  -- por sus períodos: se mueven juntos el acceso y su período.
   perform set_config('albor.ajuste_vencimiento', 'si', true);
   update public.accesos_curso set inicia_en = now() - interval '9 months', vence_en = now() - interval '1 day' where id = a.id;
   perform set_config('albor.ajuste_vencimiento', '', true);
+  if to_regclass('public.periodos_acceso') is not null then
+    execute 'alter table public.periodos_acceso disable trigger periodos_inmutables';
+    execute format('update public.periodos_acceso set inicia_en = now() - interval %L, vence_en = now() - interval %L where acceso_id = %L', '9 months', '1 day', a.id);
+    execute 'alter table public.periodos_acceso enable trigger periodos_inmutables';
+  end if;
   perform pruebas.afirmar(public.version_de(C, K) is null, 'Vencido: sin versión para el contenido');
   begin perform public.corregir_evaluacion(C, EV, '{}'); fallo := 'no falló';
   exception when others then fallo := sqlerrm; end;

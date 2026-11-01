@@ -51,13 +51,51 @@ Fecha: 01/11/2026. **Implementado en la migración 0024 y probado en local y en 
 - los certificados: no emite otro;
 - el vínculo con las compras anteriores.
 
+## 2 bis. Cobertura y renovaciones futuras (decisión A, migración 0025)
+
+**Regla de acceso.** Hay acceso si un período activo cubre el momento (`acceso_cubierto`). Ya no alcanza con el último vencimiento. Esto vale para `tiene_acceso`, `version_de`, el cambio de versión, el estado de finalización, `mis_accesos` y el campus.
+
+**Si se revoca un período que tiene otro posterior ya concedido**, el posterior conserva exactamente sus fechas:
+
+- no se adelanta;
+- no se crean períodos;
+- no se modifica ningún otro.
+
+**El intervalo sin período queda sin acceso al contenido.** Durante ese intervalo:
+
+- el campus muestra el curso en «Cursos con acceso programado», con la fecha en que se reanuda;
+- no se ofrece comprar;
+- el panel muestra «sin acceso hasta el … (período ya concedido)».
+
+**Al llegar la fecha del período posterior, el acceso se activa solo**, en la misma versión académica.
+
+**Revocaciones repetidas** (el mismo aviso, otro aviso del mismo reembolso, o un intento de la admin) no tienen efectos adicionales.
+
+`accesos_curso.vence_en` sigue siendo el fin del último período activo («hasta cuándo»).
+
 ## 3. Reembolsos (D4)
 
 | Caso | Comportamiento |
 | --- | --- |
 | Reembolso total o contracargo confirmado por el proveedor | Revoca solo los períodos de esa orden. Otras compras, becas, avances, resultados y certificados no se tocan |
-| Reembolso parcial confirmado | No revoca. Queda la incidencia `reembolso_parcial` |
-| Período revocado con otro encadenado después | Queda la incidencia `revisar_periodos` |
+| Reembolso parcial confirmado (decisión B, 0025) | Ver el detalle debajo de esta tabla |
+| Período revocado con otro encadenado después | El posterior conserva sus fechas (decisión A). Ya no se crea la incidencia `revisar_periodos` |
+
+**Reembolso parcial confirmado** (decisión B, 0025):
+
+1. Se registra el importe en `reembolsos`, una vez por aviso.
+2. El pago conserva su estado y su importe original.
+3. Se actualiza la incidencia `reembolso_parcial` con:
+   - el importe original;
+   - el total reembolsado acumulado;
+   - la compra (ítems);
+   - la marca «requiere revisión administrativa».
+4. El acceso no cambia.
+5. Nada cierra la incidencia sola:
+   - «anotar» la deja en revisión;
+   - «Registrar resolución» la cierra con un texto, sin tocar accesos;
+   - un reembolso parcial nuevo la vuelve a abrir.
+6. Un aviso que excediera lo pagado no se registra y queda señalado.
 
 Ningún reembolso se declara ejecutado sin la confirmación del proveedor.
 
@@ -98,7 +136,7 @@ Ningún reembolso se declara ejecutado sin la confirmación del proveedor.
 ## 7. Pendiente (no implementado)
 
 - Botón de compra o renovación con la pasarela real (Fase 6).
-- Regla para reembolsos parciales y una herramienta de ajuste de fechas para la admin.
+- Política comercial y legal para reembolsos parciales (hoy solo se registra la resolución escrita).
 - Programar becas a futuro sin un acceso vigente.
 - Intentos adicionales de evaluación: no hay regla académica.
 - Aviso previo al vencimiento (requiere correo).

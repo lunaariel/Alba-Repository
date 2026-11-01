@@ -54,3 +54,39 @@ Fecha: 01/11/2026. Todas corren en local y en CI, con pagos simulados. Ninguna t
   Además, comprueba que `periodos_acceso` no tenga escritura de clientes.
 - **`00_ayudas.sql` y `tests/visual/demo.sql`**: encienden `talleres_publicos` para que las pruebas y capturas de talleres sigan funcionando. El valor por defecto de la migración es apagado.
 - **`recorrido-vencimientos.mjs`**: la simulación del paso del tiempo mueve juntos el acceso y sus períodos, para que la conciliación siga en cero.
+
+## Decisiones A y B (migración 0025)
+
+Pruebas en `tests/db/99j_futuros_reembolsos_parciales.sql`, `tests/db/concurrencia.sh`, `tests/db/migracion_0024.sh` (0025 sobre datos históricos, reversión y negativa), `tests/db/reversion_posteriores.sh` (0015 a 0025) y `scripts/recorrido-renovaciones.mjs`.
+
+**A. Revocación con renovación futura**
+
+| # | Verificación | Prueba |
+| --- | --- | --- |
+| 1 | Revocar un período vigente con otro futuro | 99j: reembolso confirmado de A con B encadenado. E2E: lo mismo en el campus |
+| 2 | B conserva exactamente sus fechas | 99j: inicio, fin, estado, precio y condiciones idénticos. E2E: fechas iguales antes y después |
+| 3 | Contenido bloqueado en el intervalo | 99j: `tiene_acceso`, `version_de` y `acceso_cubierto` falsos; cambio de versión rechazado; sin oferta de compra. E2E: curso en 404 y «Cursos con acceso programado» |
+| 4 | Acceso al llegar la fecha | 99j: cobertura exacta en los bordes de B y acceso después del paso del tiempo. E2E: curso en 200 y «Acceso hasta» |
+| 5 | Historial académico preservado | 99j: avance e intentos |
+| 6 | Certificados preservados | 99j: certificado y verificación pública |
+| 7 | Compras sin alterar | 99j: ítems y órdenes idénticos (solo la reembolsada cambia de estado); sin períodos nuevos |
+| 8 | Sin transferencia de versión | 99j: versión 2 publicada en el intervalo; al activarse B sigue en la versión 1. E2E: versión sin cambios |
+| 9 | Revocaciones repetidas sin efectos | 99j: el mismo aviso da `duplicado`; otro aviso del mismo reembolso no cambia nada; la admin no puede volver a revocar |
+| 10 | Períodos consecutivos y múltiples renovaciones | 99j: tres períodos contiguos. Al revocar el del medio, primero y tercero conservan sus fechas y queda un hueco sin acceso; al revocar el tercero, el fin vuelve al del primero |
+
+**B. Reembolsos parciales**
+
+| # | Verificación | Prueba |
+| --- | --- | --- |
+| 1 | Recepción simulada | 99j y E2E: `requiere_revision` |
+| 2 | Registro del importe | 99j: fila en `reembolsos` (importe, estado, evento). El pago conserva importe y estado originales; un reembolso total posterior tampoco pisa el importe pagado |
+| 3 | Incidencia | 99j: importe original, reembolsado acumulado, ítems y marca de revisión; una sola por orden; acumula; señala lo que excedería lo pagado. E2E: el panel muestra los importes |
+| 4 | Sin revocación automática | 99j: acceso, períodos y orden idénticos tras varios reembolsos parciales. E2E: vencimiento sin cambios |
+| 5 | Idempotencia | 99j: el mismo aviso da `duplicado`, sin un segundo registro. Concurrencia: el mismo aviso dos veces a la vez se registra una vez |
+| 6 | Otros períodos preservados | 99j: la beca sigue intacta, también tras el reembolso total de la compra |
+| 7 | Datos comerciales protegidos | 99j: otra alumna no ve pagos, reembolsos ni incidencias; la propia alumna no ve la incidencia interna |
+| 8 | Acciones administrativas rechazadas a una alumna | 99j: no resuelve, no anota, no cambia el estado, no registra reembolsos; un visitante no ejecuta. E2E: la acción reenviada con la sesión de la alumna responde 404 y la incidencia sigue pendiente |
+| 9 | Resultados y certificados | 99j: intentos, avance y certificado intactos |
+| 10 | Sin cierre automático | 99j: anotar la deja «en revisión»; cerrar exige una resolución escrita (auditada) que no toca el acceso; no se resuelve dos veces; un parcial nuevo la reabre. E2E: resolución desde el panel |
+
+**Cambio en una prueba existente:** `99d_vencimientos.sql` simulaba el vencimiento moviendo solo `accesos_curso.vence_en`. Desde 0025 el acceso se decide por los períodos, así que la simulación mueve juntos el acceso y su período. La afirmación («vencido: sin versión para el contenido») no cambió.

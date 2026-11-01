@@ -18,7 +18,10 @@ const AVISOS: Record<string, { tipo: 'ok' | 'error'; texto: string }> = {
 type Props = { searchParams: Promise<{ aviso?: string }> };
 
 export default async function MisCursos({ searchParams }: Props) {
-  const [perfil, cursos, vencidos, { aviso }] = await Promise.all([miPerfil(), misCursos(), misCursosVencidos(), searchParams]);
+  const [perfil, cursos, sinAcceso, { aviso }] = await Promise.all([miPerfil(), misCursos(), misCursosVencidos(), searchParams]);
+  // Sin acceso en este momento: vencidos, o con un período futuro ya concedido (se activa en su fecha).
+  const programados = sinAcceso.filter((v) => v.proximoInicio);
+  const vencidos = sinAcceso.filter((v) => !v.proximoInicio);
   const fecha = (d: Date) => new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'America/Guatemala' }).format(d);
   const nombre = perfil.nombre.split(' ')[0];
   const mensaje = aviso ? AVISOS[aviso] : undefined;
@@ -34,12 +37,31 @@ export default async function MisCursos({ searchParams }: Props) {
           <ul className="m-0 grid list-none gap-5 p-0 lg:grid-cols-2">
             {cursos.map((c) => <TarjetaCursoCampus key={c.id} curso={c} />)}
           </ul>
-        ) : vencidos.length > 0 ? null : (
+        ) : sinAcceso.length > 0 ? null : (
           <div className="max-w-[640px] rounded-2xl bg-arena p-8">
             <p className="m-0 font-display text-2xl">Todavía no tiene cursos.</p>
             <p className="m-0 mt-2">Cuando compre un curso, aparecerá aquí con su avance.</p>
             <div className="mt-5"><EnlaceBoton href="/cursos" tamano="compacto">Ver los cursos</EnlaceBoton></div>
           </div>
+        )}
+        {programados.length > 0 && (
+          <section aria-labelledby="programados" className="mt-10 max-w-[860px]">
+            <h2 id="programados" className="m-0 text-[24px]">Cursos con acceso programado</h2>
+            <p className="m-0 mt-1 text-[15px] text-tinta-suave">Tiene un período de acceso ya concedido que todavía no empezó. Hasta esa fecha no puede ver las lecciones ni los materiales. Su avance, sus resultados y sus certificados se conservan.</p>
+            <ul className="m-0 mt-4 flex list-none flex-col gap-3 p-0">
+              {programados.map((v) => (
+                <li key={v.id} className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-5">
+                  <p className="m-0 font-bold">{v.titulo}</p>
+                  <p className="m-0 mt-1 text-[15px]">Su acceso se reanuda el <b>{fecha(v.proximoInicio!)}</b> y dura hasta el {fecha(v.venceEn)}.</p>
+                  {v.certificados.map((c) => (
+                    <p key={c.id} className="m-0 mt-2 text-[15px]">
+                      Certificado: <a href={`/campus/certificados/${c.id}`} className="font-bold text-oliva-profundo">descargar</a> (código {c.codigo}). Sigue siendo válido.
+                    </p>
+                  ))}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         {vencidos.length > 0 && (
           <section aria-labelledby="vencidos" className="mt-10 max-w-[860px]">

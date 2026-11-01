@@ -159,8 +159,8 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 | Pendiente | Estado | Qué falta | Cuándo |
 | --- | --- | --- | --- |
 | Botón de compra o renovación en el sitio | El campus muestra la oferta vigente; con las ventas cerradas dice «Las compras abren pronto» | Flujo de compra con la pasarela elegida | Fase 6, etapa 5 |
-| Reembolsos parciales | Se registran como incidencia; el acceso se mantiene | Regla de la maestra: cuándo un reembolso parcial revoca | Política de reembolsos |
-| Período revocado con otro encadenado después | Incidencia `revisar_periodos`. El vencimiento derivado puede dar más días que el período siguiente | Herramienta de ajuste de fechas para la admin, si hiciera falta | A definir |
+| Reembolsos parciales | **Decidido (B, 0025):** se registran, el acceso se mantiene y la incidencia queda pendiente de revisión; la admin registra su resolución por escrito, sin cambiar accesos | Política comercial y legal para reembolsos parciales (qué hacer con el acceso) | Cuando la titular la apruebe |
+| Período revocado con otro encadenado después | **Decidido (A, 0025):** el posterior conserva sus fechas; el intervalo queda sin acceso | — | Hecho |
 | Becas con inicio futuro sin acceso vigente | Se rechazan (`inicio_futuro`) para evitar fechas ambiguas | Programar becas a futuro, si la maestra lo necesita | A definir |
 | Intentos adicionales de evaluación | No existe forma de otorgarlos; la renovación no los da | Regla académica de la maestra | A definir |
 | Pasarela real: verificación de avisos y eventos de reembolso | Solo simulador | Recurrente no documenta públicamente los eventos de reembolso o contracargo ni cómo verificar la firma: hay que obtenerlo por escrito antes de elegir | Antes de la Fase 6, etapa 5 |
