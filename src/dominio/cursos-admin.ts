@@ -122,6 +122,19 @@ const ERRORES: Record<string, string> = {
   sin_acceso: 'Esa persona no tiene acceso activo al curso.',
   revision_no_descartable: 'Solo se descartan revisiones calculadas que no se aplicaron.',
   no_encontrado: 'No se encontró. Recargue la página.',
+  responsable_requerido: 'Indique quién autoriza (al menos 3 caracteres). Queda registrado.',
+  fin_o_sin_vencimiento: 'Elija una fecha de fin o «sin vencimiento» (una de las dos).',
+  fin_pasado: 'La fecha de fin ya pasó: elija una fecha futura.',
+  fin_invalido: 'La fecha de fin tiene que ser posterior al inicio.',
+  fin_requerido: 'Elija la fecha de fin.',
+  inicio_futuro: 'El inicio no puede ser futuro, salvo que continúe un acceso vigente sin dejar días sin cubrir.',
+  fecha_invalida: 'Revise las fechas: use el selector de fecha.',
+  correo_invalido: 'Escriba un correo válido.',
+  persona_no_encontrada: 'No hay ninguna cuenta con ese correo. La persona tiene que registrarse primero.',
+  persona_inexistente: 'No hay ninguna cuenta con ese correo. La persona tiene que registrarse primero.',
+  curso_sin_version: 'El curso todavía no tiene una versión publicada.',
+  periodo_ya_revocado: 'Ese período ya estaba revocado.',
+  compra_solo_con_reembolso: 'Una compra solo se revoca con un reembolso confirmado por la pasarela.',
 };
 
 // La clave más larga que coincide gana: «confirmacion_incorrecta» no debe leerse como «confirmacion».
@@ -165,6 +178,8 @@ const OKS: Record<string, string> = {
   duplicado_sin_algunos_pdf: 'Copia creada como borrador. Algunos PDF no se pudieron copiar y quedaron fuera: súbalos de nuevo en el temario.',
   validada: 'Finalización validada. Quedó registrada con su nota; la persona ya puede obtener su certificado si cumplió lo demás.',
   validacion_anulada: 'Validación anulada. Quedó registrado el motivo.',
+  beca_otorgada: 'Beca otorgada. Quedó registrada con sus fechas, motivo y responsable. No se creó ninguna compra.',
+  beca_revocada: 'Beca revocada. Quedó registrado el motivo; el avance y los certificados de la persona se conservan.',
 };
 
 /** Mensaje de un aviso de éxito; un código desconocido no muestra nada. */

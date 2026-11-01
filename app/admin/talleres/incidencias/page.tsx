@@ -5,14 +5,21 @@ import { formatearUSD } from '@/dominio/dinero';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { CabeceraAdmin, EstadoChip } from '@/ui/admin/estructura';
 import { TEXTOS_TALLER } from '@/ui/admin/talleres';
-import { anotarIncidencia } from '../acciones';
+import { anotarIncidencia, reintentarOtorgamiento } from '../acciones';
 
-export const metadata: Metadata = { title: 'Incidencias de talleres' };
+export const metadata: Metadata = { title: 'Incidencias' };
 
-const TIPOS = {
+const TIPOS: Record<string, string> = {
   pago_sin_cupo: 'Pago recibido sin lugar disponible: requiere reembolso',
   reembolso_por_cancelacion: 'Taller cancelado con inscripción paga: reembolso pendiente',
-} as const;
+  reembolso_por_reprogramacion: 'Taller reprogramado: la persona pidió la devolución',
+  otorgamiento_fallido: 'Pago confirmado sin acceso otorgado: reintentar',
+  pago_sin_condiciones: 'Pago de una orden sin condiciones registradas: no se otorgó acceso, decida cómo seguir',
+  compra_con_acceso_vigente: 'Compra confirmada con un acceso vigente: el período nuevo se encadenó, decida si mantenerlo o reembolsarlo',
+  orden_sin_condiciones: 'Orden antigua sin condiciones registradas: se dio por vencida, revisar',
+  reembolso_parcial: 'Reembolso parcial confirmado: el acceso se mantuvo, decida cómo seguir',
+  revisar_periodos: 'Se revocó un período con otro encadenado después: revise las fechas',
+};
 const MOTIVOS: Record<string, string> = {
   sin_cupo: 'la reserva había vencido y el cupo ya estaba completo', taller_cancelado: 'el taller ya estaba cancelado',
   taller_empezado: 'el taller ya había empezado', orden_cancelada: 'la orden estaba cancelada', taller_finalizado: 'el taller ya había terminado',
@@ -25,7 +32,7 @@ export default async function Incidencias({ searchParams }: { searchParams: Prom
   return (
     <>
       <CabeceraAdmin titulo="Incidencias" migas={[{ href: '/admin/talleres', texto: 'Talleres' }]}
-        bajada="Situaciones que necesitan su atención. Ningún reembolso figura como hecho hasta que la pasarela de pago lo confirme (Fase 6)." />
+        bajada="Pagos, accesos y talleres que necesitan su atención. Ningún reembolso figura como hecho hasta que la pasarela de pago lo confirme (Fase 6)." />
       <AvisoAccion ok={aviso.ok} error={aviso.error} textos={TEXTOS_TALLER} />
       <p className="m-0 mb-6 max-w-[860px] rounded-xl bg-arena px-5 py-3.5 text-[15px]">
         Avisos a participantes registrados y pendientes de envío: <b>{pendientes}</b>. Todavía no hay servicio de correo conectado: ninguno figura como enviado.
@@ -51,6 +58,15 @@ export default async function Incidencias({ searchParams }: { searchParams: Prom
                 {typeof i.detalle.pago_externo === 'string' && ` · Pago ${i.detalle.pago_externo}`}
               </p>
               {i.nota && <p className="m-0 mt-2 text-[15px]"><b>Nota:</b> {i.nota}</p>}
+              {i.tipo === 'otorgamiento_fallido' && i.estado !== 'resuelta' && (
+                <form action={reintentarOtorgamiento} className="mt-3 flex flex-wrap items-end gap-2">
+                  <input type="hidden" name="id" value={i.id} />
+                  <label className="flex min-w-0 flex-[1_1_280px] flex-col gap-1 text-[14px] font-bold">Nota del reintento
+                    <input name="nota" required minLength={5} maxLength={1000} className="min-h-[44px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 font-normal text-marron" />
+                  </label>
+                  <button type="submit" className="min-h-[44px] rounded-md bg-oliva-profundo px-4 font-bold text-marfil hover:bg-marron">Reintentar otorgamiento</button>
+                </form>
+              )}
               <form action={anotarIncidencia} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="id" value={i.id} />
                 <label className="flex min-w-0 flex-[1_1_280px] flex-col gap-1 text-[14px] font-bold">Nota interna

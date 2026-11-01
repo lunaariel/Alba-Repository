@@ -15,7 +15,7 @@ export async function Encabezado() {
   const enlaces = [
     { href: '/cursos', texto: 'Cursos' },
     { href: '/la-maestra', texto: 'La maestra' },
-    { href: '/talleres', texto: 'Talleres' },
+    ...(config.talleresPublicos ? [{ href: '/talleres', texto: 'Talleres' }] : []),
     ...(recursos ? [{ href: '/recursos', texto: 'Recursos' }] : []),
     { href: '/contacto', texto: 'Contacto' },
   ];

@@ -22,7 +22,9 @@ const PASOS = [
 ];
 
 export default async function Inicio({ searchParams }: { searchParams: Promise<{ para?: string }> }) {
-  const [{ para }, config, cursos, talleres] = await Promise.all([searchParams, configuracion(), cursosPublicados(), proximosTalleres(3)]);
+  const [{ para }, config, cursos, proximos] = await Promise.all([searchParams, configuracion(), cursosPublicados(), proximosTalleres(3)]);
+  // Primero se lanzan los cursos: los talleres no se promocionan hasta que se habiliten.
+  const talleres = config.talleresPublicos ? proximos : [];
   const filtro = filtroDesdeUrl(para);
   const t = config.textos;
 
@@ -47,7 +49,7 @@ export default async function Inicio({ searchParams }: { searchParams: Promise<{
             </h1>
             <p className="m-0 mt-7 max-w-[32em] text-xl">{t.heroBajada}</p>
             <div className="mt-9 flex flex-wrap gap-3.5">
-              <EnlaceBoton href={cursos.length ? '#cursos' : '/talleres'}>{cursos.length ? 'Ver los cursos' : 'Ver los talleres'}</EnlaceBoton>
+              <EnlaceBoton href={cursos.length || !config.talleresPublicos ? '#cursos' : '/talleres'}>{cursos.length || !config.talleresPublicos ? 'Ver los cursos' : 'Ver los talleres'}</EnlaceBoton>
               <EnlaceAccion href="#como">Cómo funciona</EnlaceAccion>
             </div>
           </div>

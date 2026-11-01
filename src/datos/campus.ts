@@ -104,9 +104,18 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   });
 });
 
+export interface OfertaRenovacion {
+  disponible: boolean; precioCentavos: number; duracionMeses: number | null; mesesAdicionales: number;
+  totalMeses: number | null; venceSiConfirmaHoy: Date | null;
+}
+
 export interface CursoVencido {
-  id: string; titulo: string; venceEn: Date;
+  id: string; slug: string; titulo: string; venceEn: Date;
   certificados: { id: string; codigo: string }[];
+  /** Cumplió todo antes de vencer y todavía no pidió el certificado de su versión. */
+  puedeObtenerCertificado: boolean;
+  /** Oferta vigente para renovar (precio y condiciones de hoy), si el curso sigue publicado. */
+  oferta: OfertaRenovacion | null;
 }
 
 /** Cursos cuyo acceso venció: sin contenido, pero con sus certificados (siguen siendo válidos). */
@@ -116,12 +125,33 @@ export const misCursosVencidos = cache(async (): Promise<CursoVencido[]> => {
   const { data } = await supabase.from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo');
   const filas = ((data ?? []) as unknown as FilaAcceso[]).filter((a) => a.cursos && !vigente(a));
   if (!filas.length) return [];
-  const { data: certs } = await supabase.from('certificados').select('id, curso_id, codigo_verificacion').in('curso_id', filas.map((f) => f.curso_id));
-  return filas.map((f) => ({
-    id: f.curso_id, titulo: f.cursos!.titulo, venceEn: new Date(f.vence_en!),
-    certificados: ((certs ?? []) as { id: string; curso_id: string; codigo_verificacion: string }[])
-      .filter((c) => c.curso_id === f.curso_id).map((c) => ({ id: c.id, codigo: c.codigo_verificacion })),
+  const { data: certs } = await supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion').in('curso_id', filas.map((f) => f.curso_id));
+  const certificados = (certs ?? []) as { id: string; curso_id: string; version_id: string | null; codigo_verificacion: string }[];
+  // Estado de finalización (versión histórica) y oferta de renovación, con la sesión de la persona.
+  const extras = await Promise.all(filas.map(async (f) => {
+    const [{ data: fin }, { data: oferta }] = await Promise.all([
+      supabase.rpc('mi_finalizacion', { p_curso: f.curso_id }),
+      supabase.rpc('oferta_curso', { p_curso: f.curso_id }),
+    ]);
+    return { fin: fin as { elegible_certificado?: boolean; version_id?: string } | null, oferta: oferta as Record<string, unknown> | null };
   }));
+  return filas.map((f, i) => {
+    const propios = certificados.filter((c) => c.curso_id === f.curso_id);
+    const { fin, oferta } = extras[i]!;
+    return {
+      id: f.curso_id, slug: f.cursos!.slug, titulo: f.cursos!.titulo, venceEn: new Date(f.vence_en!),
+      certificados: propios.map((c) => ({ id: c.id, codigo: c.codigo_verificacion })),
+      puedeObtenerCertificado: fin?.elegible_certificado === true && !propios.some((c) => c.version_id === fin.version_id),
+      oferta: oferta ? {
+        disponible: oferta.disponible === true,
+        precioCentavos: Number(oferta.precio_centavos ?? 0),
+        duracionMeses: oferta.duracion_meses == null ? null : Number(oferta.duracion_meses),
+        mesesAdicionales: Number(oferta.meses_adicionales ?? 5),
+        totalMeses: oferta.total_meses == null ? null : Number(oferta.total_meses),
+        venceSiConfirmaHoy: typeof oferta.vence_si_confirma_hoy === 'string' ? new Date(oferta.vence_si_confirma_hoy) : null,
+      } : null,
+    };
+  });
 });
 
 export interface MaterialCampus { id: string; titulo: string; leccionId: string; tamanoBytes: number; complementario: boolean }

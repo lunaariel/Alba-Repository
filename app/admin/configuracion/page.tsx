@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CabeceraAdmin, EstadoChip } from '@/ui/admin/estructura';
 import { exigirAdmin, mfaAdminObligatorio } from '@/datos/sesion';
+import { configuracion } from '@/datos/publico';
 
 export const metadata: Metadata = { title: 'Configuración' };
 
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title: 'Configuración' };
 export default async function Configuracion() {
   await exigirAdmin();
   const mfa = mfaAdminObligatorio();
+  const { talleresPublicos } = await configuracion();
   return (
     <>
       <CabeceraAdmin titulo="Configuración" />
@@ -24,7 +26,19 @@ export default async function Configuracion() {
             Abrir el registro
           </Link>
         </section>
- <section aria-labelledby="seguridad" className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6 md:col-span-2">
+        <section aria-labelledby="talleres-publicos" className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6 md:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="talleres-publicos" className="m-0 text-[22px]">Talleres en el sitio</h2>
+            <EstadoChip estado={talleresPublicos ? 'publicado' : 'pendiente'} texto={talleresPublicos ? 'Ofrecidos al público' : 'No ofrecidos todavía'} />
+          </div>
+          <p className="m-0 mt-2">
+            {talleresPublicos
+              ? 'El sitio muestra los talleres publicados y admite inscripciones.'
+              : 'Primero se lanzan los cursos. Puede seguir preparando talleres en el panel, pero el sitio no los muestra ni admite inscripciones nuevas. Las inscripciones existentes se conservan.'}
+          </p>
+          <p className="m-0 mt-2 text-[15px] text-tinta-suave">Se habilitan cuando se autorice el lanzamiento de los talleres.</p>
+        </section>
+        <section aria-labelledby="seguridad" className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6 md:col-span-2">
           <div className="flex items-center justify-between gap-3">
             <h2 id="seguridad" className="m-0 text-[22px]">Seguridad de la cuenta administradora</h2>
             <EstadoChip estado={mfa ? 'publicado' : 'pendiente'} texto={mfa ? 'Segundo factor exigido' : 'Segundo factor no activo'} />

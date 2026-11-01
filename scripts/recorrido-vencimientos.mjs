@@ -75,8 +75,13 @@ try {
     'la compra nueva vence a los 9 meses del pago confirmado');
   const material = sql(`select r.id from public.recursos_leccion r join public.lecciones l on l.id = r.leccion_id join public.modulos m on m.id = l.modulo_id where m.curso_id = '${C1}' and not r.complementario limit 1`);
   const antes = await ctxAlumna2.request.get(`${BASE}/campus/materiales/${material}`, { maxRedirects: 0 });
-  sql(`begin; select set_config('albor.ajuste_vencimiento', 'si', true);
-       update public.accesos_curso set inicia_en = now() - interval '10 months', vence_en = now() - interval '1 hour' where perfil_id = '${alumna2}' and curso_id = '${C1}'; commit;`);
+  // Paso del tiempo (solo en pruebas): se corren 10 meses hacia atrás el acceso y sus períodos (0024), juntos.
+  sql(`begin;
+       alter table public.periodos_acceso disable trigger periodos_inmutables;
+       update public.periodos_acceso set inicia_en = inicia_en - interval '10 months', vence_en = vence_en - interval '10 months' where perfil_id = '${alumna2}' and curso_id = '${C1}';
+       alter table public.periodos_acceso enable trigger periodos_inmutables;
+       select set_config('albor.ajuste_vencimiento', 'si', true);
+       update public.accesos_curso set inicia_en = inicia_en - interval '10 months', vence_en = vence_en - interval '10 months' where perfil_id = '${alumna2}' and curso_id = '${C1}'; commit;`);
   await al2.goto(`${BASE}/campus`, { waitUntil: 'networkidle' });
   comprobar(await al2.getByRole('heading', { name: 'Cursos con el acceso vencido' }).isVisible() && await al2.getByText(/Acceso vencido el/).isVisible(),
     'el campus muestra el curso vencido aparte');

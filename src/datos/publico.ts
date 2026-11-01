@@ -12,12 +12,14 @@ export interface Configuracion {
   whatsapp: string | null;
   zonaHoraria: string;
   textos: Textos;
+  /** Talleres ofrecidos al público. Apagado hasta que se autorice su lanzamiento (migración 0024). */
+  talleresPublicos: boolean;
 }
 
 export const configuracion = cache(async (): Promise<Configuracion> => {
   const { data } = await clientePublico()
     .from('configuracion_academia')
-    .select('nombre, correo_contacto, whatsapp, zona_horaria, textos')
+    .select('nombre, correo_contacto, whatsapp, zona_horaria, textos, talleres_publicos')
     .maybeSingle();
   return {
     nombre: data?.nombre ?? 'Albor',
@@ -25,6 +27,7 @@ export const configuracion = cache(async (): Promise<Configuracion> => {
     whatsapp: data?.whatsapp ?? null,
     zonaHoraria: data?.zona_horaria ?? 'America/Guatemala',
     textos: combinarTextos(data?.textos),
+    talleresPublicos: data?.talleres_publicos === true,
   };
 });
 

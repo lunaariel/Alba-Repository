@@ -292,3 +292,24 @@ export async function seguimientoCurso(cursoId: string): Promise<AlumnoSeguimien
     iniciaEn: f.inicia_en ? new Date(f.inicia_en) : null, venceEn: f.vence_en ? new Date(f.vence_en) : null,
   }));
 }
+
+export interface PeriodoAdmin {
+  id: string; perfilId: string; origen: 'compra' | 'beca' | 'concesion';
+  iniciaEn: Date; venceEn: Date | null; estado: 'activo' | 'revocado';
+  motivo: string | null; responsable: string | null; historico: boolean; revocadoMotivo: string | null; precioCentavos: number | null;
+}
+
+/** Períodos de acceso de un curso (compras, becas y concesiones), con su estado. Solo admin (RLS). */
+export async function periodosCurso(cursoId: string): Promise<PeriodoAdmin[]> {
+  await exigirAdmin();
+  const { data, error } = await (await clienteSesion()).from('periodos_acceso')
+    .select('id, perfil_id, origen, inicia_en, vence_en, estado, motivo, responsable, historico, revocado_motivo, precio_centavos')
+    .eq('curso_id', cursoId).order('inicia_en');
+  if (error) throw new Error(`No se pudieron leer los períodos: ${error.message}`);
+  type F = { id: string; perfil_id: string; origen: PeriodoAdmin['origen']; inicia_en: string; vence_en: string | null; estado: PeriodoAdmin['estado'];
+    motivo: string | null; responsable: string | null; historico: boolean; revocado_motivo: string | null; precio_centavos: number | null };
+  return ((data ?? []) as F[]).map((f) => ({
+    id: f.id, perfilId: f.perfil_id, origen: f.origen, iniciaEn: new Date(f.inicia_en), venceEn: f.vence_en ? new Date(f.vence_en) : null,
+    estado: f.estado, motivo: f.motivo, responsable: f.responsable, historico: f.historico, revocadoMotivo: f.revocado_motivo, precioCentavos: f.precio_centavos,
+  }));
+}

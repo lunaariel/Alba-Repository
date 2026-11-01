@@ -171,8 +171,11 @@ function aGrabacion(g: FilaGrabacion | null): GrabacionAdmin | null {
   };
 }
 
+export type TipoIncidencia = 'pago_sin_cupo' | 'reembolso_por_cancelacion' | 'reembolso_por_reprogramacion' | 'pago_sin_condiciones'
+  | 'otorgamiento_fallido' | 'compra_con_acceso_vigente' | 'orden_sin_condiciones' | 'reembolso_parcial' | 'revisar_periodos';
+
 export interface IncidenciaAdmin {
-  id: string; tipo: 'pago_sin_cupo' | 'reembolso_por_cancelacion'; estado: string; creadoEn: Date; nota: string | null;
+  id: string; tipo: TipoIncidencia; estado: string; creadoEn: Date; nota: string | null;
   taller: { id: string; titulo: string } | null; persona: string | null; correo: string | null; orden: { id: string; estado: string; total: number } | null;
   detalle: Record<string, unknown>;
 }

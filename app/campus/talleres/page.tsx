@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { miPerfil, misAvisos, misTalleres, type AvisoCampus, type TallerInscripto } from '@/datos/campus';
+import { configuracion } from '@/datos/publico';
 import { formatearHorario } from '@/dominio/talleres';
 import { Contenedor } from '@/ui/estructura';
 import { EncabezadoCampus } from '@/ui/campus';
@@ -179,7 +180,7 @@ function Fila({ t, zona, pasado }: { t: TallerInscripto; zona: string; pasado: b
 }
 
 export default async function MisTalleres({ searchParams }: Props) {
-  const [talleres, avisos, perfil, { aviso }] = await Promise.all([misTalleres(), misAvisos(), miPerfil(), searchParams]);
+  const [talleres, avisos, perfil, { aviso }, config] = await Promise.all([misTalleres(), misAvisos(), miPerfil(), searchParams, configuracion()]);
   const ahora = Date.now();
   const proximos = talleres.filter((t) => t.terminaEn.getTime() >= ahora);
   const pasados = talleres.filter((t) => t.terminaEn.getTime() < ahora).reverse();
@@ -210,7 +211,9 @@ export default async function MisTalleres({ searchParams }: Props) {
         ) : (
           <div className="max-w-[640px] rounded-2xl bg-arena p-8">
             <p className="m-0 font-display text-2xl">No tiene talleres próximos.</p>
-            <div className="mt-4"><EnlaceAccion href="/talleres">Ver los talleres en vivo</EnlaceAccion></div>
+            {config.talleresPublicos
+              ? <div className="mt-4"><EnlaceAccion href="/talleres">Ver los talleres en vivo</EnlaceAccion></div>
+              : <p className="m-0 mt-2 text-[15px] text-tinta-suave">Los talleres en vivo se abrirán más adelante.</p>}
           </div>
         )}
         {pasados.length > 0 && (

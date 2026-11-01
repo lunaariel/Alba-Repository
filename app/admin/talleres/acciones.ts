@@ -299,6 +299,18 @@ export async function anotarIncidencia(datos: FormData) {
   ir('/admin/talleres/incidencias', { ok: 'incidencia_anotada' });
 }
 
+/** Reintenta dar el acceso de un pago confirmado cuyo otorgamiento falló. Idempotente; lo registra la base. */
+export async function reintentarOtorgamiento(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, nota: texto(1000) }).safeParse({ id: datos.get('id'), nota: datos.get('nota') ?? '' });
+  if (!r.success) redirect('/admin/talleres/incidencias');
+  const { data, error } = await (await clienteSesion()).rpc('reintentar_otorgamiento', { p_incidencia: r.data.id, p_nota: r.data.nota });
+  if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
+  revalidatePath('/admin/talleres/incidencias');
+  revalidatePath('/campus', 'layout');
+  ir('/admin/talleres/incidencias', { ok: data ? 'otorgamiento_recuperado' : 'otorgamiento_pendiente' });
+}
+
 function mensaje(m: string | undefined) {
   return MENSAJES_FORM[codigoErrorTaller(m)] ?? 'No se pudo guardar. Intente de nuevo; si sigue fallando, avísenos.';
 }

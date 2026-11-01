@@ -71,6 +71,8 @@ const OKS: Record<string, string> = {
   grabacion_faltante: 'Grabación marcada como faltante.',
   grabacion_retirada: 'Grabación retirada: nadie la ve. Los derechos se conservan.',
   incidencia_anotada: 'Nota guardada. La incidencia queda en revisión hasta que la pasarela confirme el reembolso (Fase 6).',
+  otorgamiento_recuperado: 'Acceso otorgado. La incidencia quedó resuelta y registrada.',
+  otorgamiento_pendiente: 'Todavía no se pudo otorgar el acceso. La incidencia sigue abierta con el detalle del error.',
 };
 export function mensajeOkTaller(codigo: string | undefined): string | undefined {
   return codigo && Object.hasOwn(OKS, codigo) ? OKS[codigo] : undefined;

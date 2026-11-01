@@ -9,13 +9,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [cursos, talleres, articulos, config] = await Promise.all([
     cursosPublicados(), proximosTalleres(50), articulosPublicados(), configuracion(),
   ]);
-  const fijas = ['/', '/cursos', '/talleres', '/contacto']
+  const fijas = ['/', '/cursos', ...(config.talleresPublicos ? ['/talleres'] : []), '/contacto']
     .concat(esPendiente(config.textos.maestraHistoria) ? [] : ['/la-maestra'])
     .concat(articulos.length ? ['/recursos'] : []);
   return [
     ...fijas.map((ruta) => ({ url: `${base}${ruta}` })),
     ...cursos.map((c) => ({ url: `${base}/cursos/${c.slug}` })),
-    ...talleres.map((t) => ({ url: `${base}/talleres/${t.slug}` })),
+    ...(config.talleresPublicos ? talleres : []).map((t) => ({ url: `${base}/talleres/${t.slug}` })),
     ...articulos.map((a) => ({ url: `${base}/recursos/${a.slug}`, lastModified: a.publicadoEn })),
   ];
 }

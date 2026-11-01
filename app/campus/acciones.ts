@@ -105,6 +105,23 @@ export async function obtenerCertificado(datos: FormData) {
   redirect(`/campus/cursos/${cursoSlug.data}?aviso=certificado-listo#certificado`);
 }
 
+/**
+ * Certificado de un curso con el acceso vencido: quien cumplió todo antes de vencer lo puede pedir igual.
+ * La persona solo puede pedirlo para un curso que figura entre sus propios accesos (RLS); la base vuelve a
+ * comprobar que cumplió los requisitos en su versión.
+ */
+export async function obtenerCertificadoHistorico(datos: FormData) {
+  const usuario = await exigirSesion('/campus');
+  const curso = uuid.safeParse(datos.get('curso'));
+  if (!curso.success) redirect('/campus');
+  const { data: propio } = await (await clienteSesion()).from('accesos_curso').select('id').eq('curso_id', curso.data).eq('estado', 'activo').maybeSingle();
+  if (!propio) redirect('/campus?aviso=certificado-error');
+  const { data, error } = await clienteServicio().rpc('emitir_certificado', { p_perfil: usuario.id, p_curso: curso.data });
+  if (error || !data) redirect('/campus?aviso=certificado-error');
+  revalidatePath('/campus', 'layout');
+  redirect('/campus?aviso=certificado-listo#vencidos');
+}
+
 export type EstadoCuenta = { error?: string; campo?: string; ok?: string } | undefined;
 
 const ZONAS_VALIDAS = new Set(Intl.supportedValuesOf('timeZone'));
@@ -173,7 +190,7 @@ export async function inscribirmeTaller(datos: FormData) {
   await exigirSesion(`/talleres/${r.data.slug}`);
   const { error } = await (await clienteSesion()).rpc('inscribirme_gratis', { p_taller: r.data.taller });
   if (error) {
-    const codigo = ['sin_cupo', 'ya_inscripto', 'taller_no_disponible', 'taller_pago'].find((c) => error.message.startsWith(c)) ?? 'error';
+    const codigo = ['sin_cupo', 'ya_inscripto', 'talleres_no_disponibles', 'taller_no_disponible', 'taller_pago'].find((c) => error.message.startsWith(c)) ?? 'error';
     redirect(`/talleres/${r.data.slug}?aviso=${codigo}`);
   }
   revalidatePath('/campus/talleres');

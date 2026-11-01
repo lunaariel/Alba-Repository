@@ -94,10 +94,13 @@ begin
   perform pruebas.afirmar(public.emitir_certificado(C, K) is not null, 'Cumplido antes de vencer, el certificado se puede emitir después');
   perform pruebas.afirmar((select count(*) from public.progreso_leccion where perfil_id = C) = 1
     and (select count(*) from public.intentos_evaluacion where perfil_id = C) = 1, 'El historial académico se conserva');
-  -- Recompra tras vencer: pendiente de decisión comercial; hoy se rechaza sin tocar el acceso anterior.
-  begin o := public.crear_orden(C, 'curso', K); fallo := 'no falló';
-  exception when others then fallo := sqlerrm; end;
-  perform pruebas.afirmar(fallo = 'ya_tiene_acceso', 'La recompra tras vencer queda pendiente de decisión: ' || fallo);
+  -- Recompra tras vencer (decisión del 01/11/2026, migración 0024): se permite con la oferta vigente y no
+  -- toca el acceso anterior hasta que el pago se confirme. El detalle de la renovación se prueba en 99i.
+  o := public.crear_orden(C, 'curso', K);
+  perform pruebas.afirmar((select condiciones_acceso ->> 'total_meses' from public.items_orden where orden_id = o) = '11',
+    'La renovación ofrece las condiciones vigentes (6 + 5 meses)');
+  perform pruebas.afirmar((select vence_en <= now() from public.accesos_curso where perfil_id = C and curso_id = K and estado = 'activo'),
+    'Crear la orden no cambia el acceso vencido');
 end $$;
 
 -- Vista de la alumna vencida (RLS): no ve lecciones ni materiales; sí su acceso, su certificado y su historial.

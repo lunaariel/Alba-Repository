@@ -40,3 +40,7 @@ insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, c
    date_trunc('hour', now()) + interval '10 days 2 hours', date_trunc('hour', now()) + interval '10 days 3 hours 30 minutes', 20, 1500, 'publicado'),
   ('demo-taller-ambiente', '[Ejemplo] Preparar el ambiente en casa', 'Encuentro de ejemplo para las capturas.',
    date_trunc('hour', now()) + interval '20 days 2 hours', date_trunc('hour', now()) + interval '20 days 3 hours 30 minutes', 2, 1500, 'publicado');
+
+-- Talleres ofrecidos al público en la demo (la migración 0024 los deja apagados hasta su lanzamiento).
+-- Así las capturas y recorridos de talleres siguen funcionando; recorrido-renovaciones prueba el estado apagado.
+update public.configuracion_academia set talleres_publicos = true;

@@ -60,6 +60,14 @@ do $$ begin
   end if;
 end $$;
 
+-- Talleres ofrecidos al público (migración 0024: apagados por defecto hasta su lanzamiento). Las pruebas
+-- de talleres parten de un sitio con talleres abiertos; 99i prueba el estado apagado.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'configuracion_academia' and column_name = 'talleres_publicos') then
+    update public.configuracion_academia set talleres_publicos = true;
+  end if;
+end $$;
+
 -- A compra el curso (vía las funciones del servidor). B no tiene acceso.
 do $$
 declare v_orden uuid;

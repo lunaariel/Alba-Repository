@@ -21,7 +21,7 @@ end $$;
 -- 3. Funciones security definer que puede ejecutar cualquier sesión (no visitantes): solo estas. Cada una
 --    valida por dentro es_admin() o actúa sobre auth.uid().
 do $$
-declare permitidas text[] := array['anotar_incidencia', 'anular_validacion', 'aplicar_revision', 'asociar_complemento', 'bloquear_contenido', 'calcular_revision', 'cambiar_estado_grabacion', 'cancelar_mi_inscripcion', 'cancelar_taller', 'corregir_leccion_publicada', 'corregir_modulo_publicado', 'descartar_revision', 'duplicar_curso', 'duplicar_taller', 'enlace_taller', 'guardar_condiciones_grabacion', 'guardar_reunion', 'guardar_revision_grabacion', 'inscribirme_gratis', 'lecciones_pendientes', 'marcar_asistencia', 'marcar_notificaciones_leidas', 'mi_finalizacion', 'mis_accesos', 'mis_grabaciones', 'ocupados_taller', 'publicar_version', 'reemplazar_leccion', 'registrar_actividad', 'reprogramar_taller', 'responder_reprogramacion', 'seguimiento_curso', 'tiene_acceso_grabacion', 'validar_finalizacion']; reales text[]; sobra text[];
+declare permitidas text[] := array['anotar_incidencia', 'anular_validacion', 'aplicar_revision', 'asociar_complemento', 'bloquear_contenido', 'buscar_perfil_por_correo', 'calcular_revision', 'cambiar_estado_grabacion', 'cancelar_mi_inscripcion', 'cancelar_taller', 'corregir_leccion_publicada', 'corregir_modulo_publicado', 'descartar_revision', 'duplicar_curso', 'duplicar_taller', 'enlace_taller', 'guardar_condiciones_grabacion', 'guardar_reunion', 'guardar_revision_grabacion', 'inscribirme_gratis', 'lecciones_pendientes', 'marcar_asistencia', 'marcar_notificaciones_leidas', 'mi_finalizacion', 'mis_accesos', 'mis_grabaciones', 'ocupados_taller', 'oferta_curso', 'otorgar_beca', 'publicar_version', 'reemplazar_leccion', 'registrar_actividad', 'reintentar_otorgamiento', 'reprogramar_taller', 'responder_reprogramacion', 'revocar_beca', 'seguimiento_curso', 'tiene_acceso_grabacion', 'validar_finalizacion']; reales text[]; sobra text[];
 begin
   select array_agg(p.proname order by p.proname) into reales from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prosecdef and p.prorettype <> 'trigger'::regtype
@@ -36,13 +36,19 @@ select pruebas.afirmar(not has_function_privilege('authenticated', p.oid, 'execu
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
  where n.nspname = 'public' and p.proname in ('corregir_evaluacion', 'emitir_certificado', 'crear_orden', 'procesar_evento_pago', 'conceder_acceso',
    'cambiar_version', 'registrar_actividad_formativa', 'otorgar_acceso_compra', 'faltantes_publicacion', 'estado_finalizacion_de',
-   'version_de', 'version_historica_de', 'crear_version', 'inscribir_cortesia');
+   'version_de', 'version_historica_de', 'crear_version', 'inscribir_cortesia',
+   'agregar_periodo', 'recalcular_vencimiento_acceso', 'revocar_periodo_interno', 'otorgar_compra_curso', 'reintentar_otorgamiento_orden',
+   'revocar_periodos_orden', 'talleres_publicos', 'conciliar_periodos');
 
 -- 5. Columnas secretas que ningún cliente lee.
 select pruebas.afirmar(not has_column_privilege(r, t::regclass, c, 'select'), format('%s no lee %s.%s', r, t, c))
   from (values ('public.opciones', 'es_correcta'), ('public.lecciones', 'video_id'), ('public.reuniones', 'enlace_anfitrion'),
                ('public.reuniones', 'enlace_participante'), ('public.respuestas_intento', 'correcta')) x(t, c),
        unnest(array['anon', 'authenticated']) r;
+
+-- 5b. Períodos de acceso: motivos y responsables internos; ningún cliente escribe.
+select pruebas.afirmar(not exists (select 1 from pg_policies where tablename = 'periodos_acceso' and (cmd <> 'SELECT' or 'anon' = any (roles))),
+  'Períodos: solo lectura de la admin, sin escritura de clientes');
 
 -- 6. Datos personales nuevos: no legibles por visitantes.
 select pruebas.afirmar(not has_table_privilege('anon', 'public.validaciones_formativas', 'select')

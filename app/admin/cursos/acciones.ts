@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { exigirAdminAccion } from '@/datos/sesion';
 import { clienteServicio, clienteSesion } from '@/datos/supabase';
 import { codigoError, mensajeError, precioACentavos, slugDesde, SLUG_VALIDO, UUID, volverSeguro } from '@/dominio/cursos-admin';
+import { instanteGuatemala } from '@/dominio/accesos';
 
 /**
  * Acciones del editor de cursos. Todas empiezan con exigirAdminAccion() y escriben con la sesión
@@ -591,4 +592,55 @@ export async function duplicarCurso(datos: FormData) {
   }
   refrescar(d.curso);
   ir(`/admin/cursos/${d.curso}`, { ok: fallidos ? 'duplicado_sin_algunos_pdf' : 'duplicado' });
+}
+
+// ---------------------------------------------------------------- becas (períodos de acceso)
+
+/**
+ * Otorga una beca o acceso gratuito: duración elegida por la admin (no la fórmula comercial), con fin o
+ * «sin vencimiento» expreso, motivo y responsable. No crea compras ni recibos. La base exige el rol,
+ * valida las fechas y lo registra todo.
+ */
+export async function otorgarBeca(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({
+    curso: uuid, correo: z.string().trim().email().max(200), inicio: z.string().trim().max(10),
+    duracion: z.enum(['fecha', 'sin_vencimiento']), fin: z.string().trim().max(10),
+    motivo: texto(500), responsable: texto(120),
+  }).safeParse({
+    curso: datos.get('curso'), correo: datos.get('correo') ?? '', inicio: datos.get('inicio') ?? '', duracion: datos.get('duracion'),
+    fin: datos.get('fin') ?? '', motivo: datos.get('motivo') ?? '', responsable: datos.get('responsable') ?? '',
+  });
+  const curso = uuid.safeParse(datos.get('curso'));
+  if (!curso.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${curso.data}/alumnos`;
+  if (!r.success) ir(ruta, { error: r.error.issues[0]?.path[0] === 'correo' ? 'correo_invalido' : 'invalido' });
+  const inicio = r.data.inicio ? instanteGuatemala(r.data.inicio, 'inicio') : null;
+  const fin = r.data.duracion === 'fecha' ? instanteGuatemala(r.data.fin, 'fin') : null;
+  if ((r.data.inicio && !inicio) || (r.data.duracion === 'fecha' && !fin)) ir(ruta, { error: 'fecha_invalida' });
+  const s = await clienteSesion();
+  const { data: personas, error: e1 } = await s.rpc('buscar_perfil_por_correo', { p_correo: r.data.correo });
+  if (e1) ir(ruta, { error: codigoError(e1.message) });
+  const persona = (personas as { perfil_id: string }[] | null)?.[0];
+  if (!persona) ir(ruta, { error: 'persona_no_encontrada' });
+  const { error } = await s.rpc('otorgar_beca', {
+    p_perfil: persona.perfil_id, p_curso: r.data.curso, p_inicio: inicio, p_fin: fin,
+    p_sin_vencimiento: r.data.duracion === 'sin_vencimiento', p_motivo: r.data.motivo, p_responsable: r.data.responsable,
+  });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'beca_otorgada' });
+}
+
+/** Revoca una beca o concesión con motivo. Las compras se revocan solo con un reembolso confirmado. */
+export async function revocarBeca(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, periodo: uuid, motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), periodo: datos.get('periodo'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
+  const { error } = await (await clienteSesion()).rpc('revocar_beca', { p_periodo: r.data.periodo, p_motivo: r.data.motivo });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'beca_revocada' });
 }
