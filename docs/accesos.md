@@ -1,6 +1,6 @@
 # Accesos a los cursos y vencimientos
 
-Vigente desde la migración 0019 (Jornada autónoma, 01/11/2026). **Implementado y probado en local y en CI con pagos simulados; no aplicado en ninguna base real.**
+Vigente desde la migración 0019 (Jornada autónoma, 01/11/2026), con los períodos de acceso de la migración 0024 (renovaciones, becas y reembolsos por compra: ver `docs/renovaciones-becas.md`). **Implementado y probado en local y en CI con pagos simulados; no aplicado en ninguna base real.**
 
 ## Regla comercial (decisión de la maestra)
 
@@ -21,7 +21,7 @@ Vigente desde la migración 0019 (Jornada autónoma, 01/11/2026). **Implementado
 ## Lo que no vence
 
 - Los accesos anteriores a la migración 0019 no reciben vencimiento retroactivo (`condiciones.regla = 'anterior_sin_vencimiento'`).
-- Las concesiones de la admin no vencen (`concesion_sin_vencimiento`) hasta que la maestra decida otra cosa.
+- Las concesiones anteriores a las becas no vencen (`concesion_sin_vencimiento`). Las becas nuevas (0024) tienen la duración que elige la admin, o «sin vencimiento» si lo autoriza expresamente.
 - Los certificados nunca vencen: siguen siendo descargables y verificables.
 
 ## Al vencer
@@ -52,6 +52,7 @@ Vigente desde la migración 0019 (Jornada autónoma, 01/11/2026). **Implementado
   - pago confirmado y cambio de duración posterior;
   - concesión; cambio de versión;
   - vencimiento: contenido, material, avance y evaluación protegidos; historial y certificados conservados; verificación pública.
+- **Períodos, renovaciones y becas**: `tests/db/99i_periodos_acceso.sql`, `tests/db/concurrencia.sh`, `tests/db/migracion_0024.sh`, `scripts/recorrido-renovaciones.mjs` (detalle en `docs/pruebas-periodos.md`).
 - **Reversión**: `supabase/rollback/20261101000019_vencimientos_cursos_down.sql`. Se niega si ya hay duraciones, condiciones o vencimientos.
 - **E2E** (`scripts/recorrido-vencimientos.mjs`):
   - duración en el panel; ficha pública;
@@ -59,9 +60,10 @@ Vigente desde la migración 0019 (Jornada autónoma, 01/11/2026). **Implementado
   - vencimiento con curso y material en 404 y certificado disponible;
   - lista de alumnos y celular.
 
-## Decisiones pendientes de la maestra
+## Decisiones
 
-- **Recompra o renovación** después de vencer. Hoy `crear_orden` responde `ya_tiene_acceso` y no toca el acceso anterior.
-- **Vencimiento de las concesiones** (becas, cortesías de cursos). Hoy no vencen.
-- **Aviso previo al vencimiento** (por ejemplo, 15 días antes). Requiere el servicio de correo de la Fase 6.
-- **Unidad de la duración comercial**: se usaron meses porque la regla habla de «cinco meses adicionales». Si la maestra prefiere semanas, hay que cambiarlo antes de vender.
+- **Decidido (01/11/2026):**
+  - La duración comercial se expresa en meses, más cinco meses adicionales, contados desde la confirmación del pago. Ejemplo: un curso de 2 meses da 7 meses de acceso.
+  - La recompra de un curso vencido abre un período nuevo sin borrar historia (0024).
+  - Las becas tienen duración configurable (0024).
+- **Pendiente de la maestra:** el aviso previo al vencimiento (por ejemplo, 15 días antes). Requiere el servicio de correo de la Fase 6.

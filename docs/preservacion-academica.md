@@ -87,6 +87,17 @@ Además:
 - Los accesos a grabaciones guardan las condiciones con que se otorgaron; cambiarlas después o dejar de vender la grabación no modifica accesos existentes. Al vencer, el acceso deja de valer, pero no se borra ningún archivo ni registro.
 - Nada de esto toca avances, evaluaciones, certificados ni versiones de cursos.
 
+## Renovaciones, becas y reembolsos (migración 0024)
+
+La inscripción académica (`accesos_curso`: versión, avance, intentos, resultados y certificados) es una por persona y curso, y no se reinicia. Los derechos de acceso se guardan aparte, en períodos (`periodos_acceso`).
+
+- **Renovar** un curso vencido agrega un período. No cambia la versión, no borra ni reinicia avances o intentos, no da intentos nuevos y no emite otro certificado (uno por versión, idempotente). Para pasar a la versión vigente se usa el cambio voluntario de versión, con sus confirmaciones. La base exige que el acceso esté vigente para ese cambio.
+- **Un reembolso o contracargo** revoca solo el período de esa compra. Otras compras, becas, avances, resultados y certificados no se tocan. Si no queda ningún período activo, la inscripción queda revocada (como antes) pero conserva su historial: una compra o beca posterior la reactiva, con su misma versión.
+- **Una beca** agrega un período con las fechas que elige la admin. Revocarla o que termine no borra certificados.
+- **Los períodos no se reescriben**: solo pasan de activo a revocado, una vez y con motivo (`periodo_inmutable`).
+- **Las compras y concesiones anteriores** conservan sus condiciones: cada acceso existente recibió un período histórico con sus mismas fechas, sin vencimientos retroactivos.
+- **Con el acceso vencido** se pueden consultar y descargar los certificados, y obtener el de quien cumplió todo antes de vencer. La verificación pública sigue igual.
+
 ## Migraciones 0014 a 0017 — solo en entornos de prueba
 
 **Ninguna se aplicó a una base real ni a producción** y no está autorizado hacerlo. Antes de una ejecución real se presentará: identificación exacta del entorno, respaldo verificable, plan de ejecución, impacto esperado, procedimiento de recuperación, pruebas posteriores y riesgos de reversión, y se pedirá autorización específica.

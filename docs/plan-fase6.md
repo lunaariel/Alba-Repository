@@ -1,5 +1,7 @@
 # Fase 6: seguridad previa, migraciones y plan por dependencias
 
+> **Actualización del 01/11/2026:** la titular decidió lanzar primero los cursos y después los talleres. Las etapas 8 (Zoom y Meet) y 9 (grabaciones) pasan a la segunda etapa. El orden vigente está en `docs/plan-lanzamiento-cursos.md`. Los defectos D1 a D7 y el bloqueante S3 quedaron resueltos en la migración 0024 (local y CI).
+
 Fecha: 01/11/2026. **Plan para aprobar. No se inició ninguna integración externa.**
 
 ## 1. Estado de seguridad antes del lanzamiento

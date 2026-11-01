@@ -1,5 +1,7 @@
 # Auditoría de la rama `desarrollo/jornada-autonoma` frente a `main`
 
+> **Actualización del 01/11/2026:** D1 a D7 quedaron corregidos en la migración 0024 y en el campus y el panel, con las pruebas de `docs/pruebas-periodos.md`. Siguen pendientes D8 a D15.
+
 Fecha: 01/11/2026. Rama en `6336122`; `main` en `c11a247`. Auditoría de código, base de datos y pruebas.
 
 **Se basa en:**

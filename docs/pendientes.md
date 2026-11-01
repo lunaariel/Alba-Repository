@@ -152,6 +152,27 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 | Facturación según la jurisdicción comercial (FEL en Guatemala) | Solo recibo comercial no fiscal |
 | Videoconferencias automáticas (Zoom o Meet) | Adaptador manual |
 
+## Correcciones D1–D7 y períodos de acceso (01/11/2026 · migración 0024)
+
+**Implementado y probado solo en local y en CI**, con pagos simulados. No se aplicó en ninguna base real y no hay pasarela conectada.
+
+| Pendiente | Estado | Qué falta | Cuándo |
+| --- | --- | --- | --- |
+| Botón de compra o renovación en el sitio | El campus muestra la oferta vigente; con las ventas cerradas dice «Las compras abren pronto» | Flujo de compra con la pasarela elegida | Fase 6, etapa 5 |
+| Reembolsos parciales | Se registran como incidencia; el acceso se mantiene | Regla de la maestra: cuándo un reembolso parcial revoca | Política de reembolsos |
+| Período revocado con otro encadenado después | Incidencia `revisar_periodos`. El vencimiento derivado puede dar más días que el período siguiente | Herramienta de ajuste de fechas para la admin, si hiciera falta | A definir |
+| Becas con inicio futuro sin acceso vigente | Se rechazan (`inicio_futuro`) para evitar fechas ambiguas | Programar becas a futuro, si la maestra lo necesita | A definir |
+| Intentos adicionales de evaluación | No existe forma de otorgarlos; la renovación no los da | Regla académica de la maestra | A definir |
+| Pasarela real: verificación de avisos y eventos de reembolso | Solo simulador | Recurrente no documenta públicamente los eventos de reembolso o contracargo ni cómo verificar la firma: hay que obtenerlo por escrito antes de elegir | Antes de la Fase 6, etapa 5 |
+| Migración 0024 en una base real | Ensayada con datos históricos representativos, conciliación en cero y reversión exacta | Autorización específica; procedimiento en `docs/estrategia-migracion.md` | Cuando la titular lo autorice |
+
+## Talleres: lanzamiento posterior (01/11/2026)
+
+| Pendiente | Estado | Qué falta |
+| --- | --- | --- |
+| Talleres en el sitio | Ocultos al público y sin inscripciones nuevas (`talleres_publicos = false`). Módulo, datos y pruebas conservados | Autorización del lanzamiento de talleres; luego, activar el interruptor (hoy se activa solo por script, con registro de actividad) |
+| Licencia de videoconferencia | No contratada ni incluida en el presupuesto de lanzamiento | Decidir al lanzar los talleres |
+
 ## Planes presentados y en espera de aprobación (30/10/2026)
 
 - Versionado académico: **implementado** (31/10/2026, migraciones 0014 y 0015), aprobado condicionalmente por la titular. Vista previa de borradores y duplicación de cursos: aprobadas, sin implementar, como bloque aparte.
@@ -160,4 +181,4 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 
 ## Decisiones de negocio abiertas
 
-Pasarela de pago para Guatemala · certificador FEL · política de reembolsos · dominio y hosting · fotos y biografía reales de la maestra · presupuesto.
+Pasarela de pago (Recurrente o Lemon Squeezy, sin elegir) · certificador FEL y condición tributaria (contador) · política de reembolsos · nombre comercial y dominio (en estudio; «Albor» es nombre de trabajo) · hosting y presupuesto (A o B, sin aprobar) · fotos y biografía reales de la maestra.

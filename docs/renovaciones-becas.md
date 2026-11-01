@@ -1,93 +1,104 @@
-# Renovaciones de cursos vencidos y becas: modelo propuesto
+# Renovaciones, becas y reembolsos por compra: períodos de acceso
 
-Fecha: 01/11/2026. **Propuesta para aprobar; no está implementada.**
+Fecha: 01/11/2026. **Implementado en la migración 0024 y probado en local y en CI con pagos simulados.**
 
-Parte de las decisiones ya tomadas por la titular:
+- El modelo está aprobado por la titular.
+- No se aplicó en ninguna base real y no hay pasarela conectada.
+- Las pruebas se detallan en `docs/pruebas-periodos.md`.
 
-- una nueva compra abre un período nuevo y no borra historia;
-- la versión académica no cambia;
-- las becas tienen duración configurable;
-- no hay sistema paralelo.
+## 1. Modelo
 
-## 1. Idea central: un acceso, varios períodos
+| Parte | Tabla | Qué guarda |
+| --- | --- | --- |
+| **Inscripción académica** | `accesos_curso` (una activa por persona y curso) | Alumno, curso, versión académica. De ella dependen avances, intentos, resultados y certificados |
+| **Períodos de acceso** | `periodos_acceso` (nueva) | Para cada período:<br>• origen: compra, beca o concesión;<br>• `item_orden_id` (compras);<br>• inicio y vencimiento (nulo solo si se otorgó «sin vencimiento»);<br>• condiciones congeladas;<br>• precio pagado;<br>• versión al otorgar;<br>• motivo, responsable y quién otorgó;<br>• estado (activo o revocado), con fecha, motivo y responsable de la revocación;<br>• marca de período histórico |
 
-Hoy `accesos_curso` mezcla dos cosas:
+**Vencimiento del acceso.** `accesos_curso.vence_en` es el fin del último período activo, o nulo si alguno es sin vencimiento.
 
-- el **vínculo académico** de la persona con el curso: versión, progreso, intentos y certificado;
-- el **derecho a entrar**: inicio, vencimiento y origen.
+- Lo escribe una sola función (`recalcular_vencimiento_acceso`). Por eso `tiene_acceso`, `version_de`, RLS y el campus siguen funcionando sin cambios.
+- Si no queda ningún período activo, la inscripción pasa a «revocada», como antes del cambio. Su historial se conserva y una compra o beca posterior la reactiva, con la misma versión.
 
-El índice único `accesos_unico_activo` permite una sola fila activa por persona y curso. Por eso la recompra choca (D1 a D3 de la auditoría).
+**Único camino para dar derechos: `agregar_periodo`.**
 
-**El modelo propuesto separa las dos cosas:**
+- Serializa por persona y curso, con un bloqueo de transacción.
+- Reutiliza la inscripción activa, o la última revocada. Solo crea una nueva si nunca existió.
+- Registra el período en la auditoría.
 
-- **`accesos_curso` sigue siendo el ancla académica.** Una fila por persona y curso, con `version_id`, progreso, intentos y certificados que cuelgan de ella. La recompra no la duplica ni la reinicia.
-- **Nueva tabla `periodos_acceso`.** Cada período es un derecho a entrar durante un intervalo, con su propio origen. Columnas:
-  - `id`, `acceso_id`;
-  - `origen`: `compra`, `beca`, `cortesia` o `historico`;
-  - `item_orden_id` (compras);
-  - `inicia_en`, `vence_en` (nulo solo si se autorizó «sin vencimiento»);
-  - `condiciones` (jsonb congelado: duración comercial, meses adicionales, total, regla);
-  - `precio_pagado` y `moneda` (compras);
-  - `version_id` vigente al abrirlo (referencia, no la cambia);
-  - `motivo`, `responsable`;
-  - `estado`: `vigente`, `revocado` o `anulado`;
-  - `revocado_en`, `revocado_motivo`;
-  - `creado_en`.
-  - Inmutable salvo `estado` y los campos de revocación, con el mismo patrón de disparadores del resto del sistema.
-- **`accesos_curso.vence_en` pasa a ser un valor derivado:** el fin del último período vigente, o nulo si hay uno sin vencimiento. Lo recalcula una única función controlada (`recalcular_vencimiento_acceso`), que usa `albor.ajuste_vencimiento`. Así `tiene_acceso`, `version_de` y las políticas actuales siguen funcionando sin cambios.
-- **Migración de datos:** cada acceso existente recibe un período `historico` con sus mismos `inicia_en`, `vence_en` y `condiciones`. No cambia ninguna fecha. Las cortesías y accesos anteriores conservan sus condiciones originales (sin vencimiento).
+**Inserciones directas.** Cualquier inserción directa en `accesos_curso` (datos de prueba o migraciones anteriores) recibe su período automáticamente.
 
-## 2. Renovación (nueva compra de un curso vencido)
+**Inmutabilidad.** Un período solo pasa de activo a revocado, una vez y con motivo (`periodo_inmutable`).
 
-| Paso | Regla |
+**Conciliación.** `conciliar_periodos()` lista los accesos cuyo estado o vencimiento no coincide con sus períodos. Debe devolver cero filas. La migración se niega a terminar si no da cero.
+
+## 2. Compra y renovación (D1, D2)
+
+| Situación | Comportamiento |
 | --- | --- |
-| Crear la orden | `crear_orden` permite comprar si **no hay período vigente** (acceso vencido o inexistente). Si hay uno vigente, sigue respondiendo `ya_tiene_acceso` |
-| Orden pendiente desactualizada | Si cambiaron el precio o las condiciones del curso, la orden pendiente se **anula** y se crea una nueva con los valores vigentes. Las órdenes pendientes vencen a las 24 h. Corrige D2 |
-| Ítem de la orden | Congela, como hoy: precio, condiciones aceptadas (duración comercial vigente + 5 meses), curso y versión de referencia |
-| Pago confirmado | `procesar_evento_pago` crea el período: inicio = fecha de confirmación; vencimiento = `calcular_vencimiento(inicio, total_meses)`. Si no existe la fila de acceso, la crea (primera compra) |
-| Carrera: ya había un período vigente al confirmar el pago | No se pierde el pago (corrige D1). El período nuevo **se encadena** al final del vigente y se abre una incidencia para que la admin decida (mantener o reembolsar). No hay dos accesos contradictorios: hay un solo acceso con dos períodos consecutivos |
-| Reembolso o contracargo | Revoca **solo el período** de esa compra y recalcula el vencimiento (corrige D4). Lo académico queda intacto |
-| Auditoría | Cada período creado, revocado o encadenado queda en `auditoria`, con la orden y el responsable |
+| Acceso vigente | `crear_orden` responde `ya_tiene_acceso` |
+| Acceso vencido o revocado | Se puede comprar de nuevo. `oferta_curso` muestra antes de confirmar:<br>• el precio vigente;<br>• la duración, los 5 meses adicionales y el total;<br>• el vencimiento que tendría si el pago se confirmara hoy. |
+| Orden pendiente | Se reutiliza (doble clic, recarga) solo si sigue ofreciendo exactamente lo mismo. Vence, con registro y motivo, y se crea otra con la oferta vigente si:<br>• cambió el precio;<br>• cambiaron la duración o los meses adicionales;<br>• cambió el cupón;<br>• no tiene condiciones;<br>• pasaron 24 h. |
+| Pago confirmado | Un período por ítem (índice único). Empieza al confirmarse el pago y dura lo que se aceptó. El mismo aviso dos veces → `duplicado`. Otro aviso del mismo pago → `ignorado: ya_aprobada`, sin duplicar nada |
+| Pago tardío de una orden vieja | Respeta el precio y las condiciones aceptados. Un importe distinto del autorizado se rechaza (`monto_no_coincide`) |
+| Pago con un período vigente (carrera) | El período nuevo **se encadena**: empieza cuando termina el vigente. No acorta ni duplica derechos. Queda la incidencia `compra_con_acceso_vigente` para que la admin decida si lo mantiene o lo reembolsa |
+| Falla al otorgar | El pago queda registrado y la orden aprobada. No hay acceso a medias. Queda la incidencia `otorgamiento_fallido` con el error |
+| Recuperación de la falla | Hay dos formas:<br>• un nuevo aviso de la pasarela reintenta solo;<br>• la admin pulsa «Reintentar otorgamiento» en Incidencias.<br>El reintento es idempotente. |
 
-**Qué no cambia con la renovación:**
+**Lo que la renovación no cambia:**
 
-- **Versión académica:** la misma. Para pasar a la vigente se usa el cambio voluntario existente (vista previa, confirmación y auditoría).
-- **Lecciones completadas, intentos y resultados:** se conservan. Al volver, la alumna sigue donde estaba.
-- **Intentos de evaluación:** **no se reinician**. Si agotó los intentos, la renovación no da intentos nuevos. Hoy tampoco existe una función para que la admin habilite un intento adicional. Que una renovación (o la admin) dé intentos nuevos sería una regla académica nueva: **no se implementa sin decisión**.
-- **Certificados:** uno por versión, idempotente. Renovar no emite otro. Si cambia de versión y aprueba la nueva, recibe el certificado de esa versión, como hoy. Una aprobación no se traslada a una evaluación sustancialmente distinta: el cambio de versión ya lo controla.
-- **Compras anteriores:** cada una conserva su orden, su ítem, sus condiciones y su período.
+- la versión académica;
+- los avances, intentos y resultados (no se reinician);
+- los intentos de evaluación: no da intentos nuevos;
+- los certificados: no emite otro;
+- el vínculo con las compras anteriores.
 
-**Interfaz prevista (Fase 6, etapa 6):**
+## 3. Reembolsos (D4)
 
-- en «Mis cursos», un curso vencido muestra «Renovar acceso», con el precio vigente y el nuevo vencimiento calculado antes de pagar;
-- el panel de alumnos muestra la línea de períodos de cada acceso.
-
-## 3. Becas y accesos gratuitos
-
-Usan **la misma tabla de períodos**: no hay sistema paralelo.
-
-| Regla | Implementación propuesta |
+| Caso | Comportamiento |
 | --- | --- |
-| Solo la admin las otorga | Función `otorgar_beca(p_perfil, p_curso, p_motivo, p_inicio, p_fin, p_sin_vencimiento, p_responsable)`. Solo la ejecuta una sesión admin con nivel `aal2` cuando el MFA esté activo. Reemplaza el uso directo de `conceder_acceso` y corrige D3 |
-| Duración configurable | Inicio y fin elegidos por la admin. **No** se aplica la fórmula comercial (+5 meses) |
-| «Sin vencimiento» | Solo con una marca explícita y un motivo. Queda en la auditoría |
-| Motivo y responsable | Obligatorios |
-| Historia académica | No se toca: el período se agrega al acceso existente, o crea el acceso si no había |
-| No es una compra | No crea orden, ni ítem, ni recibo, ni factura. Si en el futuro hiciera falta un comprobante de una operación sin pago, se decidirá con el contador |
-| Fin de la beca | El contenido se protege como en cualquier vencimiento. **Los certificados se conservan** |
-| Revocar una beca | Función admin con motivo; revoca solo ese período |
-| Accesos gratuitos anteriores | Quedan como períodos `historico` sin vencimiento, con sus condiciones originales |
-| Beca sobre un acceso con período vigente | Se encadena después del vigente, o la admin elige un inicio inmediato que se superpone. El vencimiento derivado es el más lejano; nunca hay ambigüedad |
+| Reembolso total o contracargo confirmado por el proveedor | Revoca solo los períodos de esa orden. Otras compras, becas, avances, resultados y certificados no se tocan |
+| Reembolso parcial confirmado | No revoca. Queda la incidencia `reembolso_parcial` |
+| Período revocado con otro encadenado después | Queda la incidencia `revisar_periodos` |
 
-## 4. Esfuerzo y riesgos
+Ningún reembolso se declara ejecutado sin la confirmación del proveedor.
 
-- **Esfuerzo:**
-  - una migración: tabla, conciliación de datos y funciones;
-  - ajustes en `crear_orden`, `procesar_evento_pago`, el reembolso y `conceder_acceso`;
-  - la pantalla de becas en Alumnos;
-  - pruebas de base y E2E.
-  - Se estima en una jornada.
-- **Riesgo principal:** que `accesos_curso.vence_en` y los períodos se desincronicen. Para evitarlo, solo una función los escribe y una prueba de conciliación compara el valor guardado con el calculado.
-- **Lo que no se decide aquí:**
-  - si una renovación da intentos nuevos (hoy no);
-  - si hay precio de renovación distinto del precio de lista (hoy no, porque sería una política comercial nueva).
+## 4. Órdenes antiguas (D5)
+
+- **Pendientes sin condiciones**, anteriores a 0019: la migración las clasifica. Vencen y queda una incidencia `orden_sin_condiciones` con su detalle. No se inventan condiciones.
+- **Pago de una orden sin condiciones**: no da acceso, tampoco indefinido. Queda la incidencia `pago_sin_condiciones`.
+- **Inserción directa** de un acceso de compra sin condiciones: la base la rechaza (`compra_sin_condiciones`).
+- **Accesos ya otorgados con la regla `compra_sin_condiciones`**: conservan lo que se aceptó y no se modifican.
+
+## 5. Becas y accesos gratuitos (D3)
+
+- **Quién:** solo la admin (`otorgar_beca`, con `es_admin()`), desde *Cursos → Alumnos → Otorgar una beca*. La persona se busca por su correo con `buscar_perfil_por_correo`, que solo puede usar la admin.
+- **Qué registra:** beneficiaria, curso, inicio, fin o «sin vencimiento», motivo (al menos 10 caracteres), responsable, admin que la otorgó, fecha y auditoría.
+- **Inicio:**
+  - vacío = ahora;
+  - una fecha pasada se admite;
+  - una fecha futura solo si continúa un acceso vigente sin dejar huecos. Si no, `inicio_futuro`, para evitar fechas ambiguas.
+- **Fin o «sin vencimiento»:** uno de los dos, de forma expresa (`fin_o_sin_vencimiento`). Un fin pasado se rechaza. La fórmula comercial no se aplica.
+- **Sin compra:** no crea orden, pago ni recibo.
+- **Historia académica:** no se toca. Si la persona ya tuvo el curso, usa la misma inscripción y la misma versión.
+- **Revocar:** con motivo (`revocar_beca`). Una compra no se revoca así: solo con un reembolso confirmado (`compra_solo_con_reembolso`). Al terminar o revocarse una beca, los certificados se conservan.
+- **Concesiones anteriores:** conservan su regla (`concesion_sin_vencimiento`). `conceder_acceso` (servidor) ahora funciona también sobre un acceso vencido.
+
+## 6. Campus y panel
+
+- **Campus, curso vencido:**
+  - certificados para descargar;
+  - «Obtener mi certificado», para quien cumplió todo antes de vencer;
+  - el bloque «Renovar el acceso», con precio, condiciones y vencimiento estimado. Con las ventas cerradas dice «Las compras abren pronto», sin botón de compra.
+- **Panel, Alumnos del curso:**
+  - los períodos de cada persona: origen, fechas, precio, estado, motivo y responsable;
+  - el formulario de beca;
+  - «Revocar» en becas y concesiones.
+- **Panel, Incidencias:** los tipos nuevos y «Reintentar otorgamiento».
+- **Panel, Ventas:** el enlace a Incidencias.
+
+## 7. Pendiente (no implementado)
+
+- Botón de compra o renovación con la pasarela real (Fase 6).
+- Regla para reembolsos parciales y una herramienta de ajuste de fechas para la admin.
+- Programar becas a futuro sin un acceso vigente.
+- Intentos adicionales de evaluación: no hay regla académica.
+- Aviso previo al vencimiento (requiere correo).
