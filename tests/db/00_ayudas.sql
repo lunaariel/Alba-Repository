@@ -17,7 +17,10 @@ insert into auth.users (id, email, raw_user_meta_data) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'a@prueba.test', '{"nombre_completo": "Alumna A", "confirma_mayoria_edad": true}'),
   ('bbbbbbbb-0000-0000-0000-000000000002', 'b@prueba.test', '{"nombre_completo": "Alumno B", "confirma_mayoria_edad": true, "acepta_promociones": true}'),
   ('adadadad-0000-0000-0000-000000000003', 'maestra@prueba.test', '{"nombre_completo": "Maestra", "confirma_mayoria_edad": true}');
+-- Responsable del alta (migración 0023); en bases anteriores la variable se ignora.
+select set_config('albor.responsable', 'Datos fijos de las pruebas', false);
 insert into public.roles_usuario (perfil_id, rol) values ('adadadad-0000-0000-0000-000000000003', 'admin');
+select set_config('albor.responsable', '', false);
 
 -- Curso con 1 módulo, 2 lecciones, 1 PDF y evaluación de 2 preguntas.
 insert into public.cursos (id, slug, titulo, precio_centavos) values
@@ -48,6 +51,22 @@ insert into public.talleres (id, slug, titulo, inicia_en, termina_en, cupo, prec
    now() + interval '7 days', now() + interval '7 days 1 hour', 1, 1500, 'publicado');
 insert into public.reuniones (taller_id, proveedor, enlace_participante, enlace_anfitrion) values
   ('7a000000-0000-0000-0000-000000000001', 'manual', 'https://reunion.test/participante', 'https://reunion.test/anfitrion');
+
+-- Duración comercial del curso (migración 0019): sin ella no se vende. Condicional, porque algunos
+-- ensayos de migración cargan estas ayudas sobre una base anterior.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'cursos' and column_name = 'duracion_comercial_meses') then
+    update public.cursos set duracion_comercial_meses = 3 where id = 'c0000000-0000-0000-0000-000000000001';
+  end if;
+end $$;
+
+-- Talleres ofrecidos al público (migración 0024: apagados por defecto hasta su lanzamiento). Las pruebas
+-- de talleres parten de un sitio con talleres abiertos; 99i prueba el estado apagado.
+do $$ begin
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'configuracion_academia' and column_name = 'talleres_publicos') then
+    update public.configuracion_academia set talleres_publicos = true;
+  end if;
+end $$;
 
 -- A compra el curso (vía las funciones del servidor). B no tiene acceso.
 do $$

@@ -2,7 +2,7 @@ name: Verificar
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'desarrollo/**']
   pull_request:
 
 jobs:
@@ -102,6 +102,16 @@ jobs:
           node scripts/recorrido-cursos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- talleres en el panel, el sitio y el campus" | tee -a capturas/informe.txt
           PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789 node scripts/recorrido-talleres.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- modalidad de evaluación: formativa y sumativa" | tee -a capturas/informe.txt
+          (set -a; . ./supabase.env; set +a; node scripts/recorrido-evaluaciones.mjs) 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- vencimientos de cursos" | tee -a capturas/informe.txt
+          node scripts/recorrido-vencimientos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- períodos de acceso: renovación, certificado vencido, becas y talleres apagados" | tee -a capturas/informe.txt
+          (set -a; . ./supabase.env; set +a; node scripts/recorrido-renovaciones.mjs) 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- panel de cursos: duplicar, vista previa, orden, revisiones y bloqueos" | tee -a capturas/informe.txt
+          node scripts/recorrido-panel-cursos.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- perfil y presentación de la maestra" | tee -a capturas/informe.txt
+          (set -a; . ./supabase.env; set +a; node scripts/recorrido-perfil.mjs) 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- acciones protegidas con la sesión de la alumna" | tee -a capturas/informe.txt
           node scripts/acciones-protegidas.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- acciones sensibles: alumna, visitante, API y almacenamiento" | tee -a capturas/informe.txt
@@ -114,7 +124,9 @@ jobs:
         if: always()
         run: |
           mkdir -p /tmp/salida && cp -r capturas/. /tmp/salida/ 2>/dev/null || true
-          cd /tmp/salida && git init -q && git checkout -q -b capturas
+          # main publica en «capturas»; las ramas de desarrollo, en «capturas-<rama>» (no pisan las de main).
+          destino=capturas; [ "${GITHUB_REF_NAME}" != main ] && destino="capturas-${GITHUB_REF_NAME//\//-}"
+          cd /tmp/salida && git init -q && git checkout -q -b "$destino"
           git config user.name "verificacion-albor" && git config user.email "verificacion@albor.invalid"
           git add -A && git commit -qm "Capturas de ${GITHUB_SHA::7}"
-          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" capturas
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$destino"

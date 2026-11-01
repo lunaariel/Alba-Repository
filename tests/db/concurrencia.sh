@@ -105,3 +105,67 @@ else
   echo "FALLA      concurrencia de respuestas: éxitos=$exitos respuestas=$respuestas"
   exit 1
 fi
+
+# Períodos de acceso (0024): dos pagos confirmados a la vez del mismo curso para la misma persona (una orden
+# vieja con su precio aceptado y la nueva). Uno otorga y el otro se encadena: una sola inscripción académica,
+# dos períodos contiguos, sin incidencias de falla y una incidencia para que la admin decida.
+Z='f1f1f1f1-0000-0000-0000-000000000001'
+C='c0000000-0000-0000-0000-000000000001'
+"${PSQL[@]}" -c "insert into auth.users (id, email, raw_user_meta_data) values ('$Z', 'periodos-conc@prueba.test', '{\"nombre_completo\": \"Concurrente\", \"confirma_mayoria_edad\": true}')" >/dev/null
+OA=$("${PSQL[@]}" -c "select public.crear_orden('$Z', 'curso', '$C')")
+"${PSQL[@]}" -c "update public.cursos set precio_centavos = 5900 where id = '$C'" >/dev/null
+OB=$("${PSQL[@]}" -c "select public.crear_orden('$Z', 'curso', '$C')")
+( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-a', 'pago', '{}', '$OA', 'conc-a', 'aprobado', 4900); select pg_sleep(1.5); commit;" > /tmp/albor_pa 2>&1 ) &
+sleep 0.3
+( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-b', 'pago', '{}', '$OB', 'conc-b', 'aprobado', 5900); commit;" > /tmp/albor_pb 2>&1 ) &
+wait
+"${PSQL[@]}" -c "update public.cursos set precio_centavos = 4900 where id = '$C'" >/dev/null
+filas=$("${PSQL[@]}" -c "select count(*) from public.accesos_curso where perfil_id = '$Z'")
+periodos=$("${PSQL[@]}" -c "select count(*) from public.periodos_acceso where perfil_id = '$Z' and estado = 'activo'")
+contiguos=$("${PSQL[@]}" -c "select count(*) from public.periodos_acceso a join public.periodos_acceso b on b.perfil_id = a.perfil_id and b.id <> a.id and b.inicia_en = a.vence_en where a.perfil_id = '$Z'")
+fallidas=$("${PSQL[@]}" -c "select count(*) from public.incidencias where perfil_id = '$Z' and tipo = 'otorgamiento_fallido'")
+avisos=$("${PSQL[@]}" -c "select count(*) from public.incidencias where perfil_id = '$Z' and tipo = 'compra_con_acceso_vigente'")
+concilia=$("${PSQL[@]}" -c "select count(*) from public.conciliar_periodos()")
+if [ "$filas" = "1" ] && [ "$periodos" = "2" ] && [ "$contiguos" = "1" ] && [ "$fallidas" = "0" ] && [ "$avisos" = "1" ] && [ "$concilia" = "0" ]; then
+  echo "ok         concurrencia: dos pagos simultáneos del mismo curso, un acceso y dos períodos encadenados"
+else
+  echo "FALLA      concurrencia de períodos: filas=$filas períodos=$periodos contiguos=$contiguos fallidas=$fallidas avisos=$avisos concilia=$concilia"
+  cat /tmp/albor_pa /tmp/albor_pb; exit 1
+fi
+
+# El mismo aviso de pago procesado dos veces a la vez: uno procesa y el otro se reconoce como duplicado.
+Z2='f1f1f1f1-0000-0000-0000-000000000002'
+"${PSQL[@]}" -c "insert into auth.users (id, email, raw_user_meta_data) values ('$Z2', 'periodos-conc2@prueba.test', '{\"nombre_completo\": \"Concurrente 2\", \"confirma_mayoria_edad\": true}')" >/dev/null
+OC=$("${PSQL[@]}" -c "select public.crear_orden('$Z2', 'curso', '$C')")
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-mismo', 'pago', '{}', '$OC', 'conc-mismo', 'aprobado', 4900); select pg_sleep(0.8); commit;" > /tmp/albor_mismo_$n 2>&1 ) &
+done
+wait
+duplicados=$(cat /tmp/albor_mismo_1 /tmp/albor_mismo_2 | grep -c '^duplicado')
+periodos=$("${PSQL[@]}" -c "select count(*) from public.periodos_acceso where perfil_id = '$Z2'")
+if [ "$duplicados" = "1" ] && [ "$periodos" = "1" ]; then
+  echo "ok         concurrencia: el mismo aviso dos veces a la vez, un solo período"
+else
+  echo "FALLA      concurrencia del mismo aviso: duplicados=$duplicados períodos=$periodos"; cat /tmp/albor_mismo_1 /tmp/albor_mismo_2; exit 1
+fi
+
+# Reembolsos parciales (0025): el mismo aviso dos veces a la vez se registra una sola vez; dos avisos distintos
+# a la vez se registran los dos, acumulados en una sola incidencia, sin tocar el acceso.
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-parcial', 'reembolso', '{}', '$OC', 'conc-mismo', 'reembolsado', 1000); select pg_sleep(0.8); commit;" > /tmp/albor_parcial_$n 2>&1 ) &
+done
+wait
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select public.procesar_evento_pago('simulado', 'conc-parcial-$n', 'reembolso', '{}', '$OC', 'conc-mismo', 'reembolsado', 500); select pg_sleep(0.5); commit;" > /tmp/albor_parcial_d$n 2>&1 ) &
+done
+wait
+reembolsos=$("${PSQL[@]}" -c "select count(*) || ':' || sum(r.monto_centavos) from public.reembolsos r join public.pagos p on p.id = r.pago_id where p.id_externo = 'conc-mismo'")
+incid=$("${PSQL[@]}" -c "select count(*) || ':' || max((detalle ->> 'reembolsado_centavos')::int) from public.incidencias where tipo = 'reembolso_parcial' and orden_id = '$OC'")
+acceso=$("${PSQL[@]}" -c "select count(*) from public.periodos_acceso where perfil_id = '$Z2' and estado = 'activo'")
+pago=$("${PSQL[@]}" -c "select estado || ':' || monto_centavos from public.pagos where id_externo = 'conc-mismo'")
+if [ "$reembolsos" = "3:2000" ] && [ "$incid" = "1:2000" ] && [ "$acceso" = "1" ] && [ "$pago" = "aprobado:4900" ]; then
+  echo "ok         concurrencia: reembolsos parciales simultáneos, registrados una vez cada uno y sin tocar el acceso"
+else
+  echo "FALLA      concurrencia de reembolsos parciales: reembolsos=$reembolsos incidencia=$incid acceso=$acceso pago=$pago"
+  cat /tmp/albor_parcial_*; exit 1
+fi

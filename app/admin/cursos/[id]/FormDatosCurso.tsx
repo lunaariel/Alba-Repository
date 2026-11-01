@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { Aviso, BotonEnviar } from '@/ui/Formulario';
 import { AreaTexto, Entrada, Selector } from '@/ui/admin/campos';
 import { GuardiaCambios } from '@/ui/admin/GuardiaCambios';
@@ -10,6 +10,7 @@ import { guardarDatosCurso, type Estado } from '../acciones';
 interface Datos {
   id: string; titulo: string; slug: string; resumen: string; descripcion: string; requisitos: string; objetivos: string;
   publico: string[]; edadDesde: number; edadHasta: number; duracionHoras: string; precioCentavos: number; video: string; estado: string;
+  duracionComercialMeses: string;
 }
 
 const EDADES = [0, 1, 2, 3, 4, 5, 6].map((n) => ({ valor: String(n), texto: n === 1 ? '1 año' : `${n} años` }));
@@ -22,6 +23,8 @@ const PUBLICOS = [
 export function FormDatosCurso({ curso, alumnos }: { curso: Datos; alumnos: number }) {
   const [estado, accion] = useActionState<Estado, FormData>(guardarDatosCurso, undefined);
   const err = (c: string) => (estado?.campo === c ? estado.error : undefined);
+  const [meses, setMeses] = useState(curso.duracionComercialMeses);
+  const n = /^\d{1,2}$/.test(meses.trim()) ? Number(meses) : null;
   return (
     <form action={accion} className="flex max-w-[860px] flex-col gap-8">
       <GuardiaCambios />
@@ -55,14 +58,21 @@ export function FormDatosCurso({ curso, alumnos }: { curso: Datos; alumnos: numb
         <div className="grid gap-5 sm:grid-cols-3">
           <Selector nombre="edadDesde" etiqueta="Edad desde" opciones={EDADES} defaultValue={String(curso.edadDesde)} error={err('edadDesde')} />
           <Selector nombre="edadHasta" etiqueta="Edad hasta" opciones={EDADES} defaultValue={String(curso.edadHasta)} />
-          <Entrada nombre="duracionHoras" etiqueta="Duración (horas)" inputMode="decimal" defaultValue={curso.duracionHoras} error={err('duracionHoras')} />
+          <Entrada nombre="duracionHoras" etiqueta="Duración del contenido (horas)" inputMode="decimal" defaultValue={curso.duracionHoras} error={err('duracionHoras')} />
         </div>
       </fieldset>
 
       <fieldset className="m-0 flex flex-col gap-5 border-0 p-0">
-        <legend className="mb-1 font-display text-[22px] font-semibold">Precio y video</legend>
+        <legend className="mb-1 font-display text-[22px] font-semibold">Precio, acceso y video</legend>
         <Entrada nombre="precio" etiqueta="Precio en USD" inputMode="decimal" defaultValue={centavosATexto(curso.precioCentavos)} required error={err('precio')}
           ayuda={alumnos > 0 ? `Un precio nuevo vale solo para compras futuras: ${alumnos === 1 ? 'el alumno que ya lo tiene no se ve afectado' : `los ${alumnos} alumnos que ya lo tienen no se ven afectados`}; cada compra conserva su precio.` : 'Por ejemplo 49 o 49.50.'} />
+        <Entrada nombre="duracionComercial" etiqueta="Duración comercial del curso (meses)" inputMode="numeric" value={meses} onChange={(e) => setMeses(e.target.value)}
+          placeholder="Por ejemplo 3" error={err('duracionComercial')}
+          ayuda={<>
+            El acceso dura la duración comercial <b>más 5 meses adicionales</b>, contados desde la compra
+            {n ? <> : en total <b>{n + 5} meses</b>.</> : '.'} No es la suma de los minutos de las lecciones.
+            {' '}Sin este dato el curso no se puede vender. Un cambio vale solo para compras futuras: cada compra conserva sus condiciones.
+          </>} />
         <Entrada nombre="video" etiqueta="Video de presentación (id de Bunny, biblioteca pública)" defaultValue={curso.video} error={err('video')}
           ayuda="Opcional. Es el video que ve cualquiera en la ficha del curso. La subida desde el panel llega al conectar Bunny." />
       </fieldset>

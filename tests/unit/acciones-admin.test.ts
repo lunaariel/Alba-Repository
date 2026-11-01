@@ -30,3 +30,14 @@ test('toda acción exportada del panel empieza con exigirAdminAccion()', () => {
   }
   assert.ok(total >= 10, `se revisaron ${total} acciones`);
 });
+
+test('panel: cada página verifica el rol por sí misma (su contenido no viaja en el 404)', () => {
+  const paginas = (function recorrer(dir: string): string[] {
+    return readdirSync(dir).flatMap((n) => {
+      const p = join(dir, n);
+      return statSync(p).isDirectory() ? recorrer(p) : n === 'page.tsx' ? [p] : [];
+    });
+  })('app/admin');
+  const sinVerificar = paginas.filter((p) => !/exigirAdmin\(|cursoAdmin\(|tallerAdmin\(|listaCursos\(|registroActividad\(|listaTalleres\(|listaIncidencias\(|seguimientoCurso\(/.test(readFileSync(p, 'utf8')));
+  assert.deepEqual(sinVerificar, []);
+});

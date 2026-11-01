@@ -24,7 +24,7 @@ npm run dev                          # http://localhost:3000
 Para que una cuenta sea administradora, regístrese en el sitio y luego:
 
 ```bash
-psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v correo="'su@correo.com'" -f scripts/asignar-admin.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v correo="'su@correo.com'" -v responsable="'Su nombre'" -f scripts/asignar-admin.sql
 ```
 
 ## Verificar

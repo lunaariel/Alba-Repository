@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { miPerfil, misAvisos, misTalleres, type AvisoCampus, type TallerInscripto } from '@/datos/campus';
+import { configuracion } from '@/datos/publico';
 import { formatearHorario } from '@/dominio/talleres';
 import { Contenedor } from '@/ui/estructura';
 import { EncabezadoCampus } from '@/ui/campus';
@@ -12,7 +13,7 @@ export const metadata: Metadata = { title: 'Mis talleres' };
 
 type Props = { searchParams: Promise<{ aviso?: string }> };
 
-const DIA = 24 * 3600 * 1000;
+const HORA = 3600 * 1000;
 const fechaCorta = (d: Date, zona: string) => new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: zona }).format(d);
 
 const AVISOS_OK: Record<string, string> = {
@@ -25,7 +26,7 @@ const AVISOS_OK: Record<string, string> = {
 const AVISOS_ERROR: Record<string, string> = {
   error: 'No se pudo completar. Revise que haya marcado la confirmación e intente de nuevo.',
   inscripcion_paga: 'Las inscripciones pagas no se cancelan desde el campus. Escriba a la academia.',
-  fuera_de_plazo: 'Faltan menos de 24 horas para el taller: ya no se puede cancelar desde el campus.',
+  fuera_de_plazo: 'Ya pasó el plazo de cancelación de este taller: no se puede cancelar desde el campus.',
   sin_respuesta_pendiente: 'Esta reprogramación ya tiene una respuesta registrada.',
   taller_ya_empezo: 'El taller ya empezó: no se puede registrar la respuesta. Escriba a la academia.',
   inscripcion_sin_pago: 'Para una inscripción gratuita, elija «No puedo asistir».',
@@ -135,7 +136,7 @@ function Fila({ t, zona, pasado }: { t: TallerInscripto; zona: string; pasado: b
   const activa = t.inscripcion === 'confirmada' && t.estado === 'publicado';
   const pendiente = activa && t.respuesta === 'pendiente';
   const futuro = t.iniciaEn.getTime() > Date.now();
-  const cancelable = !t.paga && t.iniciaEn.getTime() - DIA > Date.now();
+  const cancelable = !t.paga && t.iniciaEn.getTime() - t.plazoHoras * HORA > Date.now();
   return (
     <li className="flex flex-wrap items-start gap-x-8 gap-y-4 rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6">
       <div className="min-w-0 flex-[1_1_320px]">
@@ -170,7 +171,7 @@ function Fila({ t, zona, pasado }: { t: TallerInscripto; zona: string; pasado: b
               </form>
             </details>
           ) : (
-            <p className="m-0 max-w-[300px] text-[15px] text-tinta-suave">Se puede cancelar hasta 24 horas antes. Si no puede asistir, escriba a la academia.</p>
+            <p className="m-0 max-w-[300px] text-[15px] text-tinta-suave">Se podía cancelar hasta {t.plazoHoras === 1 ? '1 hora' : `${t.plazoHoras} horas`} antes. Si no puede asistir, escriba a la academia.</p>
           ))}
         </div>
       )}
@@ -179,7 +180,7 @@ function Fila({ t, zona, pasado }: { t: TallerInscripto; zona: string; pasado: b
 }
 
 export default async function MisTalleres({ searchParams }: Props) {
-  const [talleres, avisos, perfil, { aviso }] = await Promise.all([misTalleres(), misAvisos(), miPerfil(), searchParams]);
+  const [talleres, avisos, perfil, { aviso }, config] = await Promise.all([misTalleres(), misAvisos(), miPerfil(), searchParams, configuracion()]);
   const ahora = Date.now();
   const proximos = talleres.filter((t) => t.terminaEn.getTime() >= ahora);
   const pasados = talleres.filter((t) => t.terminaEn.getTime() < ahora).reverse();
@@ -210,7 +211,9 @@ export default async function MisTalleres({ searchParams }: Props) {
         ) : (
           <div className="max-w-[640px] rounded-2xl bg-arena p-8">
             <p className="m-0 font-display text-2xl">No tiene talleres próximos.</p>
-            <div className="mt-4"><EnlaceAccion href="/talleres">Ver los talleres en vivo</EnlaceAccion></div>
+            {config.talleresPublicos
+              ? <div className="mt-4"><EnlaceAccion href="/talleres">Ver los talleres en vivo</EnlaceAccion></div>
+              : <p className="m-0 mt-2 text-[15px] text-tinta-suave">Los talleres en vivo se abrirán más adelante.</p>}
           </div>
         )}
         {pasados.length > 0 && (

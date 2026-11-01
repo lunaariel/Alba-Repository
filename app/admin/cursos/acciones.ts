@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { exigirAdminAccion } from '@/datos/sesion';
 import { clienteServicio, clienteSesion } from '@/datos/supabase';
 import { codigoError, mensajeError, precioACentavos, slugDesde, SLUG_VALIDO, UUID, volverSeguro } from '@/dominio/cursos-admin';
+import { instanteGuatemala } from '@/dominio/accesos';
 
 /**
  * Acciones del editor de cursos. Todas empiezan con exigirAdminAccion() y escriben con la sesión
@@ -71,12 +72,15 @@ export async function guardarDatosCurso(_: Estado, datos: FormData): Promise<Est
     edadHasta: z.coerce.number().int().min(0).max(6),
     duracionHoras: z.string().trim().refine((v) => v === '' || /^\d{1,3}([.,]\d)?$/.test(v), 'Escriba la duración en horas, por ejemplo 4 o 4.5.'),
     video: z.string().trim().refine((v) => v === '' || UUID.test(v), 'El id de video de Bunny tiene el formato 8-4-4-4-12 (letras y números).'),
+    duracionComercial: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) >= 1 && Number(v) <= 60),
+      'La duración comercial va de 1 a 60 meses (o vacía mientras no la defina).'),
   }).refine((d) => d.edadDesde <= d.edadHasta, { message: 'La edad "desde" no puede ser mayor que la edad "hasta".', path: ['edadDesde'] })
     .safeParse({
       id: datos.get('id'), titulo: datos.get('titulo'), slug: datos.get('slug'), resumen: datos.get('resumen') ?? '',
       descripcion: datos.get('descripcion') ?? '', requisitos: datos.get('requisitos') ?? '', objetivos: datos.get('objetivos') ?? '',
       publico: datos.getAll('publico'), edadDesde: datos.get('edadDesde'), edadHasta: datos.get('edadHasta'),
       duracionHoras: datos.get('duracionHoras') ?? '', video: datos.get('video') ?? '',
+      duracionComercial: datos.get('duracionComercial') ?? '',
     });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const precio = precioACentavos(String(datos.get('precio') ?? ''));
@@ -89,6 +93,7 @@ export async function guardarDatosCurso(_: Estado, datos: FormData): Promise<Est
     publico: d.publico, edad_desde_meses: d.edadDesde * 12, edad_hasta_meses: d.edadHasta * 12,
     duracion_minutos: d.duracionHoras ? Math.round(Number(d.duracionHoras.replace(',', '.')) * 60) || null : null,
     precio_centavos: precio, video_presentacion_id: d.video || null,
+    duracion_comercial_meses: d.duracionComercial ? Number(d.duracionComercial) : null,
   }).eq('id', d.id);
   if (error) return { error: mensajeError(error.message), campo: error.message.includes('slug') ? 'slug' : undefined };
   refrescar(d.id);
@@ -390,23 +395,29 @@ export async function guardarCriterios(_: Estado, datos: FormData): Promise<Esta
   await exigirAdminAccion();
   const r = z.object({
     curso: uuid,
+    modalidad: z.enum(['sumativa', 'formativa'], { errorMap: () => ({ message: 'Elija la forma de evaluar.' }) }),
     puntaje: z.coerce.number({ invalid_type_error: 'El puntaje mínimo va de 0 a 100.' }).int().min(0, 'El puntaje mínimo va de 0 a 100.').max(100, 'El puntaje mínimo va de 0 a 100.'),
     intentos: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) > 0), 'Los intentos van de 1 a 99, o vacío para no limitar.'),
     aprobado: texto(300).min(2, 'Escriba el mensaje para quien aprueba.'),
     desaprobado: texto(300).min(2, 'Escriba el mensaje para quien no aprueba.'),
   }).safeParse({
-    curso: datos.get('curso'), puntaje: datos.get('puntaje'), intentos: datos.get('intentos') ?? '',
+    curso: datos.get('curso'), modalidad: datos.get('modalidad') ?? 'sumativa', puntaje: datos.get('puntaje'), intentos: datos.get('intentos') ?? '',
     aprobado: datos.get('aprobado'), desaprobado: datos.get('desaprobado'),
   });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
+  // La sumativa no usa requisitos formativos (la base lo exige con una restricción).
+  const formativa = d.modalidad === 'formativa';
   const { error } = await (await clienteSesion()).from('evaluaciones').upsert({
     curso_id: d.curso, puntaje_minimo: d.puntaje, intentos_permitidos: d.intentos ? Number(d.intentos) : null,
-    mensaje_aprobado: d.aprobado, mensaje_desaprobado: d.desaprobado,
+    mensaje_aprobado: d.aprobado, mensaje_desaprobado: d.desaprobado, modalidad: d.modalidad,
+    requiere_actividades: formativa && datos.get('actividades') === 'si',
+    requiere_validacion: formativa && datos.get('validacion') === 'si',
+    con_certificado: !formativa || datos.get('certificado') === 'si',
   }, { onConflict: 'curso_id' });
   if (error) return { error: mensajeError(error.message) };
   refrescar(d.curso);
-  return { ok: 'Criterios guardados. Valen para los próximos intentos.' };
+  return { ok: formativa ? 'Configuración guardada.' : 'Criterios guardados. Valen para los próximos intentos.' };
 }
 
 const opcionesEsquema = z.array(z.object({
@@ -510,4 +521,126 @@ export async function bloquearContenido(datos: FormData) {
   if (error) ir(ruta, { error: codigoError(error.message) });
   refrescar();
   ir(ruta, { ok: r.data.bloquear === 'si' ? 'bloqueado' : 'desbloqueado' });
+}
+
+// ---------------------------------------------------------------- seguimiento formativo
+
+/** La maestra valida la finalización de una persona (modalidad formativa). La base exige admin y nota. */
+export async function validarFinalizacion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, perfil: uuid, nota: texto(1000) })
+    .safeParse({ curso: datos.get('curso'), perfil: datos.get('perfil'), nota: datos.get('nota') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
+  const { error } = await (await clienteSesion()).rpc('validar_finalizacion', { p_perfil: r.data.perfil, p_curso: r.data.curso, p_nota: r.data.nota });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'validada' });
+}
+
+/** Anula una validación hecha por error (solo si todavía no hay certificado de esa versión). */
+export async function anularValidacion(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, validacion: uuid, motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), validacion: datos.get('validacion'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
+  const { error } = await (await clienteSesion()).rpc('anular_validacion', { p_validacion: r.data.validacion, p_motivo: r.data.motivo });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'validacion_anulada' });
+}
+
+// ---------------------------------------------------------------- revisión: descartar
+
+/** Descarta una revisión favorable calculada y no aplicada. No cambia resultados; queda registrada con su motivo. */
+export async function descartarRevision(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, pregunta: uuid, revision: uuid, motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), pregunta: datos.get('pregunta'), revision: datos.get('revision'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/evaluacion/${r.data.pregunta}/revision`;
+  const { error } = await (await clienteSesion()).rpc('descartar_revision', { p_revision: r.data.revision, p_motivo: r.data.motivo });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'revision_descartada' });
+}
+
+// ---------------------------------------------------------------- duplicar
+
+/**
+ * Duplica un curso como borrador independiente (duplicar_curso) y copia sus PDF en el almacenamiento
+ * con rutas propias. Si un archivo no se puede copiar, ese material no queda en la copia y se avisa.
+ */
+export async function duplicarCurso(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, titulo: texto(140).min(3) }).safeParse({ id: datos.get('id'), titulo: datos.get('titulo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.id}/publicacion`;
+  const s = await clienteSesion();
+  const { data, error } = await s.rpc('duplicar_curso', { p_curso: r.data.id, p_titulo: r.data.titulo });
+  if (error || !data) ir(ruta, { error: codigoError(error?.message) });
+  const d = data as { curso: string; materiales: { id: string; origen: string; destino: string }[] };
+  const almacen = clienteServicio().storage.from('materiales');
+  let fallidos = 0;
+  for (const m of d.materiales) {
+    const { error: e } = await almacen.copy(m.origen, m.destino);
+    if (e) {
+      fallidos++;
+      await s.from('recursos_leccion').delete().eq('id', m.id);
+    }
+  }
+  refrescar(d.curso);
+  ir(`/admin/cursos/${d.curso}`, { ok: fallidos ? 'duplicado_sin_algunos_pdf' : 'duplicado' });
+}
+
+// ---------------------------------------------------------------- becas (períodos de acceso)
+
+/**
+ * Otorga una beca o acceso gratuito: duración elegida por la admin (no la fórmula comercial), con fin o
+ * «sin vencimiento» expreso, motivo y responsable. No crea compras ni recibos. La base exige el rol,
+ * valida las fechas y lo registra todo.
+ */
+export async function otorgarBeca(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({
+    curso: uuid, correo: z.string().trim().email().max(200), inicio: z.string().trim().max(10),
+    duracion: z.enum(['fecha', 'sin_vencimiento']), fin: z.string().trim().max(10),
+    motivo: texto(500), responsable: texto(120),
+  }).safeParse({
+    curso: datos.get('curso'), correo: datos.get('correo') ?? '', inicio: datos.get('inicio') ?? '', duracion: datos.get('duracion'),
+    fin: datos.get('fin') ?? '', motivo: datos.get('motivo') ?? '', responsable: datos.get('responsable') ?? '',
+  });
+  const curso = uuid.safeParse(datos.get('curso'));
+  if (!curso.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${curso.data}/alumnos`;
+  if (!r.success) ir(ruta, { error: r.error.issues[0]?.path[0] === 'correo' ? 'correo_invalido' : 'invalido' });
+  const inicio = r.data.inicio ? instanteGuatemala(r.data.inicio, 'inicio') : null;
+  const fin = r.data.duracion === 'fecha' ? instanteGuatemala(r.data.fin, 'fin') : null;
+  if ((r.data.inicio && !inicio) || (r.data.duracion === 'fecha' && !fin)) ir(ruta, { error: 'fecha_invalida' });
+  const s = await clienteSesion();
+  const { data: personas, error: e1 } = await s.rpc('buscar_perfil_por_correo', { p_correo: r.data.correo });
+  if (e1) ir(ruta, { error: codigoError(e1.message) });
+  const persona = (personas as { perfil_id: string }[] | null)?.[0];
+  if (!persona) ir(ruta, { error: 'persona_no_encontrada' });
+  const { error } = await s.rpc('otorgar_beca', {
+    p_perfil: persona.perfil_id, p_curso: r.data.curso, p_inicio: inicio, p_fin: fin,
+    p_sin_vencimiento: r.data.duracion === 'sin_vencimiento', p_motivo: r.data.motivo, p_responsable: r.data.responsable,
+  });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'beca_otorgada' });
+}
+
+/** Revoca una beca o concesión con motivo. Las compras se revocan solo con un reembolso confirmado. */
+export async function revocarBeca(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ curso: uuid, periodo: uuid, motivo: texto(500) })
+    .safeParse({ curso: datos.get('curso'), periodo: datos.get('periodo'), motivo: datos.get('motivo') ?? '' });
+  if (!r.success) redirect('/admin/cursos');
+  const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
+  const { error } = await (await clienteSesion()).rpc('revocar_beca', { p_periodo: r.data.periodo, p_motivo: r.data.motivo });
+  if (error) ir(ruta, { error: codigoError(error.message) });
+  refrescar(r.data.curso);
+  ir(ruta, { ok: 'beca_revocada' });
 }

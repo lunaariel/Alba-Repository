@@ -1,3 +1,5 @@
+import { CONFIG_PREDETERMINADA, faltaCriterioCertificacion, usaPreguntas, type ConfigEvaluacion } from './evaluacion';
+
 /**
  * Reglas y textos del editor de cursos. La base de datos tiene la última palabra
  * (validar_publicacion_curso, proteger_historial…); esto solo explica y valida antes de enviar.
@@ -32,18 +34,30 @@ export interface EstadoContenido {
   leccionesVigentes: number;
   preguntasVigentes: number;
   preguntasSinCorrecta: number;
+  /** Modalidad del borrador. Sin ella se asume la sumativa (como la base cuando no hay evaluación configurada). */
+  evaluacion?: Pick<ConfigEvaluacion, 'modalidad' | 'requiereActividades' | 'requiereValidacion' | 'conCertificado'>;
 }
 
 export interface Requisito { clave: string; texto: string; cumplido: boolean; donde: 'datos' | 'temario' | 'evaluacion' }
 
-/** La misma lista que exige la base para publicar (validar_publicacion_curso). */
+/** La misma lista que exige la base para publicar (faltantes_publicacion). */
 export function requisitosPublicacion(e: EstadoContenido): Requisito[] {
-  return [
+  const ev = e.evaluacion ?? { modalidad: 'sumativa', requiereActividades: false, requiereValidacion: false, conCertificado: true };
+  const r: Requisito[] = [
     { clave: 'precio', texto: 'Precio en USD mayor que cero', cumplido: e.precioCentavos > 0, donde: 'datos' },
     { clave: 'lecciones', texto: 'Al menos una lección vigente', cumplido: e.leccionesVigentes > 0, donde: 'temario' },
-    { clave: 'evaluacion', texto: 'Evaluación final con al menos una pregunta', cumplido: e.preguntasVigentes > 0, donde: 'evaluacion' },
-    { clave: 'respuesta_correcta', texto: 'Cada pregunta con su respuesta correcta', cumplido: e.preguntasVigentes > 0 && e.preguntasSinCorrecta === 0, donde: 'evaluacion' },
   ];
+  if (usaPreguntas(ev)) {
+    r.push(ev.modalidad === 'sumativa'
+      ? { clave: 'evaluacion', texto: 'Evaluación final con al menos una pregunta', cumplido: e.preguntasVigentes > 0, donde: 'evaluacion' }
+      : { clave: 'actividades', texto: 'Actividades formativas con al menos una pregunta', cumplido: e.preguntasVigentes > 0, donde: 'evaluacion' });
+    r.push({ clave: 'respuesta_correcta', texto: 'Cada pregunta con su respuesta correcta', cumplido: e.preguntasVigentes > 0 && e.preguntasSinCorrecta === 0, donde: 'evaluacion' });
+  }
+  if (ev.modalidad === 'formativa' && ev.conCertificado) {
+    r.push({ clave: 'criterios_certificacion', texto: 'Un criterio para certificar además de las lecciones (actividades o validación docente)',
+      cumplido: !faltaCriterioCertificacion({ ...CONFIG_PREDETERMINADA, ...ev }), donde: 'evaluacion' });
+  }
+  return r;
 }
 
 /** Temas que tienen una sola pregunta vigente: informarlos revelaría cuál se falló. */
@@ -101,6 +115,26 @@ const ERRORES: Record<string, string> = {
   version_sin_leccion: 'Solo se puede asociar a versiones que incluyen esta lección.',
   leccion_no_publicada: 'Esta lección todavía no está en ninguna versión: edítela directamente.',
   leccion_retirada: 'La lección está retirada del borrador.',
+  nota_requerida: 'Escriba una nota (al menos 10 caracteres): queda registrada con la validación.',
+  validacion_no_corresponde: 'La versión que sigue esta persona no pide validación docente.',
+  ya_validada: 'Esta persona ya tiene una validación vigente en su versión.',
+  certificado_emitido: 'Ya se emitió el certificado de esa versión: la validación no se puede anular.',
+  sin_acceso: 'Esa persona no tiene acceso activo al curso.',
+  revision_no_descartable: 'Solo se descartan revisiones calculadas que no se aplicaron.',
+  no_encontrado: 'No se encontró. Recargue la página.',
+  responsable_requerido: 'Indique quién autoriza (al menos 3 caracteres). Queda registrado.',
+  fin_o_sin_vencimiento: 'Elija una fecha de fin o «sin vencimiento» (una de las dos).',
+  fin_pasado: 'La fecha de fin ya pasó: elija una fecha futura.',
+  fin_invalido: 'La fecha de fin tiene que ser posterior al inicio.',
+  fin_requerido: 'Elija la fecha de fin.',
+  inicio_futuro: 'El inicio no puede ser futuro, salvo que continúe un acceso vigente sin dejar días sin cubrir.',
+  fecha_invalida: 'Revise las fechas: use el selector de fecha.',
+  correo_invalido: 'Escriba un correo válido.',
+  persona_no_encontrada: 'No hay ninguna cuenta con ese correo. La persona tiene que registrarse primero.',
+  persona_inexistente: 'No hay ninguna cuenta con ese correo. La persona tiene que registrarse primero.',
+  curso_sin_version: 'El curso todavía no tiene una versión publicada.',
+  periodo_ya_revocado: 'Ese período ya estaba revocado.',
+  compra_solo_con_reembolso: 'Una compra solo se revoca con un reembolso confirmado por la pasarela.',
 };
 
 // La clave más larga que coincide gana: «confirmacion_incorrecta» no debe leerse como «confirmacion».
@@ -139,6 +173,13 @@ const OKS: Record<string, string> = {
   correccion_aplicada: 'Corrección menor aplicada en todas las versiones. Quedó registrada con su tipo y motivo.',
   leccion_reemplazada: 'Se creó la lección de reemplazo en el borrador. La original se conserva intacta para quienes siguen las versiones publicadas.',
   complemento_asociado: 'Material complementario actualizado: lo ven los alumnos de las versiones elegidas. No cambia avances ni requisitos.',
+  revision_descartada: 'Revisión descartada. No cambió ningún resultado y quedó registrada con su motivo.',
+  duplicado: 'Copia creada como borrador independiente: sin alumnos, compras, intentos ni certificados. Revise el título y la dirección web.',
+  duplicado_sin_algunos_pdf: 'Copia creada como borrador. Algunos PDF no se pudieron copiar y quedaron fuera: súbalos de nuevo en el temario.',
+  validada: 'Finalización validada. Quedó registrada con su nota; la persona ya puede obtener su certificado si cumplió lo demás.',
+  validacion_anulada: 'Validación anulada. Quedó registrado el motivo.',
+  beca_otorgada: 'Beca otorgada. Quedó registrada con sus fechas, motivo y responsable. No se creó ninguna compra.',
+  beca_revocada: 'Beca revocada. Quedó registrado el motivo; el avance y los certificados de la persona se conservan.',
 };
 
 /** Mensaje de un aviso de éxito; un código desconocido no muestra nada. */
@@ -169,3 +210,16 @@ export const TIPOS_CORRECCION = [
   { valor: 'video_mejorado', texto: 'Mismo video, versión técnicamente mejorada' },
   { valor: 'calidad_audio_video', texto: 'Calidad de sonido o imagen' },
 ] as const;
+
+/** Elementos presentes en ambas listas que cambian de posición (comparando solo los comunes). */
+export function cambiosDeOrden(antes: string[], despues: string[], titulos: Map<string, string>, tipo: string): string[] {
+  const comunes = new Set(antes.filter((id) => despues.includes(id)));
+  const a = antes.filter((id) => comunes.has(id));
+  const d = despues.filter((id) => comunes.has(id));
+  if (a.join() === d.join()) return [];
+  return d.flatMap((id, i) => {
+    const previo = a.indexOf(id);
+    return previo === i ? [] : [`${tipo} «${titulos.get(id) ?? '…'}»: del lugar ${previo + 1} al ${i + 1}`];
+  });
+}
+

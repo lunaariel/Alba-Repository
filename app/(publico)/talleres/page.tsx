@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { proximosTalleres } from '@/datos/publico';
+import { notFound } from 'next/navigation';
+import { configuracion, proximosTalleres } from '@/datos/publico';
 import { Contenedor } from '@/ui/estructura';
 import { ListaTalleres } from '@/ui/talleres';
 import { EnlaceBoton } from '@/ui/acciones';
@@ -12,6 +13,8 @@ export const metadata: Metadata = {
 
 
 export default async function Talleres() {
+  // Talleres no habilitados para el público: la página no existe (sin borrar nada).
+  if (!(await configuracion()).talleresPublicos) notFound();
   const talleres = await proximosTalleres(24);
   return (
     <section aria-labelledby="titulo" className="bg-arena">

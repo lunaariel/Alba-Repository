@@ -69,6 +69,30 @@ export async function rendirEvaluacion(_: ResultadoEvaluacion, datos: FormData):
 }
 
 /** Emite el certificado (o devuelve el existente). La base valida las tres condiciones. */
+export type ResultadoActividades =
+  | { completo: boolean; respondidas: number; total: number; temasAReforzar: string[] }
+  | { error: string }
+  | undefined;
+
+/**
+ * Envía las actividades formativas. Sin nota: la base registra el envío, dice si está completo
+ * (todas las preguntas respondidas) y sugiere temas para repasar. No revela respuestas correctas.
+ */
+export async function enviarActividades(_: ResultadoActividades, datos: FormData): Promise<ResultadoActividades> {
+  const usuario = await exigirSesion('/campus');
+  const cursoSlug = slug.safeParse(datos.get('curso'));
+  if (!cursoSlug.success) return { error: 'No encontramos el curso.' };
+  const curso = await cursoCampus(cursoSlug.data);
+  if (!curso?.actividades) return { error: 'Este curso no tiene actividades formativas en su versión.' };
+  const { data, error } = await clienteServicio().rpc('registrar_actividad_formativa', {
+    p_perfil: usuario.id, p_evaluacion: curso.actividades.evaluacionId, p_respuestas: respuestasDesdeFormulario(datos.entries()),
+  });
+  if (error) return { error: 'No pudimos registrar sus respuestas. Intente de nuevo en unos minutos.' };
+  const d = data as { completo: boolean; respondidas: number; total: number; temas_a_reforzar: string[] };
+  revalidatePath(`/campus/cursos/${cursoSlug.data}`);
+  return { completo: d.completo, respondidas: d.respondidas, total: d.total, temasAReforzar: d.temas_a_reforzar ?? [] };
+}
+
 export async function obtenerCertificado(datos: FormData) {
   const usuario = await exigirSesion('/campus');
   const cursoSlug = slug.safeParse(datos.get('curso'));
@@ -81,6 +105,23 @@ export async function obtenerCertificado(datos: FormData) {
   redirect(`/campus/cursos/${cursoSlug.data}?aviso=certificado-listo#certificado`);
 }
 
+/**
+ * Certificado de un curso con el acceso vencido: quien cumplió todo antes de vencer lo puede pedir igual.
+ * La persona solo puede pedirlo para un curso que figura entre sus propios accesos (RLS); la base vuelve a
+ * comprobar que cumplió los requisitos en su versión.
+ */
+export async function obtenerCertificadoHistorico(datos: FormData) {
+  const usuario = await exigirSesion('/campus');
+  const curso = uuid.safeParse(datos.get('curso'));
+  if (!curso.success) redirect('/campus');
+  const { data: propio } = await (await clienteSesion()).from('accesos_curso').select('id').eq('curso_id', curso.data).eq('estado', 'activo').maybeSingle();
+  if (!propio) redirect('/campus?aviso=certificado-error');
+  const { data, error } = await clienteServicio().rpc('emitir_certificado', { p_perfil: usuario.id, p_curso: curso.data });
+  if (error || !data) redirect('/campus?aviso=certificado-error');
+  revalidatePath('/campus', 'layout');
+  redirect('/campus?aviso=certificado-listo#vencidos');
+}
+
 export type EstadoCuenta = { error?: string; campo?: string; ok?: string } | undefined;
 
 const ZONAS_VALIDAS = new Set(Intl.supportedValuesOf('timeZone'));
@@ -90,11 +131,15 @@ export async function guardarCuenta(_: EstadoCuenta, datos: FormData): Promise<E
   const r = z.object({
     nombre: z.string().trim().min(2, 'Escriba su nombre completo.').max(120, 'El nombre es demasiado largo.'),
     zona: z.string().refine((z: string) => ZONAS_VALIDAS.has(z) || z === 'UTC', 'Elija una zona horaria de la lista.'),
-  }).safeParse({ nombre: datos.get('nombre'), zona: datos.get('zona') });
+    // Opcionales: vacío = no lo informa.
+    areaLaboral: z.string().trim().refine((v) => v === '' || (v.length >= 2 && v.length <= 120), 'El área laboral va de 2 a 120 caracteres, o vacía.'),
+    estudios: z.string().trim().refine((v) => v === '' || (v.length >= 2 && v.length <= 160), 'Los estudios van de 2 a 160 caracteres, o vacíos.'),
+  }).safeParse({ nombre: datos.get('nombre'), zona: datos.get('zona'), areaLaboral: datos.get('areaLaboral') ?? '', estudios: datos.get('estudios') ?? '' });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const supabase = await clienteSesion();
   const { error } = await supabase.from('perfiles')
-    .update({ nombre_completo: r.data.nombre, zona_horaria: r.data.zona }).eq('id', usuario.id);
+    .update({ nombre_completo: r.data.nombre, zona_horaria: r.data.zona, area_laboral: r.data.areaLaboral || null, estudios: r.data.estudios || null })
+    .eq('id', usuario.id);
   if (error) return { error: 'No pudimos guardar los cambios. Intente de nuevo.' };
   revalidatePath('/campus', 'layout');
   return { ok: 'Cambios guardados.' };
@@ -145,7 +190,7 @@ export async function inscribirmeTaller(datos: FormData) {
   await exigirSesion(`/talleres/${r.data.slug}`);
   const { error } = await (await clienteSesion()).rpc('inscribirme_gratis', { p_taller: r.data.taller });
   if (error) {
-    const codigo = ['sin_cupo', 'ya_inscripto', 'taller_no_disponible', 'taller_pago'].find((c) => error.message.startsWith(c)) ?? 'error';
+    const codigo = ['sin_cupo', 'ya_inscripto', 'talleres_no_disponibles', 'taller_no_disponible', 'taller_pago'].find((c) => error.message.startsWith(c)) ?? 'error';
     redirect(`/talleres/${r.data.slug}?aviso=${codigo}`);
   }
   revalidatePath('/campus/talleres');

@@ -79,9 +79,12 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
     tipo: z.enum(['gratuito', 'pago'], { errorMap: () => ({ message: 'Indique si es gratuito o pago.' }) }),
     cupoTipo: z.enum(['limitado', 'ilimitado']),
     plataforma: z.enum(['zoom', 'meet']),
+    cancelacion: z.coerce.number({ invalid_type_error: 'El plazo de cancelación va de 0 a 336 horas (14 días).' }).int('Escriba un número entero de horas.')
+      .min(0, 'El plazo de cancelación va de 0 a 336 horas (14 días).').max(336, 'El plazo de cancelación va de 0 a 336 horas (14 días).'),
   }).safeParse({
     id: datos.get('id'), titulo: datos.get('titulo'), slug: datos.get('slug'), descripcion: datos.get('descripcion') ?? '',
     zona: datos.get('zona'), tipo: datos.get('tipo'), cupoTipo: datos.get('cupoTipo'), plataforma: datos.get('plataforma'),
+    cancelacion: datos.get('cancelacion') ?? '24',
   });
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
@@ -99,7 +102,7 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
   }
   const cambios: Record<string, unknown> = {
     titulo: d.titulo, slug: d.slug, descripcion: d.descripcion || null, zona_horaria: d.zona, precio_centavos: precio, cupo,
-    plataforma: d.plataforma,
+    plataforma: d.plataforma, cancelacion_horas: d.cancelacion,
   };
   if (datos.get('conFecha') === 'si') {
     const h = horario(datos);
@@ -294,6 +297,32 @@ export async function anotarIncidencia(datos: FormData) {
   if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
   revalidatePath('/admin/talleres/incidencias');
   ir('/admin/talleres/incidencias', { ok: 'incidencia_anotada' });
+}
+
+/**
+ * Registra por escrito cómo se resolvió un reembolso parcial. No modifica accesos, períodos ni compras: la
+ * política comercial para reembolsos parciales todavía no está aprobada (decisión B, 01/11/2026).
+ */
+export async function resolverReembolsoParcial(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, resolucion: texto(1000) }).safeParse({ id: datos.get('id'), resolucion: datos.get('resolucion') ?? '' });
+  if (!r.success) redirect('/admin/talleres/incidencias');
+  const { error } = await (await clienteSesion()).rpc('resolver_reembolso_parcial', { p_incidencia: r.data.id, p_resolucion: r.data.resolucion });
+  if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
+  revalidatePath('/admin/talleres/incidencias');
+  ir('/admin/talleres/incidencias', { ok: 'reembolso_parcial_resuelto' });
+}
+
+/** Reintenta dar el acceso de un pago confirmado cuyo otorgamiento falló. Idempotente; lo registra la base. */
+export async function reintentarOtorgamiento(datos: FormData) {
+  await exigirAdminAccion();
+  const r = z.object({ id: uuid, nota: texto(1000) }).safeParse({ id: datos.get('id'), nota: datos.get('nota') ?? '' });
+  if (!r.success) redirect('/admin/talleres/incidencias');
+  const { data, error } = await (await clienteSesion()).rpc('reintentar_otorgamiento', { p_incidencia: r.data.id, p_nota: r.data.nota });
+  if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
+  revalidatePath('/admin/talleres/incidencias');
+  revalidatePath('/campus', 'layout');
+  ir('/admin/talleres/incidencias', { ok: data ? 'otorgamiento_recuperado' : 'otorgamiento_pendiente' });
 }
 
 function mensaje(m: string | undefined) {

@@ -12,12 +12,14 @@ export interface Configuracion {
   whatsapp: string | null;
   zonaHoraria: string;
   textos: Textos;
+  /** Talleres ofrecidos al público. Apagado hasta que se autorice su lanzamiento (migración 0024). */
+  talleresPublicos: boolean;
 }
 
 export const configuracion = cache(async (): Promise<Configuracion> => {
   const { data } = await clientePublico()
     .from('configuracion_academia')
-    .select('nombre, correo_contacto, whatsapp, zona_horaria, textos')
+    .select('nombre, correo_contacto, whatsapp, zona_horaria, textos, talleres_publicos')
     .maybeSingle();
   return {
     nombre: data?.nombre ?? 'Albor',
@@ -25,6 +27,7 @@ export const configuracion = cache(async (): Promise<Configuracion> => {
     whatsapp: data?.whatsapp ?? null,
     zonaHoraria: data?.zona_horaria ?? 'America/Guatemala',
     textos: combinarTextos(data?.textos),
+    talleresPublicos: data?.talleres_publicos === true,
   };
 });
 
@@ -59,6 +62,11 @@ export interface CursoDetalle extends CursoResumen {
   modulos: { titulo: string; lecciones: { titulo: string; duracionMinutos: number | null }[] }[];
   cantidadMateriales: number;
   tieneEvaluacion: boolean;
+  /** Modalidad de la versión vigente y si entrega certificado. */
+  modalidad: 'sumativa' | 'formativa';
+  conCertificado: boolean;
+  /** Condiciones de acceso: duración comercial (null = sin definir) + meses adicionales. */
+  acceso: { duracionMeses: number | null; mesesAdicionales: number };
 }
 
 export const cursoPorSlug = cache(async (slug: string): Promise<CursoDetalle | null> => {
@@ -79,7 +87,8 @@ export const cursoPorSlug = cache(async (slug: string): Promise<CursoDetalle | n
   ]);
   // Objetivos y requisitos de la versión vigente (lo que compra quien se inscribe hoy), no del borrador.
   const programa = (version as { objetivos: string[]; requisitos: string | null } | null) ?? { objetivos: c.objetivos ?? [], requisitos: c.requisitos };
-  const r = (resumen ?? {}) as { materiales?: number; evaluacion?: boolean };
+  const r = (resumen ?? {}) as { materiales?: number; evaluacion?: boolean; modalidad?: string; con_certificado?: boolean;
+    duracion_comercial_meses?: number | null; meses_adicionales?: number };
 
   type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: number; leccion_titulo: string; duracion_minutos: number | null; orden: number };
   const filas = [...((temario ?? []) as FilaTemario[])].sort((a, b) => a.modulo_orden - b.modulo_orden || a.orden - b.orden);
@@ -96,6 +105,8 @@ export const cursoPorSlug = cache(async (slug: string): Promise<CursoDetalle | n
     id: c.id, descripcion: c.descripcion, objetivos: programa.objetivos ?? [], requisitos: programa.requisitos,
     videoPresentacionId: c.video_presentacion_id, modulos,
     cantidadMateriales: r.materiales ?? 0, tieneEvaluacion: r.evaluacion ?? false,
+    modalidad: r.modalidad === 'formativa' ? 'formativa' : 'sumativa', conCertificado: r.con_certificado !== false,
+    acceso: { duracionMeses: r.duracion_comercial_meses ?? null, mesesAdicionales: r.meses_adicionales ?? 5 },
   };
 });
 

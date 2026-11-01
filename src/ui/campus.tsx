@@ -32,6 +32,8 @@ export function Marca({ hecha }: { hecha: boolean }) {
   );
 }
 
+const fechaLarga = (d: Date) => new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'America/Guatemala' }).format(d);
+
 export function TarjetaCursoCampus({ curso }: { curso: CursoCampus }) {
   const hechas = curso.lecciones.filter((l) => l.completada).length;
   const base = `/campus/cursos/${curso.slug}`;
@@ -39,7 +41,7 @@ export function TarjetaCursoCampus({ curso }: { curso: CursoCampus }) {
     ? { href: base, texto: 'Ver curso y certificado' }
     : curso.continuar
       ? { href: `${base}/lecciones/${curso.continuar.id}`, texto: hechas === 0 ? 'Empezar el curso' : 'Continuar donde lo dejó' }
-      : { href: base, texto: 'Ir a la evaluación final' };
+      : { href: base, texto: 'Ver lo que falta para terminar' };
   return (
     <li className="flex flex-col gap-4 rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido p-6 sm:p-7">
       <div>
@@ -54,6 +56,9 @@ export function TarjetaCursoCampus({ curso }: { curso: CursoCampus }) {
           {textoAvance(hechas, curso.lecciones.length)} · {curso.avance} %
         </p>
       </div>
+      {curso.venceEn && (
+        <p className="m-0 text-[15px] text-tinta-suave">Acceso hasta el <span className="font-bold text-marron">{fechaLarga(curso.venceEn)}</span></p>
+      )}
       {curso.continuar && hechas > 0 && (
         <p className="m-0 text-[15px]">
           <span className="text-tinta-suave">Sigue con: </span>

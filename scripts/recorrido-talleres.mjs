@@ -224,6 +224,16 @@ try {
   const filaPronto = al.locator('li', { hasText: 'Taller en 12 horas' });
   comprobar((await filaPronto.getByText('Cancelar mi inscripción').count()) === 0 && await filaPronto.getByText(/hasta 24 horas antes/).isVisible(),
     'gratuito a menos de 24 h: no se ofrece cancelar');
+  // Plazo configurable: la admin lo cambia a 6 h; la inscripción existente conserva sus 24 h.
+  await a.goto(`${BASE}/admin/talleres/${pronto}`, { waitUntil: 'networkidle' });
+  await a.fill('#cancelacion', '6');
+  await a.getByRole('button', { name: 'Guardar cambios' }).click();
+  await a.getByText('Cambios guardados.').waitFor({ timeout: 15000 });
+  comprobar(sql(`select cancelacion_horas from public.talleres where id = '${pronto}'`) === '6'
+    && sql(`select cancelacion_horas from public.inscripciones_taller where taller_id = '${pronto}'`) === '24',
+    'el plazo de cancelación se configura por taller y no cambia el de quien ya se inscribió');
+  await al.reload({ waitUntil: 'networkidle' });
+  comprobar((await filaPronto.getByText('Cancelar mi inscripción').count()) === 0, 'la inscripción existente sigue sin poder cancelarse a 12 h');
   const filaPago = al.locator('li', { hasText: '[Ejemplo] Taller pago' });
   comprobar((await filaPago.getByText('Cancelar mi inscripción').count()) === 0 && await filaPago.getByRole('link', { name: 'escriba a la academia' }).isVisible(),
     'pago: sin botón de cancelación, con el contacto de la academia');

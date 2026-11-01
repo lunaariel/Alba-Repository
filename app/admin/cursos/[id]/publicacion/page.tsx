@@ -6,7 +6,7 @@ import { requisitosPublicacion } from '@/dominio/cursos-admin';
 import { formatearUSD } from '@/dominio/dinero';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
-import { cambiarEstadoCurso, eliminarCurso, publicarVersion } from '../../acciones';
+import { cambiarEstadoCurso, duplicarCurso, eliminarCurso, publicarVersion } from '../../acciones';
 
 export const metadata: Metadata = { title: 'Publicación' };
 
@@ -29,7 +29,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
   const h = c.historial;
   const cambios = cambiosDelBorrador(c);
   const hayCambios = cambios.leccionesNuevas.length + cambios.leccionesQuitadas.length + cambios.preguntasNuevas + cambios.preguntasQuitadas > 0
-    || cambios.objetivosCambian
+    || cambios.objetivosCambian || cambios.modalidad.length > 0 || cambios.ordenCambia.length > 0
     || (cambios.criterios !== null && (cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] || cambios.criterios.intentos[0] !== cambios.criterios.intentos[1]));
 
   return (
@@ -52,6 +52,12 @@ export default async function Publicacion({ params, searchParams }: Props) {
               </li>
             ))}
           </ul>
+          {c.duracionComercialMeses === null && (
+            <p className="m-0 mt-4 rounded-lg border-[1.5px] border-[#D9C48C] bg-[#F5EBCF] px-3 py-2 text-[14px] text-[#6B5420]">
+              Falta la duración comercial (en <Link href={base} className="font-bold text-[#6B5420]">Datos y precio</Link>): sin ella el curso se puede publicar,
+              pero nadie puede comprarlo, porque las condiciones de acceso se muestran antes de pagar.
+            </p>
+          )}
           <p className="m-0 mt-4 text-[14px] text-tinta-suave">
             {e.leccionesVigentes === 1 ? '1 lección vigente' : `${e.leccionesVigentes} lecciones vigentes`} · {e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`} · {c.precioCentavos > 0 ? formatearUSD(c.precioCentavos) : 'sin precio'}
           </p>
@@ -65,7 +71,9 @@ export default async function Publicacion({ params, searchParams }: Props) {
               <div className="mt-4">
                 {listo ? (
                   <ConfirmarAccion accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'publicado' }} textoBoton="Publicar el curso" titulo="¿Publicar el curso?" estilo="primario">
-                    <p className="m-0">«{c.titulo}» aparecerá en el sitio con precio {formatearUSD(c.precioCentavos)}, {e.leccionesVigentes === 1 ? '1 lección' : `${e.leccionesVigentes} lecciones`} y una evaluación de {e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`}.</p>
+                    <p className="m-0">«{c.titulo}» aparecerá en el sitio con precio {formatearUSD(c.precioCentavos)}, {e.leccionesVigentes === 1 ? '1 lección' : `${e.leccionesVigentes} lecciones`} y {e.evaluacion?.modalidad === 'formativa'
+                      ? 'evaluación formativa'
+                      : `una evaluación de ${e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`}`}.</p>
                     <p className="m-0 text-[15px] text-tinta-suave">Las ventas siguen cerradas hasta conectar la pasarela de pago (Fase 6).</p>
                   </ConfirmarAccion>
                 ) : (
@@ -104,6 +112,15 @@ export default async function Publicacion({ params, searchParams }: Props) {
           )}
 
           <div className="mt-6 border-t border-borde-bandeja pt-4">
+            <ConfirmarAccion accion={duplicarCurso} campos={{ id: c.id }} textoBoton="Duplicar el curso" titulo="¿Duplicar el curso?" textoConfirmar="Crear la copia">
+              <p className="m-0">Se crea un curso nuevo en borrador con los datos, el temario, los PDF y la evaluación vigentes del borrador
+                (sin lo retirado ni lo bloqueado). No se copian alumnos, compras, avances, intentos, certificados, versiones ni historial.</p>
+              <label htmlFor="titulo-copia" className="mt-2 text-[15px] font-bold">Título de la copia</label>
+              <input id="titulo-copia" name="titulo" required minLength={3} maxLength={140} defaultValue={`${c.titulo} (copia)`}
+                className="min-h-[50px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-4 text-marron" />
+            </ConfirmarAccion>
+          </div>
+          <div className="mt-4 border-t border-borde-bandeja pt-4">
             {conHistorial ? (
               <p className="m-0 text-[14px] text-tinta-suave">Este curso tiene alumnos, compras o certificados: no se puede eliminar. Su historial se conserva.</p>
             ) : (
@@ -134,11 +151,17 @@ export default async function Publicacion({ params, searchParams }: Props) {
                   {cambios.objetivosCambian && <li>Objetivos de aprendizaje modificados (Datos y precio).</li>}
                   {cambios.preguntasNuevas > 0 && <li>{plural(cambios.preguntasNuevas, 'pregunta nueva o reemplazada', 'preguntas nuevas o reemplazadas')}.</li>}
                   {cambios.preguntasQuitadas > 0 && <li>{plural(cambios.preguntasQuitadas, 'pregunta quitada', 'preguntas quitadas')}.</li>}
-                  {cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
-                  {cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
+                  {cambios.modalidad.length === 0 && cambios.criterios && cambios.criterios.puntaje[0] !== cambios.criterios.puntaje[1] && <li>Puntaje mínimo: {cambios.criterios.puntaje[0]} → {cambios.criterios.puntaje[1]}.</li>}
+                  {cambios.modalidad.length === 0 && cambios.criterios && cambios.criterios.intentos[0] !== cambios.criterios.intentos[1] && <li>Intentos: {intentosTexto(cambios.criterios.intentos[0])} → {intentosTexto(cambios.criterios.intentos[1])}.</li>}
+                  {cambios.modalidad.map((t) => <li key={t}>{t}</li>)}
+                  {cambios.ordenCambia.length > 0 && (
+                    <li>Cambios de orden:
+                      <ul className="m-0 mt-1 list-[circle] pl-5">{cambios.ordenCambia.map((t) => <li key={t}>{t}.</li>)}</ul>
+                    </li>
+                  )}
                 </ul>
               ) : (
-                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas, objetivos ni criterios. (Los cambios de orden y de precio no se listan aquí.)</p>
+                <p className="m-0 mt-2 text-[15px]">No hay cambios de lecciones, preguntas, orden, objetivos ni criterios. (El precio no forma parte de la versión.)</p>
               )}
               {c.estado === 'publicado' && (
                 <div className="mt-4">
@@ -178,7 +201,9 @@ export default async function Publicacion({ params, searchParams }: Props) {
                     <td className="py-2 pr-4 font-bold">{v.numero}{v.vigente && <span className="ml-2 rounded-full bg-oliva-profundo px-2 py-0.5 text-[12px] text-marfil">vigente</span>}</td>
                     <td className="py-2 pr-4">{fecha(v.publicadaEn)}</td>
                     <td className="py-2 pr-4">{plural(v.lecciones, 'lección', 'lecciones')} · {plural(v.preguntas, 'pregunta', 'preguntas')}</td>
-                    <td className="py-2 pr-4">mínimo {v.puntajeMinimo} · intentos {intentosTexto(v.intentosPermitidos)}</td>
+                    <td className="py-2 pr-4">{v.config.modalidad === 'sumativa'
+                      ? <>Evaluación final · mínimo {v.puntajeMinimo} · intentos {intentosTexto(v.intentosPermitidos)}</>
+                      : <>Formativa{v.config.requiereActividades ? ' · actividades' : ''}{v.config.requiereValidacion ? ' · validación docente' : ''}{v.config.conCertificado ? '' : ' · sin certificado'}</>}</td>
                     <td className="py-2 pr-4">{v.alumnos} · {plural(v.certificados, 'certificado', 'certificados')}</td>
                     <td className="py-2">{v.resumen ?? '—'}</td>
                   </tr>

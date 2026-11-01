@@ -21,6 +21,7 @@ export default async function DatosCurso({ params, searchParams }: Props) {
           objetivos: c.objetivos.join('\n'), publico: c.publico, edadDesde: Math.floor((c.edadDesdeMeses ?? 0) / 12),
           edadHasta: Math.ceil((c.edadHastaMeses ?? 72) / 12), duracionHoras: c.duracionMinutos ? String(Math.round(c.duracionMinutos / 6) / 10) : '',
           precioCentavos: c.precioCentavos, video: c.videoPresentacionId ?? '', estado: c.estado,
+          duracionComercialMeses: c.duracionComercialMeses ? String(c.duracionComercialMeses) : '',
         }}
         alumnos={c.historial.alumnos}
       />

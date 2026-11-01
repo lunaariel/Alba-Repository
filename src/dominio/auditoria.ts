@@ -79,12 +79,16 @@ const ACCIONES: Record<string, string> = {
   incidencia_anotada: 'Anotó una incidencia',
   leccion_reemplazada: 'Creó una lección de reemplazo en el borrador',
   complemento_asociado: 'Cambió las versiones de un material complementario',
+  curso_duplicado: 'Duplicó un curso como borrador',
+  revision_descartada: 'Descartó una revisión favorable sin aplicarla',
+  finalizacion_validada: 'Validó la finalización de un alumno (evaluación formativa)',
+  validacion_anulada: 'Anuló una validación de finalización',
 };
 
 /** Grupos para filtrar el registro: cada uno reúne una o más tablas. */
 export const GRUPOS_ACTIVIDAD = {
   cursos: { texto: 'Cursos y temario', entidades: ['cursos', 'modulos', 'lecciones', 'recursos_leccion', 'versiones_curso'] },
-  evaluaciones: { texto: 'Evaluaciones', entidades: ['evaluaciones', 'preguntas', 'opciones', 'revisiones_evaluacion'] },
+  evaluaciones: { texto: 'Evaluaciones', entidades: ['evaluaciones', 'preguntas', 'opciones', 'revisiones_evaluacion', 'validaciones_formativas'] },
   talleres: { texto: 'Talleres', entidades: ['talleres', 'inscripciones_taller', 'recordatorios', 'reuniones', 'incidencias', 'grabaciones_taller', 'accesos_grabacion'] },
   accesos: { texto: 'Accesos y roles', entidades: ['accesos_curso', 'roles_usuario'] },
   ventas: { texto: 'Ventas y cupones', entidades: ['ordenes', 'cupones'] },
@@ -109,12 +113,16 @@ const CAMPOS: Record<string, string> = {
   respuesta: 'Respuesta', vence_en: 'Vence', revocado_en: 'Revocado', a_la_venta: 'A la venta',
   acceso_incluido_dias: 'Días de acceso (inscripción)', acceso_incluido_sin_vencimiento: 'Sin vencimiento (inscripción)',
   acceso_compra_dias: 'Días de acceso (compra)', acceso_compra_sin_vencimiento: 'Sin vencimiento (compra)',
+  modalidad: 'Forma de evaluar', requiere_actividades: 'Exige actividades formativas', requiere_validacion: 'Exige validación docente',
+  con_certificado: 'Entrega certificado', nota: 'Nota',
+  duracion_comercial_meses: 'Duración comercial (meses)',
   inicia_antes: 'Fecha anterior', inicia_despues: 'Fecha nueva', accesos_otorgados: 'Accesos otorgados',
 };
 
 const ESTADOS: Record<string, string> = {
   borrador: 'Borrador', publicado: 'Publicado', archivado: 'Archivado', cancelado: 'Cancelado',
   finalizado: 'Finalizado', activo: 'Activo', revocado: 'Revocado',
+  sumativa: 'Evaluación final con puntaje', formativa: 'Formativa',
   prevista: 'Prevista', recibida: 'Original recibida', en_revision: 'En revisión', en_edicion: 'En edición', verificada: 'Verificada',
   publicada: 'Publicada', no_publicable: 'No publicable', fallida: 'Fallida', faltante: 'Faltante', retirada: 'Retirada', no_corresponde: 'No corresponde',
 };
@@ -131,7 +139,7 @@ const fechaHora = (iso: string) =>
 export function formatearValor(campo: string, valor: unknown): string {
   if (valor === null || valor === undefined || valor === '') return '(vacío)';
   if (campo === 'precio_centavos' && typeof valor === 'number' && Number.isInteger(valor) && valor >= 0) return formatearUSD(valor);
-  if (campo === 'estado' && typeof valor === 'string') return ESTADOS[valor] ?? valor;
+  if ((campo === 'estado' || campo === 'modalidad') && typeof valor === 'string') return ESTADOS[valor] ?? valor;
   if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
   if (typeof valor === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(valor) && !Number.isNaN(Date.parse(valor))) return fechaHora(valor);
   if (typeof valor === 'object') return '(datos)';

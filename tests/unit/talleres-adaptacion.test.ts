@@ -31,5 +31,5 @@ test('campus: las inscripciones pagas no muestran un botón de cancelación', ()
   const pagina = readFileSync('app/campus/talleres/page.tsx', 'utf8');
   assert.match(pagina, /t\.paga \? \(/);
   assert.match(pagina, /escriba a la academia/);
-  assert.match(pagina, /const cancelable = !t\.paga && t\.iniciaEn\.getTime\(\) - DIA > Date\.now\(\)/);
+  assert.match(pagina, /const cancelable = !t\.paga && t\.iniciaEn\.getTime\(\) - t\.plazoHoras \* HORA > Date\.now\(\)/);
 });

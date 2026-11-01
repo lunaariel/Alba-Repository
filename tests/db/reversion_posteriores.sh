@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Ensayo de reversión de 0015 y 0016 sobre datos existentes: base hasta 0014 con los datos de prueba,
-# huella, aplicar 0015 y 0016, revertir en orden inverso, huella igual; volver a aplicar funciona.
+# Ensayo de reversión de las migraciones posteriores a 0014 sobre datos existentes: base hasta 0014 con los
+# datos de prueba, huella, aplicar 0015 en adelante, revertir en orden inverso, huella igual; volver a aplicar funciona.
 # Después de usar las funciones nuevas (por ejemplo, una incidencia), la reversión se niega.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -11,7 +11,7 @@ q() { "${PSQL[@]}" -d "$DB" -tA -c "$1"; }
 "${PSQL[@]}" -d postgres -c "drop database if exists $DB" -c "create database $DB encoding 'UTF8' template template0" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/supabase_stub.sql" >/dev/null
 for m in "$RAIZ"/supabase/migrations/*.sql; do
-  case "$(basename "$m")" in 2026103100001[5-7]_*) continue;; esac
+  n=$(basename "$m"); [ $((10#${n:8:6})) -ge 15 ] && continue
   "${PSQL[@]}" -d "$DB" -f "$m" >/dev/null
 done
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/tests/db/00_ayudas.sql" >/dev/null
@@ -36,8 +36,27 @@ antes=$(q "$HUELLA")
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000015_ajustes_versionado.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000016_talleres_gestion.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000017_talleres_adaptacion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000018_modalidad_evaluacion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000019_vencimientos_cursos.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000020_panel_cursos.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000021_plazo_cancelacion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000022_perfil_formacion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000023_seguridad.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000024_periodos_acceso.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000025_periodos_futuros_reembolsos_parciales.sql" >/dev/null
+[ "$(q "select count(*) from public.conciliar_periodos()")" = "0" ] || { echo "FALLA      0024 no concilia"; exit 1; }
+[ "$(q "select count(*) from public.inscripciones_taller where cancelacion_horas is distinct from 24")" = "0" ] || { echo "FALLA      0021 cambió el plazo de inscripciones existentes"; exit 1; }
+[ "$(q "select count(*) from public.accesos_curso where vence_en is not null or inicia_en is null")" = "0" ] || { echo "FALLA      0019 asignó vencimientos retroactivos"; exit 1; }
 [ "$(q "select origen from public.inscripciones_taller limit 1")" = "compra" ] || { echo "FALLA      0016 no clasificó la inscripción existente"; exit 1; }
 [ "$(q "select count(*) from public.envios_recordatorio where para_inicio is not null")" = "1" ] || { echo "FALLA      0016 no completó para_inicio"; exit 1; }
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000025_periodos_futuros_reembolsos_parciales_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000024_periodos_acceso_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000023_seguridad_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000022_perfil_formacion_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000021_plazo_cancelacion_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000020_panel_cursos_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000019_vencimientos_cursos_down.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000018_modalidad_evaluacion_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000017_talleres_adaptacion_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000016_talleres_gestion_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000015_ajustes_versionado_down.sql" >/dev/null
@@ -49,6 +68,24 @@ despues=$(q "$HUELLA")
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000015_ajustes_versionado.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000016_talleres_gestion.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261031000017_talleres_adaptacion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000018_modalidad_evaluacion.sql" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/migrations/20261101000019_vencimientos_cursos.sql" >/dev/null
+# Con una duración comercial definida, la reversión de 0019 se niega; sin ella, procede.
+q "update public.cursos set duracion_comercial_meses = 4 where id = (select id from public.cursos limit 1)" >/dev/null
+if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000019_vencimientos_cursos_down.sql" >/dev/null 2>/tmp/albor_rev19.log; then
+  echo "FALLA      la reversión de 0019 debió negarse"; exit 1
+fi
+grep -q reversion_imposible /tmp/albor_rev19.log || { echo "FALLA      la reversión de 0019 falló por otro motivo: $(head -2 /tmp/albor_rev19.log)"; exit 1; }
+q "update public.cursos set duracion_comercial_meses = null" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000019_vencimientos_cursos_down.sql" >/dev/null
+# Con una evaluación formativa configurada, la reversión de 0018 se niega; sin ella, procede.
+q "update public.evaluaciones set modalidad = 'formativa', requiere_validacion = true where id = (select id from public.evaluaciones limit 1)" >/dev/null
+if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000018_modalidad_evaluacion_down.sql" >/dev/null 2>/tmp/albor_rev18.log; then
+  echo "FALLA      la reversión de 0018 debió negarse"; exit 1
+fi
+grep -q reversion_imposible /tmp/albor_rev18.log || { echo "FALLA      la reversión de 0018 falló por otro motivo: $(head -2 /tmp/albor_rev18.log)"; exit 1; }
+q "update public.evaluaciones set modalidad = 'sumativa', requiere_validacion = false" >/dev/null
+"${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261101000018_modalidad_evaluacion_down.sql" >/dev/null
 # Con una grabación ya recibida, la reversión de 0017 se niega (perdería su estado).
 q "insert into public.grabaciones_taller (taller_id, estado) select id, 'recibida' from public.talleres limit 1 on conflict (taller_id) do update set estado = 'recibida'" >/dev/null
 if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000017_talleres_adaptacion_down.sql" >/dev/null 2>/tmp/albor_rev17.log; then
@@ -62,4 +99,4 @@ if "${PSQL[@]}" -d "$DB" -f "$RAIZ/supabase/rollback/20261031000016_talleres_ges
   echo "FALLA      la reversión de 0016 debió negarse"; exit 1
 fi
 grep -q reversion_imposible /tmp/albor_rev16.log || { echo "FALLA      la reversión falló por otro motivo: $(head -2 /tmp/albor_rev16.log)"; exit 1; }
-echo "ok         reversión de 0015, 0016 y 0017: datos idénticos, se reaplican, y se niega cuando perdería información"
+echo "ok         reversión de 0015 a 0025: datos idénticos, se reaplican, y se niega cuando perdería información"

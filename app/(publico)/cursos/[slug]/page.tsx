@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { configuracion, cursoPorSlug } from '@/datos/publico';
-import { etiquetaDuracion, metadatosCurso } from '@/dominio/catalogo';
+import { etiquetaDuracion, metadatosCurso, textoAcceso, textoEvaluacion } from '@/dominio/catalogo';
 import { formatearUSD } from '@/dominio/dinero';
 import { BIBLIOTECA_VIDEO_PUBLICA, INSCRIPCIONES_ABIERTAS } from '@/config/comercio';
 import { Contenedor, MarcoFoto } from '@/ui/estructura';
@@ -69,8 +69,8 @@ export default async function FichaCurso({ params }: Props) {
             <ul className="m-0 mt-5 flex list-none flex-col gap-2 p-0 text-base">
               <li>{lecciones} {lecciones === 1 ? 'lección' : 'lecciones'} en video{curso.duracionMinutos ? `, ${etiquetaDuracion(curso.duracionMinutos)} en total` : ''}</li>
               {curso.cantidadMateriales > 0 && <li>{curso.cantidadMateriales} {curso.cantidadMateriales === 1 ? 'material descargable' : 'materiales descargables'} en PDF</li>}
-              <li>Acceso sin vencimiento</li>
-              {curso.tieneEvaluacion && <li>Evaluación final y certificado de finalización</li>}
+              <li>{textoAcceso(curso.acceso)}</li>
+              {textoEvaluacion(curso) && <li>{textoEvaluacion(curso)}</li>}
             </ul>
             <div className="mt-6">
               {INSCRIPCIONES_ABIERTAS ? (

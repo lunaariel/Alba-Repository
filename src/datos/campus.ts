@@ -4,6 +4,7 @@ import { clienteSesion, clienteServicio } from './supabase';
 import { exigirSesion } from './sesion';
 import { ordenarLecciones, porcentajeAvance, leccionParaContinuar } from '@/dominio/aprendizaje';
 import { proveedorVideo } from '@/servicios/video';
+import { aFinalizacion, type Finalizacion } from '@/dominio/evaluacion';
 
 /**
  * Lecturas del campus. Todo pasa por el cliente con sesión, así que RLS decide qué ve cada alumno.
@@ -32,6 +33,8 @@ export interface CursoCampus {
   certificado: { id: string; codigo: string } | null;
   certificadoAnterior: { id: string; codigo: string } | null;
   version: { id: string; numero: number; publicadaEn: Date } | null;
+  /** Fin del acceso (calculado por el servidor al comprar). null: sin vencimiento (accesos anteriores o concesiones). */
+  venceEn: Date | null;
 }
 
 type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: number; leccion_id: string; leccion_titulo: string; duracion_minutos: number | null; orden: number };
@@ -62,16 +65,29 @@ async function leccionesConProgreso(versiones: { cursoId: string; versionId: str
   return resultado;
 }
 
-type FilaAcceso = { curso_id: string; version_id: string; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
+type FilaAcceso = { curso_id: string; version_id: string; vence_en: string | null; cursos: { id: string; slug: string; titulo: string; resumen: string | null } | null };
 
-/** Cursos con acceso activo, con su avance según la versión de cada uno. El acceso no vence. */
+/**
+ * Cobertura de cada acceso propio, calculada por la base (mis_accesos): hay acceso si un período cubre este
+ * momento. Un derecho futuro ya concedido (por ejemplo, una renovación después de un período revocado)
+ * no da acceso hasta su fecha: se informa como «programado».
+ */
+const coberturas = cache(async (): Promise<Map<string, { vigente: boolean; proximoInicio: Date | null }>> => {
+  const { data } = await (await clienteSesion()).rpc('mis_accesos');
+  return new Map(((data ?? []) as { curso_id: string; vigente: boolean; proximo_inicio: string | null }[])
+    .map((f) => [f.curso_id, { vigente: f.vigente === true, proximoInicio: f.proximo_inicio ? new Date(f.proximo_inicio) : null }]));
+});
+
+/** Cursos con acceso vigente, con su avance según la versión de cada uno. Los vencidos van aparte (misCursosVencidos). */
 export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   await exigirSesion('/campus');
   const supabase = await clienteSesion();
   const { data: accesos, error } = await supabase
-    .from('accesos_curso').select('curso_id, version_id, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
+    .from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
   if (error) throw new Error(`No se pudieron leer sus cursos: ${error.message}`);
-  const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos);
+  // La base protege el contenido al vencer (tiene_acceso, version_de); aquí solo se ordena la vista.
+  const cobertura = await coberturas();
+  const filas = (accesos as unknown as FilaAcceso[]).filter((a) => a.cursos && cobertura.get(a.curso_id)?.vigente === true);
   if (filas.length === 0) return [];
   const ids = filas.map((a) => a.curso_id);
   const [lecciones, { data: certs }, { data: versiones }] = await Promise.all([
@@ -82,7 +98,7 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   type Cert = { id: string; curso_id: string; version_id: string; codigo_verificacion: string };
   const listaCerts = (certs ?? []) as Cert[];
   const versionPorId = new Map(((versiones ?? []) as { id: string; numero: number; publicada_en: string }[]).map((v) => [v.id, v]));
-  return filas.map(({ cursos: c, version_id }) => {
+  return filas.map(({ cursos: c, version_id, vence_en }) => {
     const ls = lecciones.get(c!.id) ?? [];
     // El certificado de la versión actual; si no hay, el último obtenido (de una versión anterior).
     const cert = listaCerts.find((x) => x.curso_id === c!.id && x.version_id === version_id) ?? null;
@@ -94,6 +110,61 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
       certificado: cert ? { id: cert.id, codigo: cert.codigo_verificacion } : null,
       certificadoAnterior: anterior ? { id: anterior.id, codigo: anterior.codigo_verificacion } : null,
       version: v ? { id: version_id, numero: v.numero, publicadaEn: new Date(v.publicada_en) } : null,
+      venceEn: vence_en ? new Date(vence_en) : null,
+    };
+  });
+});
+
+export interface OfertaRenovacion {
+  disponible: boolean; precioCentavos: number; duracionMeses: number | null; mesesAdicionales: number;
+  totalMeses: number | null; venceSiConfirmaHoy: Date | null;
+}
+
+export interface CursoVencido {
+  id: string; slug: string; titulo: string; venceEn: Date;
+  /** Inicio de un período futuro ya concedido; mientras tanto no hay acceso al contenido. */
+  proximoInicio: Date | null;
+  certificados: { id: string; codigo: string }[];
+  /** Cumplió todo antes de vencer y todavía no pidió el certificado de su versión. */
+  puedeObtenerCertificado: boolean;
+  /** Oferta vigente para renovar (precio y condiciones de hoy), si el curso sigue publicado. */
+  oferta: OfertaRenovacion | null;
+}
+
+/** Cursos cuyo acceso venció: sin contenido, pero con sus certificados (siguen siendo válidos). */
+export const misCursosVencidos = cache(async (): Promise<CursoVencido[]> => {
+  await exigirSesion('/campus');
+  const supabase = await clienteSesion();
+  const { data } = await supabase.from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo');
+  const cobertura = await coberturas();
+  const filas = ((data ?? []) as unknown as FilaAcceso[]).filter((a) => a.cursos && cobertura.get(a.curso_id)?.vigente !== true);
+  if (!filas.length) return [];
+  const { data: certs } = await supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion').in('curso_id', filas.map((f) => f.curso_id));
+  const certificados = (certs ?? []) as { id: string; curso_id: string; version_id: string | null; codigo_verificacion: string }[];
+  // Estado de finalización (versión histórica) y oferta de renovación, con la sesión de la persona.
+  const extras = await Promise.all(filas.map(async (f) => {
+    const [{ data: fin }, { data: oferta }] = await Promise.all([
+      supabase.rpc('mi_finalizacion', { p_curso: f.curso_id }),
+      supabase.rpc('oferta_curso', { p_curso: f.curso_id }),
+    ]);
+    return { fin: fin as { elegible_certificado?: boolean; version_id?: string } | null, oferta: oferta as Record<string, unknown> | null };
+  }));
+  return filas.map((f, i) => {
+    const propios = certificados.filter((c) => c.curso_id === f.curso_id);
+    const { fin, oferta } = extras[i]!;
+    return {
+      id: f.curso_id, slug: f.cursos!.slug, titulo: f.cursos!.titulo, venceEn: new Date(f.vence_en!),
+      proximoInicio: cobertura.get(f.curso_id)?.proximoInicio ?? null,
+      certificados: propios.map((c) => ({ id: c.id, codigo: c.codigo_verificacion })),
+      puedeObtenerCertificado: fin?.elegible_certificado === true && !propios.some((c) => c.version_id === fin.version_id),
+      oferta: oferta ? {
+        disponible: oferta.disponible === true,
+        precioCentavos: Number(oferta.precio_centavos ?? 0),
+        duracionMeses: oferta.duracion_meses == null ? null : Number(oferta.duracion_meses),
+        mesesAdicionales: Number(oferta.meses_adicionales ?? 5),
+        totalMeses: oferta.total_meses == null ? null : Number(oferta.total_meses),
+        venceSiConfirmaHoy: typeof oferta.vence_si_confirma_hoy === 'string' ? new Date(oferta.vence_si_confirma_hoy) : null,
+      } : null,
     };
   });
 });
@@ -114,6 +185,10 @@ export interface CursoCampusDetalle extends CursoCampus {
   materiales: MaterialCampus[];
   evaluacion: EvaluacionResumen | null;
   pendientes: number;
+  /** Modalidad y requisitos de la versión del alumno, y cuánto cumplió (la base decide). */
+  finalizacion: Finalizacion | null;
+  /** Actividades formativas de su versión (solo en la modalidad formativa con preguntas). */
+  actividades: { evaluacionId: string; preguntas: number; envios: number } | null;
 }
 
 /** Un curso del campus por slug, solo si la persona tiene acceso activo. Si no, null. */
@@ -122,17 +197,20 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
   if (!curso) return null;
   const supabase = await clienteSesion();
   const ids = curso.lecciones.map((l) => l.id);
-  const [{ data: materiales }, { data: ev }] = await Promise.all([
+  const [{ data: materiales }, { data: ev }, { data: fin }] = await Promise.all([
     ids.length
       ? supabase.from('recursos_leccion').select('id, titulo, leccion_id, tamano_bytes, orden, complementario').in('leccion_id', ids).order('orden')
       : Promise.resolve({ data: [] }),
     // Criterios e intentos de la versión del alumno, no del borrador.
     supabase.rpc('mi_evaluacion', { p_curso: curso.id }),
+    supabase.rpc('mi_finalizacion', { p_curso: curso.id }),
   ]);
   type Ev = { evaluacion_id: string | null; puntaje_minimo: number; intentos_permitidos: number | null; preguntas: number;
+    modalidad?: 'sumativa' | 'formativa'; envios_formativos?: number;
     aprobado_equivalente: boolean; intentos: { numero: number; puntaje: number; aprobado: boolean; revisado: boolean; entregado_en: string }[] };
   const e = ev as Ev | null;
-  const resumen: EvaluacionResumen | null = e?.evaluacion_id && e.preguntas > 0 ? {
+  const formativa = e?.modalidad === 'formativa';
+  const resumen: EvaluacionResumen | null = !formativa && e?.evaluacion_id && e.preguntas > 0 ? {
     id: e.evaluacion_id, puntajeMinimo: e.puntaje_minimo, intentosPermitidos: e.intentos_permitidos, preguntas: e.preguntas,
     aprobada: e.aprobado_equivalente,
     intentos: (e.intentos ?? []).map((i) => ({ numero: i.numero, puntaje: i.puntaje, aprobado: i.aprobado, revisado: i.revisado, entregadoEn: new Date(i.entregado_en) })),
@@ -143,6 +221,9 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
       .map((m) => ({ id: m.id, titulo: m.titulo, leccionId: m.leccion_id, tamanoBytes: m.tamano_bytes, complementario: m.complementario })),
     evaluacion: resumen,
     pendientes: curso.lecciones.filter((l) => !l.completada).length,
+    finalizacion: aFinalizacion(fin as Record<string, unknown> | null),
+    actividades: formativa && e?.evaluacion_id && e.preguntas > 0
+      ? { evaluacionId: e.evaluacion_id, preguntas: e.preguntas, envios: e.envios_formativos ?? 0 } : null,
   };
 });
 
@@ -208,6 +289,8 @@ export interface TallerInscripto {
   canceladaPor: 'alumno' | 'academia' | null;
   /** Respuesta a la última reprogramación (null si no hubo). */
   respuesta: 'pendiente' | 'aceptada' | 'reembolso_solicitado' | 'no_asiste' | null;
+  /** Horas antes del inicio hasta las que puede cancelar (copiadas al inscribirse). */
+  plazoHoras: number;
   /** El servidor solo lo entrega a inscriptos confirmados (enlace_taller). */
   enlace: string | null;
   reprogramadoDesde: Date | null;
@@ -219,7 +302,7 @@ export interface AvisoCampus { id: string; tipo: string; tallerId: string | null
 
 type FilaInscripcion = {
   estado: string; origen: TallerInscripto['origen']; creado_en: string; item_orden_id: string | null;
-  cancelada_por: TallerInscripto['canceladaPor']; respuesta_reprogramacion: TallerInscripto['respuesta'];
+  cancelada_por: TallerInscripto['canceladaPor']; respuesta_reprogramacion: TallerInscripto['respuesta']; cancelacion_horas: number | null;
   talleres: {
     id: string; slug: string; titulo: string; inicia_en: string; termina_en: string; zona_horaria: string; estado: string;
     motivo_cancelacion: string | null;
@@ -231,7 +314,7 @@ export async function misTalleres(): Promise<TallerInscripto[]> {
   const supabase = await clienteSesion();
   const [{ data, error }, { data: avisos }, { data: grabaciones }] = await Promise.all([
     supabase.from('inscripciones_taller')
-      .select('estado, origen, creado_en, item_orden_id, cancelada_por, respuesta_reprogramacion, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, motivo_cancelacion)')
+      .select('estado, origen, creado_en, item_orden_id, cancelada_por, respuesta_reprogramacion, cancelacion_horas, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, motivo_cancelacion)')
       .in('estado', ['confirmada', 'reembolso_pendiente', 'reembolsada', 'cancelada'])
       .order('creado_en', { ascending: false }),
     supabase.from('notificaciones').select('taller_id, detalle, creado_en').eq('tipo', 'taller_reprogramado').order('creado_en', { ascending: false }),
@@ -254,7 +337,7 @@ export async function misTalleres(): Promise<TallerInscripto[]> {
     return {
       id: t.id, slug: t.slug, titulo: t.titulo, iniciaEn: new Date(t.inicia_en), terminaEn: new Date(t.termina_en), zonaHoraria: t.zona_horaria,
       estado: t.estado, inscripcion: f.estado, origen: f.origen, paga: f.origen === 'compra' || f.item_orden_id !== null,
-      canceladaPor: f.cancelada_por, respuesta: f.respuesta_reprogramacion, enlace: enlaces[i] ?? null,
+      canceladaPor: f.cancelada_por, respuesta: f.respuesta_reprogramacion, plazoHoras: f.cancelacion_horas ?? 24, enlace: enlaces[i] ?? null,
       reprogramadoDesde: reprogramado.get(t.id) ?? null, motivoCancelacion: t.motivo_cancelacion, grabacion: grab.get(t.id) ?? null,
     };
   }).sort((a, b) => a.iniciaEn.getTime() - b.iniciaEn.getTime());
@@ -316,13 +399,20 @@ export async function compra(id: string): Promise<Compra | null> {
   return (await misCompras()).find((c) => c.id === id) ?? null;
 }
 
-export interface Perfil { nombre: string; correo: string; zonaHoraria: string }
+export interface Perfil {
+  nombre: string; correo: string; zonaHoraria: string;
+  /** Opcionales; datos personales que solo ven la persona y la admin. */
+  areaLaboral: string; estudios: string;
+}
 
 export const miPerfil = cache(async (): Promise<Perfil> => {
   const usuario = await exigirSesion('/campus/cuenta');
   const supabase = await clienteSesion();
-  const { data } = await supabase.from('perfiles').select('nombre_completo, zona_horaria').eq('id', usuario.id).maybeSingle();
-  return { nombre: data?.nombre_completo ?? '', correo: usuario.email ?? '', zonaHoraria: data?.zona_horaria ?? 'America/Guatemala' };
+  const { data } = await supabase.from('perfiles').select('nombre_completo, zona_horaria, area_laboral, estudios').eq('id', usuario.id).maybeSingle();
+  return {
+    nombre: data?.nombre_completo ?? '', correo: usuario.email ?? '', zonaHoraria: data?.zona_horaria ?? 'America/Guatemala',
+    areaLaboral: data?.area_laboral ?? '', estudios: data?.estudios ?? '',
+  };
 });
 
 /** Visita a una lección (para "Continuar donde lo dejó"). No toca completada_en; RLS exige acceso. */
@@ -343,7 +433,10 @@ export interface CambioVersion {
   intentosPermitidos: { antes: number | null; despues: number | null };
   evaluacionIgual: boolean;
   tieneCertificado: boolean;
+  /** Modalidad y requisitos antes y después (null si la base no los informa). */
+  requisitos: { antes: RequisitosVersion; despues: RequisitosVersion } | null;
 }
+export interface RequisitosVersion { modalidad: 'sumativa' | 'formativa'; requiereActividades: boolean; requiereValidacion: boolean; conCertificado: boolean }
 
 /** Qué cambiaría si el alumno pasa a la versión vigente del curso. null si ya está en ella. */
 export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | null> {
@@ -353,6 +446,7 @@ export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | 
     actual: { id: string; numero: number; publicada_en: string }; nueva: { id: string; numero: number; publicada_en: string; resumen: string | null };
     lecciones_nuevas: string[]; lecciones_quitadas: string[]; pendientes_despues: number; completadas_conservadas: number;
     puntaje_minimo: { antes: number; despues: number }; intentos_permitidos: { antes: number | null; despues: number | null };
+    requisitos?: { antes: FilaRequisitos; despues: FilaRequisitos };
     evaluacion_igual: boolean; tiene_certificado: boolean;
   };
   return {
@@ -362,5 +456,11 @@ export async function cambioDeVersion(cursoId: string): Promise<CambioVersion | 
     pendientesDespues: d.pendientes_despues, completadasConservadas: d.completadas_conservadas,
     puntajeMinimo: d.puntaje_minimo, intentosPermitidos: d.intentos_permitidos,
     evaluacionIgual: d.evaluacion_igual, tieneCertificado: d.tiene_certificado,
+    requisitos: d.requisitos ? { antes: aRequisitos(d.requisitos.antes), despues: aRequisitos(d.requisitos.despues) } : null,
   };
 }
+
+type FilaRequisitos = { modalidad: 'sumativa' | 'formativa'; requiere_actividades: boolean; requiere_validacion: boolean; con_certificado: boolean };
+const aRequisitos = (r: FilaRequisitos): RequisitosVersion => ({
+  modalidad: r.modalidad, requiereActividades: r.requiere_actividades, requiereValidacion: r.requiere_validacion, conCertificado: r.con_certificado,
+});

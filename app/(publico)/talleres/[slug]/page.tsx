@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { tallerPorSlug } from '@/datos/publico';
+import { configuracion, tallerPorSlug } from '@/datos/publico';
 import { formatearHorario, textoCupo } from '@/dominio/talleres';
 import { formatearUSD } from '@/dominio/dinero';
 import { INSCRIPCIONES_ABIERTAS } from '@/config/comercio';
@@ -20,6 +20,7 @@ const AVISOS: Record<string, string> = {
   ya_inscripto: 'Ya está inscripta o inscripto en este taller. Lo encuentra en Mis talleres.',
   taller_no_disponible: 'Este taller ya no admite inscripciones.',
   taller_pago: 'Este taller es pago: la inscripción abre al habilitarse las ventas.',
+  talleres_no_disponibles: 'Los talleres todavía no admiten inscripciones.',
   error: 'No se pudo completar la inscripción. Intente de nuevo.',
 };
 
@@ -31,7 +32,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 
 export default async function DetalleTaller({ params, searchParams }: Props) {
-  const [{ slug }, { aviso }] = await Promise.all([params, searchParams]);
+  const [{ slug }, { aviso }, config] = await Promise.all([params, searchParams, configuracion()]);
+  // Talleres no habilitados para el público: sin ficha ni inscripción (los datos se conservan).
+  if (!config.talleresPublicos) notFound();
   const taller = await tallerPorSlug(slug);
   if (!taller) notFound();
   const gratuito = taller.precioCentavos === 0;

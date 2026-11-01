@@ -112,11 +112,23 @@ end $$;
 select pruebas.afirmar((select count(*) from public.auditoria) >= 7, 'La admin lee el registro de actividad');
 reset role;
 
--- 4) Asignar el rol admin (script del servidor) queda registrado; el rol alumno de cada registro, no.
+-- 4) Asignar el rol admin (script del servidor) exige identificar al responsable (0023) y queda registrado;
+--    el rol alumno de cada registro, no.
 set local request.jwt.claim.sub = '';
+do $$ begin
+  insert into public.roles_usuario (perfil_id, rol) values ('bbbbbbbb-0000-0000-0000-000000000002', 'admin');
+  raise exception 'NO_FALLÓ: alta de admin sin responsable';
+exception when others then
+  perform pruebas.afirmar(sqlerrm = 'responsable_requerido', 'Sin responsable identificado, el alta de admin se rechaza: ' || sqlerrm);
+end $$;
+select set_config('albor.responsable', 'Persona que ejecuta el script', true);
 insert into public.roles_usuario (perfil_id, rol) values ('bbbbbbbb-0000-0000-0000-000000000002', 'admin');
 select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'rol_admin_creado'
-  and despues ->> 'perfil_id' = 'bbbbbbbb-0000-0000-0000-000000000002' and actor_id is null), 'Alta de admin registrada (autor: sistema)');
+  and despues ->> 'perfil_id' = 'bbbbbbbb-0000-0000-0000-000000000002' and actor_id is null), 'Alta de admin registrada (autor: script)');
+select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'rol_admin_responsable_alta'
+  and despues ->> 'responsable' = 'Persona que ejecuta el script' and despues ->> 'via' = 'script_servidor'), 'El responsable real queda en la auditoría');
+delete from public.roles_usuario where perfil_id = 'bbbbbbbb-0000-0000-0000-000000000002' and rol = 'admin';
+select pruebas.afirmar(exists (select 1 from public.auditoria where accion = 'rol_admin_responsable_baja'), 'La baja también registra al responsable');
 select pruebas.afirmar(not exists (select 1 from public.auditoria where entidad = 'roles_usuario' and despues ->> 'rol' = 'alumno'),
   'El rol alumno automático no llena el registro');
 

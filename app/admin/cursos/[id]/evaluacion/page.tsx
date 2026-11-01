@@ -9,6 +9,7 @@ import { BotonesOrden } from '@/ui/admin/BotonesOrden';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
 import { eliminarElemento, retirarElemento } from '../../acciones';
 import { FormCriterios } from './FormCriterios';
+import { CONFIG_PREDETERMINADA, usaPreguntas } from '@/dominio/evaluacion';
 
 export const metadata: Metadata = { title: 'Evaluación' };
 
@@ -23,6 +24,8 @@ export default async function Evaluacion({ params, searchParams }: Props) {
   const volver = `/admin/cursos/${c.id}/evaluacion`;
   const temasSolos = temasConUnaPregunta(preguntas);
   const versionado = c.versiones.length > 0;
+  const config = ev?.config ?? CONFIG_PREDETERMINADA;
+  const formativa = config.modalidad === 'formativa';
   return (
     <>
       <AvisoAccion ok={aviso.ok} error={aviso.error} />
@@ -41,7 +44,7 @@ export default async function Evaluacion({ params, searchParams }: Props) {
       <div className="grid grid-cols-1 items-start gap-8 xl:grid-cols-[1fr_380px]">
         <section aria-labelledby="preguntas">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="preguntas" className="m-0 text-[24px]">Preguntas</h2>
+            <h2 id="preguntas" className="m-0 text-[24px]">{formativa ? 'Actividades formativas' : 'Preguntas'}</h2>
             <Link href={`${volver}/nueva`} className="inline-flex min-h-[46px] items-center rounded-md bg-oliva-profundo px-5 font-bold text-marfil no-underline hover:bg-marron">+ Nueva pregunta</Link>
           </div>
           {temasSolos.length > 0 && (
@@ -50,8 +53,15 @@ export default async function Evaluacion({ params, searchParams }: Props) {
               Al informar «temas a reforzar», el alumno sabría cuál falló. Se recomienda que cada tema agrupe al menos dos preguntas.
             </p>
           )}
+          {formativa && !usaPreguntas(config) && (
+            <p className="m-0 mb-4 rounded-xl bg-arena px-4 py-3 text-[15px]">
+              Las actividades formativas no son obligatorias con la configuración actual: las preguntas no forman parte de la próxima versión.
+            </p>
+          )}
           {preguntas.length === 0 ? (
-            <div className="rounded-2xl bg-arena p-6"><p className="m-0">Todavía no hay preguntas. Un curso necesita al menos una para publicarse.</p></div>
+            <div className="rounded-2xl bg-arena p-6"><p className="m-0">{usaPreguntas(config)
+              ? 'Todavía no hay preguntas. Hace falta al menos una para publicar.'
+              : 'Todavía no hay preguntas. Con la configuración actual no son necesarias para publicar.'}</p></div>
           ) : (
             <ol className="m-0 flex list-none flex-col gap-3 p-0">
               {preguntas.map((p, i) => {
@@ -98,9 +108,11 @@ export default async function Evaluacion({ params, searchParams }: Props) {
           )}
         </section>
         <FormCriterios curso={c.id} criterios={{
-          puntaje: String(ev?.puntajeMinimo ?? 70), intentos: ev?.intentosPermitidos ? String(ev.intentosPermitidos) : '',
+          puntaje: String(ev?.puntajeMinimo ?? CONFIG_PREDETERMINADA.puntajeMinimo),
+          intentos: ev ? (ev.intentosPermitidos ? String(ev.intentosPermitidos) : '') : String(CONFIG_PREDETERMINADA.intentosPermitidos),
           aprobado: ev?.mensajeAprobado ?? 'Aprobó la evaluación.', desaprobado: ev?.mensajeDesaprobado ?? 'Todavía no alcanzó el puntaje mínimo.',
-        }} conIntentos={(ev?.intentos ?? 0) > 0} versionado={versionado} />
+        }} config={ev?.config ?? CONFIG_PREDETERMINADA} vigente={c.versiones.find((v) => v.vigente)?.config ?? null}
+          conIntentos={(ev?.intentos ?? 0) > 0} versionado={versionado} />
       </div>
     </>
   );

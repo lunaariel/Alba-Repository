@@ -10,6 +10,8 @@ values
    'Movimiento, lenguaje y vida cotidiana en los primeros años.', array['familias','cuidadores'], 0, 36, 300, 5900, '{}'),
   ('c1000000-0000-0000-0000-000000000003', 'demo-ambiente-3-6', '[Ejemplo] El ambiente preparado de 3 a 6 años',
    'Organizar materiales y espacios para el trabajo independiente.', array['docentes','familias'], 36, 72, 360, 6900, '{}');
+-- Duración comercial de ejemplo (el acceso dura esto + 5 meses desde la compra). Valores de demostración.
+update public.cursos set duracion_comercial_meses = 3 where id::text like 'c1000000-%';
 
 do $$
 declare c uuid; m uuid; e uuid; p uuid;
@@ -38,3 +40,7 @@ insert into public.talleres (slug, titulo, descripcion, inicia_en, termina_en, c
    date_trunc('hour', now()) + interval '10 days 2 hours', date_trunc('hour', now()) + interval '10 days 3 hours 30 minutes', 20, 1500, 'publicado'),
   ('demo-taller-ambiente', '[Ejemplo] Preparar el ambiente en casa', 'Encuentro de ejemplo para las capturas.',
    date_trunc('hour', now()) + interval '20 days 2 hours', date_trunc('hour', now()) + interval '20 days 3 hours 30 minutes', 2, 1500, 'publicado');
+
+-- Talleres ofrecidos al público en la demo (la migración 0024 los deja apagados hasta su lanzamiento).
+-- Así las capturas y recorridos de talleres siguen funcionando; recorrido-renovaciones prueba el estado apagado.
+update public.configuracion_academia set talleres_publicos = true;
