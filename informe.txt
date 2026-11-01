@@ -1,0 +1,585 @@
+200 1440px /
+200 1440px /cursos
+200 1440px /cursos/demo-montessori-en-casa
+200 1440px /talleres
+200 1440px /talleres/demo-taller-ambiente
+200 1440px /la-maestra
+200 1440px /contacto
+200 1440px /ingresar
+200 1440px /registro
+200 1440px /verificar
+200 1440px /verificar/EFC2C79EE78A
+200 1440px /verificar/NOEXISTE0000
+200 390px /
+200 390px /cursos
+200 390px /cursos/demo-montessori-en-casa
+200 390px /talleres
+200 390px /talleres/demo-taller-ambiente
+200 390px /la-maestra
+200 390px /contacto
+200 390px /ingresar
+200 390px /registro
+200 390px /verificar
+200 390px /verificar/EFC2C79EE78A
+200 390px /verificar/NOEXISTE0000
+ingreso 1440px como alumna.demo@albor.invalid
+200 1440px /campus
+200 1440px /campus/cursos/demo-montessori-en-casa
+200 1440px /campus/cursos/demo-montessori-en-casa/lecciones/9debd718-f2a1-433e-a3ac-eed40f4ee40f
+200 1440px /campus/cursos/demo-autonomia-0-3
+200 1440px /campus/cursos/demo-ambiente-3-6/evaluacion
+200 1440px /campus/talleres
+200 1440px /campus/compras
+200 1440px /campus/compras/29562ee1-9ee4-4165-b90f-c83531c3b372
+200 1440px /campus/cuenta
+200 descarga /campus/certificados/e435d21c-daa5-4b0c-9c4f-a8fa239e9a8d (application/pdf)
+ingreso 390px como alumna.demo@albor.invalid
+200 390px /campus
+200 390px /campus/cursos/demo-montessori-en-casa
+200 390px /campus/cursos/demo-montessori-en-casa/lecciones/9debd718-f2a1-433e-a3ac-eed40f4ee40f
+200 390px /campus/cursos/demo-autonomia-0-3
+200 390px /campus/cursos/demo-ambiente-3-6/evaluacion
+200 390px /campus/talleres
+200 390px /campus/compras
+200 390px /campus/compras/29562ee1-9ee4-4165-b90f-c83531c3b372
+200 390px /campus/cuenta
+--- recorrido del campus
+ok    sin sesión, /campus lleva a /ingresar
+ok    sin sesión, un certificado redirige (estado 307)
+lección de partida: 9debd718-f2a1-433e-a3ac-eed40f4ee40f
+ok    ingreso con la alumna de ejemplo
+ok    completar y seguir abre la lección siguiente
+ok    el avance muestra 2 de 3
+ok    la página de evaluación no contiene la respuesta correcta
+ok    respuestas incorrectas: 0 puntos
+ok    respuestas correctas: 100 puntos
+ok    el certificado se descarga como PDF
+ok    el PDF se puede volver a generar
+ok    dos cursos con certificado, sin duplicados
+ok    el código 5261DFC628B0 se verifica sin sesión
+ok    certificado inexistente o ajeno: 404
+ok    material ajeno: 404
+ok    curso sin acceso: 404
+ok    sin errores en la consola
+--- panel
+ingreso 1440px como maestra.demo@albor.invalid
+200 1440px /admin
+200 1440px /admin/cursos
+200 1440px /admin/cursos/c1000000-0000-0000-0000-000000000001
+200 1440px /admin/cursos/c1000000-0000-0000-0000-000000000001/temario
+200 1440px /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/9debd718-f2a1-433e-a3ac-eed40f4ee40f
+200 1440px /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion
+200 1440px /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/fb4efb73-b9c5-4e73-a28e-051bd34f3326
+200 1440px /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion
+200 1440px /admin/talleres
+200 1440px /admin/configuracion/actividad
+ingreso 390px como maestra.demo@albor.invalid
+200 390px /admin
+200 390px /admin/cursos
+200 390px /admin/cursos/c1000000-0000-0000-0000-000000000001
+200 390px /admin/cursos/c1000000-0000-0000-0000-000000000001/temario
+200 390px /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/9debd718-f2a1-433e-a3ac-eed40f4ee40f
+200 390px /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion
+200 390px /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/fb4efb73-b9c5-4e73-a28e-051bd34f3326
+200 390px /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion
+200 390px /admin/talleres
+200 390px /admin/configuracion/actividad
+ok    una dirección inexistente da 404
+ok    sin sesión, /admin responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/cursos responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/talleres responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/alumnos responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/certificados responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/ventas responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/contenido responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/comunicaciones responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/configuracion responde 404 igual que una página inexistente (404)
+ok    sin sesión, /admin/configuracion/actividad responde 404 igual que una página inexistente (404)
+ok    robots.txt no menciona el panel
+ok    la alumna no ve el enlace al panel
+ok    alumna en /admin: 404
+ok    alumna en /admin/cursos: 404
+ok    alumna en /admin/talleres: 404
+ok    alumna en /admin/alumnos: 404
+ok    alumna en /admin/certificados: 404
+ok    alumna en /admin/ventas: 404
+ok    alumna en /admin/contenido: 404
+ok    alumna en /admin/comunicaciones: 404
+ok    alumna en /admin/configuracion: 404
+ok    alumna en /admin/configuracion/actividad: 404
+ok    la administradora entra al panel desde el campus
+ok    admin en /admin: 200 (menú marca «Hoy»)
+ok    admin en /admin/cursos: 200 (menú marca «Cursos»)
+ok    admin en /admin/talleres: 200 (menú marca «Talleres»)
+ok    admin en /admin/alumnos: 200 (menú marca «Alumnos»)
+ok    admin en /admin/certificados: 200 (menú marca «Certificados»)
+ok    admin en /admin/ventas: 200 (menú marca «Ventas»)
+ok    admin en /admin/contenido: 200 (menú marca «Contenido»)
+ok    admin en /admin/comunicaciones: 200 (menú marca «Comunicaciones»)
+ok    admin en /admin/configuracion: 200 (menú marca «Configuración»)
+ok    admin en /admin/configuracion/actividad: 200 (menú marca «Configuración»)
+ok    el panel pide no ser indexado
+ok    figura el cambio del taller
+ok    con el nombre de la autora
+ok    figura la asignación del rol admin
+ok    el filtro por tema funciona
+ok    parámetros inválidos no rompen la página
+ok    sin errores en la consola
+--- cursos en el panel
+ok    el curso nuevo nace en borrador
+ok    se guardan los datos del curso
+ok    un precio inválido se explica
+ok    sin temario ni evaluación no aparece «Publicar»
+ok    se agrega un módulo
+ok    se guarda la lección
+ok    un id de video inválido se explica
+ok    no se asume el tipo de material: hay que elegirlo
+ok    un archivo que no es PDF se rechaza
+ok    el PDF se sube al almacenamiento privado y queda en la lección
+ok    se crea la pregunta
+ok    avisa que un tema con una sola pregunta revelaría la fallada
+ok    se guardan los criterios de aprobación
+ok    el curso se publica tras confirmar
+ok    el curso publicado aparece en el catálogo
+ok    el temario avisa que se edita el borrador
+ok    una lección ya vista solo se puede retirar, no eliminar
+ok    se retira una lección del borrador de un curso con certificados
+ok    retirar del borrador no cambia el sitio hasta publicar
+ok    la publicación muestra la diferencia con la versión vigente
+ok    se publica la versión 2 tras escribir PUBLICAR y el resumen
+ok    el historial de versiones marca la vigente
+ok    el sitio muestra la versión 2
+ok    el certificado emitido sigue válido e indica la versión 1
+ok    la alumna sigue en la versión 1, con su temario completo
+ok    la alumna ve que hay una versión nueva, sin cambio automático
+ok    antes de cambiar ve qué lecciones salen
+ok    antes de cambiar ve si la evaluación cambia
+ok    tras confirmar, la alumna sigue la versión 2
+ok    su temario ya es el de la versión 2
+ok    conserva el certificado de la versión 1
+ok    la misma evaluación aprobada se reconoce
+ok    obtiene el certificado de la versión 2 sin rendir de nuevo
+ok    el certificado anterior sigue válido y sigue diciendo versión 1
+ok    ya en la vigente, la página de cambio no ofrece nada
+ok    una pregunta publicada avisa que no se modifica
+ok    el cálculo muestra a quién beneficia, sin aplicar nada
+ok    sin la confirmación exacta no se aplica
+ok    con CORREGIR 1 se aplica
+ok    la revisión queda listada con su motivo
+ok    se bloquea una lección con motivo
+ok    la lección bloqueada no se muestra a la alumna
+ok    se desbloquea con motivo
+ok    la evaluación avisa que se edita el borrador
+ok    una pregunta respondida no se puede eliminar
+ok    las opciones de una pregunta respondida no se pueden quitar
+ok    un curso con alumnos no vuelve a borrador ni se elimina
+ok    se archiva un curso con alumnos tras escribir ARCHIVAR
+ok    el curso archivado sale del catálogo
+ok    la alumna conserva el curso archivado en su campus
+ok    la alumna no abre el editor de cursos (404)
+ok    el registro muestra la creación del curso y el retiro de la lección
+ok    el registro muestra la versión publicada y el bloqueo
+ok    el registro muestra la revisión favorable aplicada
+ok    sin errores en la consola
+--- talleres en el panel, el sitio y el campus
+ok    se crea el taller como borrador
+ok    la hora se muestra en la zona del taller
+ok    con vista previa en otras zonas
+ok    sin descripción no se puede publicar
+ok    se guardan descripción, precio gratuito y cupo, y el formulario muestra lo guardado
+ok    el taller se publica
+ok    recordatorios por defecto: 24 h y 1 h
+ok    se carga el enlace a mano
+ok    se configuran los recordatorios
+ok    sin sesión, se pide ingresar para inscribirse
+ok    la confirmación se ve en la plataforma y dice que no se envió correo
+ok    la confirmación queda registrada como notificación pendiente, no como enviada
+ok    quien ya está inscripta no puede volver a inscribirse
+ok    con el único lugar ocupado: «Cupo completo»
+ok    con la inscripción confirmada se muestra el enlace de participante, nunca el de anfitrión
+ok    gratuito a más de 24 h: se ofrece cancelar
+ok    el panel no ofrece inscribir por cortesía (las invitaciones serán cupones, Fase 6)
+ok    la admin ve a la alumna inscripta
+ok    la lista se exporta en CSV
+ok    la exportación queda registrada
+ok    con inscriptos, la fecha se cambia solo con «Reprogramar»
+ok    se reprograma con motivo
+ok    el aviso de reprogramación queda registrado (pendiente, sin correo)
+ok    la inscripción queda pendiente de respuesta: ni aceptada ni cancelada, con su lugar
+ok    la admin identifica a quien no respondió
+ok    la lista de talleres señala respuestas pendientes
+ok    la alumna ve la fecha original y la nueva, y que falta su respuesta
+ok    mientras está pendiente no se le confirma la asistencia a la fecha nueva
+ok    el aviso aparece en el campus
+ok    la alumna acepta la nueva fecha
+ok    la decisión queda registrada y auditada
+ok    los avisos se marcan como leídos
+ok    los procesos programados no corren sin clave (401)
+ok    procesos programados: {"reservas_vencidas":0,"talleres_finalizados":0,"recordatorios_registrados":1}; la segunda corrida no repite ({"reservas_vencidas":0,"talleres_finalizados":0,"recordatorios_registrados":0})
+ok    ninguna notificación figura como enviada
+ok    se duplica como borrador
+ok    la copia no tiene inscriptos ni enlace de reunión
+ok    la alumna cancela su inscripción gratuita
+ok    el lugar vuelve a estar disponible
+ok    la alumna puede volver a inscribirse
+ok    gratuito a menos de 24 h: no se ofrece cancelar
+ok    el plazo de cancelación se configura por taller y no cambia el de quien ya se inscribió
+ok    la inscripción existente sigue sin poder cancelarse a 12 h
+ok    pago: sin botón de cancelación, con el contacto de la academia
+ok    se reprograma el taller pago
+ok    pago reprogramado: se ofrece pedir el reembolso
+ok    el pedido de reembolso crea una incidencia; la orden no se toca y nada figura reembolsado
+ok    la grabación nace prevista y explica la regla de privacidad
+ok    sin verificar no se ofrece publicar
+ok    original recibida
+ok    en revisión
+ok    se registra la revisión
+ok    verificada
+ok    se guardan las condiciones de acceso
+ok    al publicar, la alumna inscripta (aunque no asistió) recibe el acceso, con sus condiciones
+ok    la alumna ve la grabación publicada con su vencimiento
+ok    la confirmación de cancelar informa a cuántas personas afecta
+ok    se cancela el taller con motivo
+ok    la alumna ve la cancelación y el enlace desaparece
+ok    un taller con inscriptos no ofrece eliminarse
+ok    el pago tardío sin lugar deja la orden en «requiere reembolso» (no pendiente)
+ok    sin sobreventa: una sola inscripción
+ok    la incidencia se ve en el panel con su motivo
+ok    la nota pasa la incidencia a revisión, sin declarar el reembolso hecho
+ok    alumna en /admin/talleres: 404
+ok    alumna en /admin/talleres/07727454-b6e9-4512-a5b0-988c085ec30d: 404
+ok    alumna en /admin/talleres/07727454-b6e9-4512-a5b0-988c085ec30d/participantes/csv: 404
+ok    alumna en /admin/talleres/incidencias: 404
+ok    alumna en /admin/talleres/9399700f-1d13-49ce-92c1-35b68ea5aae0/grabacion: 404
+ok    una página del registro más allá del final se muestra vacía, sin error (200)
+ok    el registro muestra reprogramar, cancelar, duplicar, la respuesta de la alumna y los cambios de la grabación
+ok    celular, panel lista: sin desborde horizontal
+ok    celular, panel datos: sin desborde horizontal
+ok    celular, panel participantes: sin desborde horizontal
+ok    celular, panel estado: sin desborde horizontal
+ok    celular, panel videollamada: sin desborde horizontal
+ok    celular, panel incidencias: sin desborde horizontal
+ok    celular, panel grabacion: sin desborde horizontal
+ok    celular, panel participantes-pago: sin desborde horizontal
+ok    celular, mis-talleres: sin desborde horizontal
+ok    celular, sitio-lista: sin desborde horizontal
+ok    celular, sitio-ficha: sin desborde horizontal
+ok    sin errores en la consola
+--- modalidad de evaluación: formativa y sumativa
+ok    una evaluación nueva usa los valores predeterminados: 70 % y 2 intentos
+ok    sin criterios, el formulario explica que no alcanza para certificar
+ok    la vista previa del alumno se actualiza
+ok    se guarda la modalidad formativa
+ok    sin criterios de certificación el curso queda en borrador
+ok    la vista previa muestra lo que verá el alumno, sin puntaje
+ok    se guardan los requisitos de finalización
+ok    el curso formativo se publica
+ok    la versión 1 fija la modalidad y los requisitos
+ok    el campus muestra los requisitos formativos, sin evaluación final
+ok    el certificado explica todo lo que falta
+ok    la evaluación final no existe en la modalidad formativa (404)
+ok    un envío incompleto no completa las actividades
+ok    actividades completas, con temas a repasar y sin nota
+ok    sin la validación docente no se ofrece el certificado
+ok    la admin ve a la alumna por versión y lo que le falta
+ok    se capturó la solicitud real de validación
+ok    alumna: validar la finalización se rechaza (404), sin cambios
+ok    visitante: validar la finalización se rechaza (404), sin cambios
+ok    API con el token de la alumna: validar 403, registrar por el servidor 403, estado ajeno 403, «correcta» 403
+ok    la admin valida la finalización con su nota
+ok    la alumna ve que cumplió todo
+ok    certificado formativo emitido
+ok    con certificado emitido ya no se ofrece anular la validación
+ok    cambiar la modalidad muestra las consecuencias antes de guardar
+ok    celular, panel evaluacion: sin desborde horizontal
+ok    celular, panel alumnos: sin desborde horizontal
+ok    celular, panel publicacion: sin desborde horizontal
+ok    celular, campus-curso: sin desborde horizontal
+ok    celular, campus-actividades: sin desborde horizontal
+ok    sin errores en la consola
+--- vencimientos de cursos
+ok    la admin ve la duración comercial y el total con los 5 meses
+ok    el total se recalcula en vivo (4 + 5 = 9)
+ok    una duración fuera de rango se explica
+ok    se guarda la duración comercial
+ok    la compra anterior conserva 3 + 5 = 8 meses
+ok    la ficha pública muestra las condiciones de acceso antes de comprar
+ok    la tarjeta del curso comprado muestra hasta cuándo hay acceso
+ok    un acceso concedido (sin vencimiento) no muestra fecha
+ok    la compra nueva vence a los 9 meses del pago confirmado
+ok    el campus muestra el curso vencido aparte
+ok    vencido: el curso (404) y el material (404, antes 503) dejan de estar disponibles
+ok    sus certificados siguen descargables (200)
+ok    la lista de alumnos muestra vigentes y vencidos
+ok    celular, campus con curso vencido: sin desborde horizontal
+ok    celular, ficha con condiciones: sin desborde horizontal
+ok    sin errores en la consola
+--- períodos de acceso: renovación, certificado vencido, becas y talleres apagados
+ok    punto de partida: el curso está vencido
+ok    el curso vencido muestra el precio y las condiciones vigentes antes de renovar
+ok    con las ventas cerradas no hay botón de compra
+ok    la orden de renovación congela la oferta vigente (9 meses)
+ok    renovación procesada por la pasarela simulada (procesado)
+ok    misma inscripción académica y misma versión
+ok    la compra anterior conserva su período; la nueva suma otro
+ok    renovado: el curso vuelve a estar disponible en el campus
+ok    renovado: el contenido vuelve a abrirse (200)
+ok    cumplió todos los requisitos antes de vencer
+ok    con el acceso vencido, el campus ofrece obtener el certificado
+ok    el certificado se emite y se descarga (200)
+ok    el campus vencido muestra el certificado para descargar
+ok    la verificación pública del certificado funciona con el acceso vencido (200)
+ok    el contenido sigue protegido (404)
+ok    el panel muestra los períodos de cada persona
+ok    la admin otorga una beca con fecha de fin
+ok    la acción de becas reenviada por una alumna o un visitante se rechaza (404, 404) y no crea nada
+ok    la beca registra origen, responsable y fecha de fin
+ok    la beca no crea compras
+ok    con la beca vuelve a tener acceso, en la misma inscripción
+ok    la admin revoca la beca con motivo
+ok    revocada: vuelve a estar vencido y conserva su certificado
+ok    una alumna no se otorga becas (403), no lee períodos ni busca personas (403)
+ok    revocar el período vigente no adelanta la renovación: conserva sus fechas
+ok    el campus muestra el derecho futuro, sin ofrecer comprar
+ok    en el intervalo sin cobertura el contenido está bloqueado (404)
+ok    el panel muestra el intervalo sin acceso y el período concedido
+ok    al llegar la fecha del período futuro, el acceso se activa (200)
+ok    la renovación no cambia la versión académica
+ok    un reembolso parcial no cambia el acceso ni el importe original del pago
+ok    la incidencia muestra el importe original y el reembolsado
+ok    la admin registra la resolución por escrito
+ok    resolver no modifica el acceso
+ok    una alumna no resuelve reembolsos parciales (404) y la incidencia sigue pendiente
+ok    apagados: sin listado (404) ni ficha (404)
+ok    apagados: el inicio y el menú no los promocionan
+ok    apagados: el mapa del sitio no los incluye
+ok    apagados: quien ya estaba inscripta sigue viendo su taller
+ok    el panel informa que los talleres no se ofrecen todavía
+ok    la admin sigue trabajando con los talleres
+ok    accesos y períodos concilian después del recorrido
+ok    celular, alumnos con períodos y becas: sin desborde horizontal
+ok    celular, campus con renovación y certificado: sin desborde horizontal
+ok    sin errores en la consola
+--- panel de cursos: duplicar, vista previa, orden, revisiones y bloqueos
+ok    se capturó la solicitud real de duplicar
+ok    alumna: duplicar se rechaza (404), sin cursos nuevos
+ok    visitante: duplicar se rechaza (404), sin cursos nuevos
+ok    la copia se crea como borrador independiente
+ok    la copia no tiene alumnos ni versiones
+ok    el PDF se copió en el almacenamiento con una ruta propia
+ok    la copia muestra el estado vacío de alumnos
+ok    si un PDF no se puede copiar, se avisa
+ok    el material sin archivo no queda en la copia
+ok    la vista previa muestra el borrador como lo vería un alumno
+ok    se navega entre lecciones en la vista previa
+ok    la vista previa no crea avances ni accesos y no muestra claves
+ok    la publicación muestra los cambios de orden frente a la versión vigente
+ok    alumna: descartar se rechaza (404)
+ok    visitante: descartar se rechaza (404)
+ok    la revisión queda descartada y listada, sin cambiar resultados
+ok    el material se bloquea en todas las versiones con motivo
+ok    y se desbloquea
+ok    celular, vista-previa: sin desborde horizontal
+ok    celular, alumnos: sin desborde horizontal
+ok    celular, revision: sin desborde horizontal
+ok    sin errores en la consola
+--- perfil y presentación de la maestra
+ok    la cuenta ofrece área laboral y estudios como opcionales
+ok    un valor inválido se explica
+ok    se guardan el área laboral y los estudios
+ok    otra alumna y un visitante no leen esos datos por la API
+ok    sin aprobación, el sitio no muestra la presentación nueva
+ok    el panel muestra la presentación con la trayectoria informada, pendiente de revisión
+ok    se guarda como borrador
+ok    el borrador sigue sin publicarse
+ok    al aprobar, se publica
+ok    la página «La maestra» muestra la presentación aprobada
+ok    los cambios quedan en el registro de actividad
+ok    celular, contenido: sin desborde horizontal
+ok    celular, cuenta: sin desborde horizontal
+ok    sin errores en la consola
+--- acciones protegidas con la sesión de la alumna
+ok    la admin abre /admin/cursos (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001 (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001/temario (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/9debd718-f2a1-433e-a3ac-eed40f4ee40f (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/fb4efb73-b9c5-4e73-a28e-051bd34f3326 (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000003/evaluacion/c0661bb7-9c7d-4e8d-bee5-5f99a64663af/revision (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion (200)
+ok    formularios reales del panel: 40, acciones distintas: 12 (20 descartados por ser también del campus)
+ok    alumna: /admin/cursos · ref · titulo=Cambio no autorizado precio=x → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001 · ref · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Montessori en  slug=demo-montessori-en-casa publico=familias duracionHoras=4 precio=49 duracionComercial=4 video= resumen=Qué cambiar en casa para descripcion=Texto suficiente para pa objetivos=Preparar un rincón de la requisitos=Texto suficiente para pa edadDesde=0 edadHasta=0 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=modulos id=fd2229a7-2b95-4a3f-9ebb- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=modulos id=fd2229a7-2b95-4a3f-9ebb- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f9f01147 · id=fd2229a7-2b95-4a3f-9ebb- curso=c1000000-0000-0000-0000- titulo=Observar y preparar motivo=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 404f6dc5e3 · tabla=modulos id=fd2229a7-2b95-4a3f-9ebb- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=lecciones id=6652aee2-37c5-48dd-8d13- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=lecciones id=6652aee2-37c5-48dd-8d13- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 404f6dc5e3 · tabla=lecciones id=6652aee2-37c5-48dd-8d13- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=lecciones id=9debd718-f2a1-433e-a3ac- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=lecciones id=9debd718-f2a1-433e-a3ac- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 404f6dc5e3 · tabla=lecciones id=9debd718-f2a1-433e-a3ac- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40df76bd46 · curso=c1000000-0000-0000-0000- modulo=fd2229a7-2b95-4a3f-9ebb- titulo=Cambio no autorizado → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=modulos id=ee66bb01-796e-45d0-b827- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=modulos id=ee66bb01-796e-45d0-b827- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f9f01147 · id=ee66bb01-796e-45d0-b827- curso=c1000000-0000-0000-0000- titulo=Vida cotidiana motivo=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 404f6dc5e3 · tabla=modulos id=ee66bb01-796e-45d0-b827- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=lecciones id=98ffc855-db05-4c95-8b45- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4021afbc23 · tabla=lecciones id=98ffc855-db05-4c95-8b45- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 404f6dc5e3 · tabla=lecciones id=98ffc855-db05-4c95-8b45- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40df76bd46 · curso=c1000000-0000-0000-0000- modulo=ee66bb01-796e-45d0-b827- titulo=Cambio no autorizado → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4074ec30ba · curso=c1000000-0000-0000-0000- titulo=Cambio no autorizado → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/9debd718-f2a1-433e-a3ac-eed40f4ee40f · 40ac5d5037 · id=9debd718-f2a1-433e-a3ac- curso=c1000000-0000-0000-0000- confirmacion=REEMPLAZAR → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/9debd718-f2a1-433e-a3ac-eed40f4ee40f · ref · id=9debd718-f2a1-433e-a3ac- curso=c1000000-0000-0000-0000- titulo=Un espacio a su altura duracion=15 video= descripcion=Texto suficiente para pa motivo=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/9debd718-f2a1-433e-a3ac-eed40f4ee40f · 40503f97ed · tabla=lecciones id=9debd718-f2a1-433e-a3ac- volver=/admin/cursos/c1000000-0 bloquear=si confirmacion=BLOQUEAR motivo=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 40d469e007 · id=c1000000-0000-0000-0000- estado=archivado confirmacion=ARCHIVAR → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 40d0735666 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Montessori en  → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 400f6d7538 · id=c1000000-0000-0000-0000- confirmacion=PUBLICAR resumen=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 40d469e007 · id=c1000000-0000-0000-0000- estado=archivado confirmacion=ARCHIVAR → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 40d0735666 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Desarrollo y a → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 400f6d7538 · id=c1000000-0000-0000-0000- confirmacion=PUBLICAR resumen=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 4021afbc23 · tabla=preguntas id=fb4efb73-b9c5-4e73-a28e- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 4021afbc23 · tabla=preguntas id=fb4efb73-b9c5-4e73-a28e- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 404f6dc5e3 · tabla=preguntas id=fb4efb73-b9c5-4e73-a28e- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · ref · curso=c1000000-0000-0000-0000- modalidad=sumativa puntaje=70 intentos=2 actividades=si validacion=si certificado=si aprobado=Aprobó la evaluación. desaprobado=Todavía no alcanzó el pu → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/fb4efb73-b9c5-4e73-a28e-051bd34f3326 · ref · curso=c1000000-0000-0000-0000- pregunta=fb4efb73-b9c5-4e73-a28e- opciones=[{"id":"1a1fd02b-c652-4f tipo=unica tema= correcta-visual=x enunciado=Pregunta de ejemplo → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/fb4efb73-b9c5-4e73-a28e-051bd34f3326 · 40503f97ed · tabla=preguntas id=fb4efb73-b9c5-4e73-a28e- volver=/admin/cursos/c1000000-0 bloquear=si confirmacion=BLOQUEAR motivo=Texto suficiente para pa → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000003/evaluacion/c0661bb7-9c7d-4e8d-bee5-5f99a64663af/revision · 40f9b58f44 · curso=c1000000-0000-0000-0000- pregunta=c0661bb7-9c7d-4e8d-bee5- opciones=682a207a-ce1b-4297-9138- motivo=Texto suficiente para pa version=2e806e39-5341-40fd-99a5- → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion · 40d469e007 · id=c1000000-0000-0000-0000- estado=publicado → 404
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion · 40d0735666 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] El ambiente pr → 404
+ok    la sesión de la alumna siguió activa durante toda la prueba (200)
+ok    la base no cambió tras 40 reenvíos de la alumna (huella 861b5512df24)
+ok    todas las respuestas a la alumna fueron un 404 controlado ([[404,40]])
+ok    tampoco cambia sin sesión
+ok    se encontró el formulario de bloqueo de la lección
+ok    control positivo: el mismo formulario enviado por la admin bloquea la lección (303)
+ok    control positivo: y la desbloquea
+ok    el bloqueo y el desbloqueo quedaron registrados
+--- acciones sensibles: alumna, visitante, API y almacenamiento
+ok    se capturó la solicitud real del panel: Eliminar un curso
+ok    se capturó la solicitud real del panel: Eliminar una lección
+ok    se capturó la solicitud real del panel: Eliminar un módulo
+ok    se capturó la solicitud real del panel: Eliminar una pregunta
+ok    se capturó la solicitud real del panel: Quitar un material
+ok    se capturó la solicitud real del panel: Subir un archivo (preparar la subida)
+ok    se capturó la solicitud real del panel: Subir un archivo (registrar lo subido)
+ok    se capturó la solicitud real del panel: Aplicar una revisión favorable
+ok    se capturó la solicitud real del panel: Calcular una revisión favorable
+ok    se capturó la solicitud real del panel: Bloquear contenido
+ok    se capturó la solicitud real del panel: Publicar una versión
+ok    se capturó la solicitud real del panel: Cambiar criterios académicos
+ok    se capturó la solicitud real del panel: Archivar un curso
+ok    se capturó la solicitud real del panel: Corrección menor de una lección publicada
+ok    se capturó la solicitud real del panel: Crear una lección de reemplazo
+ok    se capturó la solicitud real del panel: Asociar un material complementario
+ok    se capturó la solicitud real del panel: Corregir el nombre de un módulo publicado
+ok    se capturó la solicitud real del panel: Crear un taller
+ok    se capturó la solicitud real del panel: Editar un taller
+ok    se capturó la solicitud real del panel: Eliminar un taller
+ok    se capturó la solicitud real del panel: Reprogramar un taller
+ok    se capturó la solicitud real del panel: Cancelar un taller
+ok    se capturó la solicitud real del panel: Duplicar un taller
+ok    se capturó la solicitud real del panel: Cargar el enlace de una videollamada
+ok    se capturó la solicitud real del panel: Cambiar recordatorios
+ok    se capturó la solicitud real del panel: Cambiar el estado de una grabación
+ok    se capturó la solicitud real del panel: Registrar la revisión de una grabación
+ok    se capturó la solicitud real del panel: Guardar condiciones de una grabación
+ok    se capturó la solicitud real del panel: Anotar una incidencia
+ok    se capturó la solicitud real del panel: Crear un curso
+ok    acciones distintas capturadas: 28
+ok    alumna: «Eliminar un curso» rechazada con 404, sin cambios
+ok    visitante: «Eliminar un curso» rechazada con 404, sin cambios
+ok    alumna: «Eliminar una lección» rechazada con 404, sin cambios
+ok    visitante: «Eliminar una lección» rechazada con 404, sin cambios
+ok    alumna: «Eliminar un módulo» rechazada con 404, sin cambios
+ok    visitante: «Eliminar un módulo» rechazada con 404, sin cambios
+ok    alumna: «Eliminar una pregunta» rechazada con 404, sin cambios
+ok    visitante: «Eliminar una pregunta» rechazada con 404, sin cambios
+ok    alumna: «Quitar un material» rechazada con 404, sin cambios
+ok    visitante: «Quitar un material» rechazada con 404, sin cambios
+ok    alumna: «Subir un archivo (preparar la subida)» rechazada con 404, sin cambios
+ok    visitante: «Subir un archivo (preparar la subida)» rechazada con 404, sin cambios
+ok    alumna: «Subir un archivo (registrar lo subido)» rechazada con 404, sin cambios
+ok    visitante: «Subir un archivo (registrar lo subido)» rechazada con 404, sin cambios
+ok    alumna: «Aplicar una revisión favorable» rechazada con 404, sin cambios
+ok    visitante: «Aplicar una revisión favorable» rechazada con 404, sin cambios
+ok    alumna: «Calcular una revisión favorable» rechazada con 404, sin cambios
+ok    visitante: «Calcular una revisión favorable» rechazada con 404, sin cambios
+ok    alumna: «Bloquear contenido» rechazada con 404, sin cambios
+ok    visitante: «Bloquear contenido» rechazada con 404, sin cambios
+ok    alumna: «Publicar una versión» rechazada con 404, sin cambios
+ok    visitante: «Publicar una versión» rechazada con 404, sin cambios
+ok    alumna: «Cambiar criterios académicos» rechazada con 404, sin cambios
+ok    visitante: «Cambiar criterios académicos» rechazada con 404, sin cambios
+ok    alumna: «Archivar un curso» rechazada con 404, sin cambios
+ok    visitante: «Archivar un curso» rechazada con 404, sin cambios
+ok    alumna: «Corrección menor de una lección publicada» rechazada con 404, sin cambios
+ok    visitante: «Corrección menor de una lección publicada» rechazada con 404, sin cambios
+ok    alumna: «Crear una lección de reemplazo» rechazada con 404, sin cambios
+ok    visitante: «Crear una lección de reemplazo» rechazada con 404, sin cambios
+ok    alumna: «Asociar un material complementario» rechazada con 404, sin cambios
+ok    visitante: «Asociar un material complementario» rechazada con 404, sin cambios
+ok    alumna: «Corregir el nombre de un módulo publicado» rechazada con 404, sin cambios
+ok    visitante: «Corregir el nombre de un módulo publicado» rechazada con 404, sin cambios
+ok    alumna: «Crear un taller» rechazada con 404, sin cambios
+ok    visitante: «Crear un taller» rechazada con 404, sin cambios
+ok    alumna: «Editar un taller» rechazada con 404, sin cambios
+ok    visitante: «Editar un taller» rechazada con 404, sin cambios
+ok    alumna: «Eliminar un taller» rechazada con 404, sin cambios
+ok    visitante: «Eliminar un taller» rechazada con 404, sin cambios
+ok    alumna: «Reprogramar un taller» rechazada con 404, sin cambios
+ok    visitante: «Reprogramar un taller» rechazada con 404, sin cambios
+ok    alumna: «Cancelar un taller» rechazada con 404, sin cambios
+ok    visitante: «Cancelar un taller» rechazada con 404, sin cambios
+ok    alumna: «Duplicar un taller» rechazada con 404, sin cambios
+ok    visitante: «Duplicar un taller» rechazada con 404, sin cambios
+ok    alumna: «Cargar el enlace de una videollamada» rechazada con 404, sin cambios
+ok    visitante: «Cargar el enlace de una videollamada» rechazada con 404, sin cambios
+ok    alumna: «Cambiar recordatorios» rechazada con 404, sin cambios
+ok    visitante: «Cambiar recordatorios» rechazada con 404, sin cambios
+ok    alumna: «Cambiar el estado de una grabación» rechazada con 404, sin cambios
+ok    visitante: «Cambiar el estado de una grabación» rechazada con 404, sin cambios
+ok    alumna: «Registrar la revisión de una grabación» rechazada con 404, sin cambios
+ok    visitante: «Registrar la revisión de una grabación» rechazada con 404, sin cambios
+ok    alumna: «Guardar condiciones de una grabación» rechazada con 404, sin cambios
+ok    visitante: «Guardar condiciones de una grabación» rechazada con 404, sin cambios
+ok    alumna: «Anotar una incidencia» rechazada con 404, sin cambios
+ok    visitante: «Anotar una incidencia» rechazada con 404, sin cambios
+ok    alumna: «Crear un curso» rechazada con 404, sin cambios
+ok    visitante: «Crear un curso» rechazada con 404, sin cambios
+ok    alumna: desbloquear también se rechaza
+ok    control positivo: la misma solicitud enviada por la admin elimina el curso de prueba
+ok    API: la alumna no lee respuestas correctas (403)
+ok    API: la alumna no lee enlaces de anfitrión (403)
+ok    API: la alumna no lee los id de video privados (403)
+ok    API: funciones administrativas rechazadas para la alumna {"publicar_version":403,"aplicar_revision":403,"bloquear_contenido":403,"reemplazar_leccion":403,"corregir_modulo_publicado":403,"cambiar_version":403,"emitir_certificado":403,"inscribir_cortesia":403,"cambiar_estado_grabacion":403,"guardar_condiciones_grabacion":403,"otorgar_acceso_compra":403}
+ok    API: la alumna no lee grabaciones ni sus referencias (200)
+ok    almacenamiento: la alumna no sube archivos al bucket privado (400)
+ok    almacenamiento: la alumna no lista archivos administrativos (200, borrar → 200)
+ok    la base y el almacenamiento no cambiaron tras los intentos directos (cursos, intentos, certificados, archivos)
+ok    la página de cambio informa que no se puede volver atrás
+ok    se capturó la solicitud de cambio de versión
+ok    la solicitud capturada lleva el destino
+ok    la solicitud capturada lleva la casilla de confirmación
+ok    cambio de versión manipulado (destino anterior (versión 1)): no cambia nada
+ok    cambio de versión manipulado (destino inexistente): no cambia nada
+ok    cambio de versión manipulado (sin la casilla de confirmación): no cambia nada
+ok    cambio de versión sin sesión: rechazado (307)
+ok    la alumna sigue en la versión 1 de c1
+ok    se capturó la solicitud real de la alumna para responder la reprogramación
+ok    responder la reprogramación (segunda alumna (real)): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (visitante): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (la propia alumna sin la casilla): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (la propia alumna con una respuesta inventada): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (la propia alumna pidiendo reembolso de un taller gratuito): no cambia nada; la alumna sigue pendiente
+ok    control positivo: la solicitud de la propia alumna registra su aceptación (una sola vez)
+ok    responder dos veces no registra una segunda decisión
+ok    marcar avisos ajenos como leídos (segunda alumna): sin cambios (10 sin leer)
+ok    se capturó la solicitud de cancelación de un taller gratuito
+ok    el taller pago no ofrece cancelar
+ok    cancelar un taller pago con una solicitud manipulada: no cambia nada (ni orden ni acceso)
+ok    la segunda alumna no cancela la inscripción de la primera
+ok    página de cambio de un curso sin acceso: 404
