@@ -24,11 +24,11 @@ export default async function Leccion({ params, searchParams }: Props) {
   const usuario = await exigirSesion(`/campus/cursos/${slug}/lecciones/${id}`);
   const curso = await cursoCampus(slug);
   if (!curso) notFound();
-  const detalle = await leccionCampus(curso, id);
+  const detalle = await leccionCampus(curso, id, usuario.id);
   if (!detalle) notFound();
   await registrarVisita(usuario.id, id);
 
-  const { leccion, descripcion, urlVideo } = detalle;
+  const { leccion, descripcion, video } = detalle;
   const { anterior, siguiente, posicion, total } = vecinas(curso.lecciones, id);
   const materiales = curso.materiales.filter((m) => m.leccionId === id);
   const base = `/campus/cursos/${slug}`;
@@ -43,9 +43,9 @@ export default async function Leccion({ params, searchParams }: Props) {
         <h1 id="titulo-leccion" className="m-0 mt-1 text-[clamp(30px,3.6vw,46px)] leading-[1.1]">{leccion.titulo}</h1>
 
         <div className="mt-6 aspect-video w-full overflow-hidden rounded-2xl bg-salvia-claro">
-          {urlVideo ? (
+          {video.estado === 'listo' ? (
             <iframe
-              src={urlVideo}
+              src={video.url}
               title={`Video: ${leccion.titulo}`}
               loading="lazy"
               allow="accelerometer; gyroscope; encrypted-media; picture-in-picture; fullscreen"
@@ -54,7 +54,13 @@ export default async function Leccion({ params, searchParams }: Props) {
             />
           ) : (
             <div className="flex h-full items-end p-6">
-              <p className="m-0 text-[15px] text-tinta-foto">Video de la lección pendiente: se verá aquí cuando la maestra lo cargue.</p>
+              <p className="m-0 text-[15px] text-tinta-foto" data-estado-video={video.estado}>
+                {video.estado === 'error'
+                  ? 'No pudimos cargar el video en este momento. Recargue la página en unos minutos.'
+                  : video.estado === 'no_disponible'
+                    ? 'El video de esta lección no está disponible para su acceso.'
+                    : 'Video de la lección pendiente: se verá aquí cuando la maestra lo cargue.'}
+              </p>
             </div>
           )}
         </div>

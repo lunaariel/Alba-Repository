@@ -26,7 +26,7 @@ function origen(url: string | undefined): string {
   }
 }
 
-export function construirCsp(o: { nonce: string; desarrollo: boolean; supabaseUrl?: string; https?: boolean }): string {
+export function construirCsp(o: { nonce: string; desarrollo: boolean; supabaseUrl?: string; https?: boolean; videoSimulado?: boolean; enmarcable?: boolean }): string {
   if (!/^[A-Za-z0-9+/=_-]{16,}$/.test(o.nonce)) throw new Error('nonce inválido');
   const supabase = origen(o.supabaseUrl);
   const directivas: Record<string, string[]> = {
@@ -44,12 +44,14 @@ export function construirCsp(o: { nonce: string; desarrollo: boolean; supabaseUr
     // Subida de PDF del panel con URL firmada de Supabase Storage; en desarrollo, el WebSocket de Next.
     'connect-src': ["'self'", ...(supabase ? [supabase] : []), ...(o.desarrollo ? ['ws:', 'wss:'] : [])],
     'media-src': ["'self'"],
-    'frame-src': [...ORIGENES_VIDEO],
+    // El reproductor simulado (solo desarrollo y pruebas) se sirve desde el propio sitio.
+    'frame-src': [...ORIGENES_VIDEO, ...(o.videoSimulado ? ["'self'"] : [])],
     'worker-src': ["'self'", 'blob:'],
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
-    'frame-ancestors': ["'none'"],
+    // Solo la página del reproductor simulado se deja enmarcar, y únicamente por el propio sitio.
+    'frame-ancestors': [o.enmarcable ? "'self'" : "'none'"],
     'report-uri': ['/api/csp'],
   };
   const texto = Object.entries(directivas).map(([k, v]) => `${k} ${v.join(' ')}`);

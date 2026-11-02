@@ -1,6 +1,8 @@
 import { timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
 import { clienteServicio } from '@/datos/supabase';
+import { proveedorCorreo } from '@/servicios/correo';
+import { procesarCola } from '@/servicios/correo/procesar';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +10,8 @@ export const dynamic = 'force-dynamic';
  * Procesos programados: vencer reservas de cupo, finalizar talleres terminados y registrar los
  * recordatorios que correspondan. Lo llamará la tarea programada del hosting (Vercel Cron o pg_cron),
  * que se elige al definir el hosting. Exige la clave PROCESOS_CLAVE; sin ella configurada, no corre.
- * Los recordatorios quedan registrados como pendientes: no hay proveedor de correo conectado.
+ * Los correos de la cola se procesan con el proveedor configurado; hoy solo el simulado, que los deja «simulado»
+ * (nunca «enviado»). Los avisos de vencimiento no se generan aquí: su anticipación está pendiente de decisión.
  */
 export async function POST(request: NextRequest) {
   const clave = process.env.PROCESOS_CLAVE;
@@ -22,5 +25,13 @@ export async function POST(request: NextRequest) {
   ];
   const error = reservas.error ?? finalizados.error ?? recordatorios.error;
   if (error) return NextResponse.json({ error: 'fallo_proceso' }, { status: 500 });
-  return NextResponse.json({ reservas_vencidas: reservas.data, talleres_finalizados: finalizados.data, recordatorios_registrados: recordatorios.data });
+  const proveedor = proveedorCorreo();
+  const correos = proveedor
+    ? await procesarCola({
+        rpc: (fn, args) => db.rpc(fn, args),
+        plantillas: async () => new Map(((await db.from('plantillas_correo').select('clave, asunto, cuerpo')).data ?? [])
+          .map((p: { clave: string; asunto: string; cuerpo: string }) => [p.clave, { asunto: p.asunto, cuerpo: p.cuerpo }])),
+      }, proveedor).catch(() => ({ error: 'cola_no_disponible' }))
+    : { sin_proveedor: true };
+  return NextResponse.json({ reservas_vencidas: reservas.data, talleres_finalizados: finalizados.data, recordatorios_registrados: recordatorios.data, correos });
 }

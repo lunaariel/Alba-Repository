@@ -1,18 +1,19 @@
 /**
- * Contrato para entregar videos privados. El adaptador de Bunny Stream (URL firmada por token)
- * está en bunny.ts.
- * El servidor solo firma una URL después de comprobar que la persona tiene acceso al curso.
+ * Contrato para entregar videos privados. El servidor pide una URL de reproducción SOLO después de que la base
+ * autorizó la lección (autorizar_video_leccion: acceso vigente, versión académica y bloqueo). La URL es temporal.
+ * Adaptadores: Bunny Stream (bunny.ts, URL firmada por token) y el simulador local (simulado.ts).
  */
 export interface ProveedorVideo {
-  readonly nombre: string;
+  readonly nombre: 'bunny' | 'simulado';
   urlReproduccion(videoId: string, opciones: { segundosValidez: number }): Promise<string>;
 }
 
-/** Para desarrollo: devuelve una URL local que no expone ningún video real. */
-export class VideoSimulado implements ProveedorVideo {
-  readonly nombre = 'simulado';
-  async urlReproduccion(videoId: string, { segundosValidez }: { segundosValidez: number }): Promise<string> {
-    const vence = Math.floor(Date.now() / 1000) + segundosValidez;
-    return `http://localhost:3000/video-simulado/${encodeURIComponent(videoId)}?vence=${vence}`;
-  }
-}
+/** Lo que el campus puede mostrar en lugar del video, sin detalles internos. */
+export type EstadoVideo =
+  | { estado: 'listo'; url: string }
+  | { estado: 'pendiente' }          // la lección no tiene video cargado
+  | { estado: 'no_disponible' }      // sin proveedor configurado en este entorno
+  | { estado: 'error' };             // el proveedor falló: se puede reintentar
+
+/** Segundos de validez de una URL de reproducción de lección (después hay que recargar la página). */
+export const VALIDEZ_LECCION_SEGUNDOS = 2 * 60 * 60;

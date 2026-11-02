@@ -15,7 +15,8 @@
     "probar": "tsx --test tests/unit/*.test.ts",
     "probar:db": "./scripts/probar-db.sh",
     "db:reiniciar": "supabase db reset",
-    "capturas": "node scripts/capturas.mjs"
+    "capturas": "node scripts/capturas.mjs",
+    "configuracion": "tsx scripts/verificar-configuracion.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.0",

@@ -4,6 +4,7 @@ import { clienteSesion, clienteServicio } from './supabase';
 import { exigirSesion } from './sesion';
 import { ordenarLecciones, porcentajeAvance, leccionParaContinuar } from '@/dominio/aprendizaje';
 import { proveedorVideo } from '@/servicios/video';
+import { VALIDEZ_LECCION_SEGUNDOS, type EstadoVideo } from '@/servicios/video/tipos';
 import { aFinalizacion, type Finalizacion } from '@/dominio/evaluacion';
 
 /**
@@ -232,22 +233,35 @@ export const cursoCampus = cache(async (slug: string): Promise<CursoCampusDetall
 export interface LeccionDetalle {
   leccion: LeccionCampus;
   descripcion: string | null;
-  urlVideo: string | null;          // null: video pendiente (sin id o sin proveedor configurado)
+  video: EstadoVideo;
 }
 
-/** Detalle de una lección y su URL de video firmada (vence en 2 horas). */
-export async function leccionCampus(curso: CursoCampusDetalle, leccionId: string): Promise<LeccionDetalle | null> {
+/**
+ * Detalle de una lección del curso de la persona. El video pasa por dos controles: la lección está en el temario
+ * de SU versión (misCursos, solo cursos con acceso vigente) y la base vuelve a autorizarla con
+ * autorizar_video_leccion (acceso vigente, versión, bloqueo). Solo entonces se pide una URL temporal al proveedor.
+ */
+export async function leccionCampus(curso: CursoCampusDetalle, leccionId: string, perfilId: string): Promise<LeccionDetalle | null> {
   const leccion = curso.lecciones.find((l) => l.id === leccionId);
   if (!leccion) return null;
   const supabase = await clienteSesion();
   const { data } = await supabase.from('lecciones').select('descripcion').eq('id', leccionId).maybeSingle();
-  // El acceso ya se comprobó (la lección está en un curso de misCursos). Recién ahora se lee el id privado.
-  const { data: privado } = await clienteServicio().from('lecciones').select('video_id').eq('id', leccionId).maybeSingle();
+  return { leccion, descripcion: data?.descripcion ?? null, video: await videoDeLeccion(perfilId, leccionId) };
+}
+
+async function videoDeLeccion(perfilId: string, leccionId: string): Promise<EstadoVideo> {
+  const { data, error } = await clienteServicio().rpc('autorizar_video_leccion', { p_perfil: perfilId, p_leccion: leccionId });
+  const r = data as { estado?: string; video_id?: string } | null;
+  if (error) return { estado: 'error' };
+  if (r?.estado === 'sin_video') return { estado: 'pendiente' };
+  if (r?.estado !== 'autorizado' || !r.video_id) return { estado: 'no_disponible' };
   const proveedor = proveedorVideo();
-  const urlVideo = privado?.video_id && proveedor.nombre !== 'simulado'
-    ? await proveedor.urlReproduccion(privado.video_id, { segundosValidez: 2 * 60 * 60 })
-    : null;
-  return { leccion, descripcion: data?.descripcion ?? null, urlVideo };
+  if (!proveedor) return { estado: 'pendiente' };
+  try {
+    return { estado: 'listo', url: await proveedor.urlReproduccion(r.video_id, { segundosValidez: VALIDEZ_LECCION_SEGUNDOS }) };
+  } catch {
+    return { estado: 'error' };
+  }
 }
 
 export interface PreguntaEvaluacion {

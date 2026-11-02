@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PagosSimulados } from '../../src/servicios/pagos/simulado';
 import { LEYENDA_NO_FISCAL, SoloRecibo } from '../../src/servicios/facturacion/solo-recibo';
 import { ReunionManual } from '../../src/servicios/reuniones/manual';
-import { CorreoEnMemoria } from '../../src/servicios/correo/tipos';
+import { CorreoSimulado } from '../../src/servicios/correo/tipos';
 
 test('pasarela simulada: webhook firmado se acepta, alterado se rechaza', async () => {
   const p = new PagosSimulados('secreto-de-prueba-123456');
@@ -44,13 +44,13 @@ test('reunión manual solo acepta enlaces https', async () => {
   assert.equal(r.enlaceAnfitrion, null);
 });
 
-test('correo en memoria no envía dos veces el mismo mensaje', async () => {
-  const c = new CorreoEnMemoria();
-  const m = { para: 'a@prueba.test', plantilla: 'confirmacion_compra' as const, variables: {}, claveIdempotencia: 'confirmacion_compra:o1' };
+test('correo simulado no guarda dos veces el mismo mensaje (misma clave de idempotencia)', async () => {
+  const c = new CorreoSimulado();
+  const m = { para: 'a@prueba.test', asunto: 'Su compra', texto: 'Hola', claveIdempotencia: 'confirmacion_compra:o1' };
   await c.enviar(m);
-  const segundo = await c.enviar(m);
-  assert.equal(c.enviados.length, 1);
-  assert.equal(segundo.idExterno, 'duplicado-ignorado');
+  await c.enviar(m);
+  assert.equal(c.mensajes.length, 1);
+  assert.equal(c.simulado, true, 'el simulado se identifica como tal: la cola lo registra «simulado», no «enviado»');
 });
 
 test('VideoBunny firma la URL con la fórmula de Bunny', async () => {

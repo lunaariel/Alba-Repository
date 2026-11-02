@@ -29,7 +29,7 @@ export default async function VistaPrevia({ params, searchParams }: Props) {
   const preguntas = usaPreguntas(config) ? (c.evaluacion?.preguntas ?? []).filter((p) => !p.retirada && !p.marca.bloqueada) : [];
   const proveedor = proveedorVideo();
   // El id privado ya lo leyó el servidor (cursoAdmin, después de exigirAdmin). La URL firmada vence en 30 minutos.
-  const urlVideo = actual?.videoId && proveedor.nombre !== 'simulado' ? await proveedor.urlReproduccion(actual.videoId, { segundosValidez: 30 * 60 }) : null;
+  const urlVideo = actual?.videoId && proveedor ? await proveedor.urlReproduccion(actual.videoId, { segundosValidez: 30 * 60 }).catch(() => null) : null;
   const base = `/admin/cursos/${c.id}/vista-previa`;
 
   return (

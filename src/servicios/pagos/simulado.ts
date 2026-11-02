@@ -8,6 +8,8 @@ import type { EstadoPago, EventoPago, ProveedorPagos, SesionPago } from './tipos
 export class PagosSimulados implements ProveedorPagos {
   readonly nombre = 'simulado';
   private readonly pagos = new Map<string, { ordenId: string; estado: EstadoPago; montoCentavos: number }>();
+  /** Simula que la pasarela no responde a las consultas (error de comunicación; la pasarela real reintentaría). */
+  sinConexion = false;
 
   constructor(private readonly secreto: string, private readonly urlBase = 'http://localhost:3000') {
     if (secreto.length < 16) throw new Error('El secreto de la pasarela simulada debe tener al menos 16 caracteres.');
@@ -19,18 +21,21 @@ export class PagosSimulados implements ProveedorPagos {
     return { idExterno, urlCheckout: `${this.urlBase}/pago-simulado?pago=${idExterno}` };
   }
 
-  /** Genera el webhook que la pasarela "enviaría" al cambiar de estado. */
-  generarWebhook(idExterno: string, estado: EstadoPago): { cuerpo: string; cabeceras: Record<string, string> } {
+  /**
+   * Genera el webhook que la pasarela "enviaría" al cambiar de estado. Con `idEvento` repite un aviso ya enviado
+   * (reintento de la pasarela); con `montoAviso` simula un aviso cuyo importe no coincide con el pago real.
+   */
+  generarWebhook(idExterno: string, estado: EstadoPago, opciones: { idEvento?: string; montoAviso?: number } = {}): { cuerpo: string; cabeceras: Record<string, string> } {
     const pago = this.pagos.get(idExterno);
     if (!pago) throw new Error(`Pago simulado inexistente: ${idExterno}`);
     pago.estado = estado;
     const cuerpo = JSON.stringify({
-      id: `evt_${randomUUID()}`,
-      tipo: estado === 'reembolsado' ? 'reembolso' : 'pago',
+      id: opciones.idEvento ?? `evt_${randomUUID()}`,
+      tipo: estado === 'reembolsado' ? 'reembolso' : estado === 'contracargo' ? 'contracargo' : 'pago',
       pago: idExterno,
       orden: pago.ordenId,
       estado,
-      monto: pago.montoCentavos,
+      monto: opciones.montoAviso ?? pago.montoCentavos,
     });
     return { cuerpo, cabeceras: { 'x-firma-simulada': this.firmar(cuerpo) } };
   }
@@ -51,6 +56,7 @@ export class PagosSimulados implements ProveedorPagos {
   }
 
   async consultarEstado(idExterno: string) {
+    if (this.sinConexion) throw new Error('pasarela_no_responde');
     const pago = this.pagos.get(idExterno);
     if (!pago) throw new Error(`Pago simulado inexistente: ${idExterno}`);
     return { estado: pago.estado, montoCentavos: pago.montoCentavos };

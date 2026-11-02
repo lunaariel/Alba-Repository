@@ -15,6 +15,8 @@ export async function middleware(request: NextRequest) {
     desarrollo: process.env.NODE_ENV === 'development',
     supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     https: request.nextUrl.protocol === 'https:',
+    videoSimulado: process.env.VIDEO_PROVEEDOR === 'simulado' && process.env.APP_ENTORNO !== 'produccion',
+    enmarcable: request.nextUrl.pathname.startsWith('/video-simulado/') && process.env.APP_ENTORNO !== 'produccion',
   });
   const encabezadoCsp = modoCsp(process.env.CSP_MODO) === 'observacion' ? 'Content-Security-Policy-Report-Only' : 'Content-Security-Policy';
   request.headers.set('x-nonce', nonce);
