@@ -17,7 +17,7 @@ create table if not exists auth.users (
 -- Igual que en Supabase: el usuario sale del claim "sub" del JWT de la solicitud.
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(
-    coalesce(current_setting('request.jwt.claim.sub', true),
+    coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''),
              (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')),
     '')::uuid
 $$;
