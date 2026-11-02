@@ -87,6 +87,8 @@ export async function enviarActividades(_: ResultadoActividades, datos: FormData
   const { data, error } = await clienteServicio().rpc('registrar_actividad_formativa', {
     p_perfil: usuario.id, p_evaluacion: curso.actividades.evaluacionId, p_respuestas: respuestasDesdeFormulario(datos.entries()),
   });
+  // D8: la base limita los envíos por persona y minuto.
+  if (error?.message.includes('demasiados_envios')) return { error: 'Envió sus respuestas muchas veces seguidas. Espere un minuto y vuelva a intentarlo.' };
   if (error) return { error: 'No pudimos registrar sus respuestas. Intente de nuevo en unos minutos.' };
   const d = data as { completo: boolean; respondidas: number; total: number; temas_a_reforzar: string[] };
   revalidatePath(`/campus/cursos/${cursoSlug.data}`);
@@ -114,7 +116,7 @@ export async function obtenerCertificadoHistorico(datos: FormData) {
   const usuario = await exigirSesion('/campus');
   const curso = uuid.safeParse(datos.get('curso'));
   if (!curso.success) redirect('/campus');
-  const { data: propio } = await (await clienteSesion()).from('accesos_curso').select('id').eq('curso_id', curso.data).eq('estado', 'activo').maybeSingle();
+  const { data: propio } = await (await clienteSesion()).from('accesos_curso').select('id').eq('perfil_id', usuario.id).eq('curso_id', curso.data).eq('estado', 'activo').maybeSingle();
   if (!propio) redirect('/campus?aviso=certificado-error');
   const { data, error } = await clienteServicio().rpc('emitir_certificado', { p_perfil: usuario.id, p_curso: curso.data });
   if (error || !data) redirect('/campus?aviso=certificado-error');

@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { CampoCodigoReforzado, useReforzadaActiva } from './reforzada';
 
 const estilos = {
   primario: 'min-h-[44px] rounded-sm bg-oliva-profundo px-[18px] font-bold text-marfil hover:bg-marron',
@@ -27,6 +28,8 @@ function Enviar({ texto, peligro, habilitado }: { texto: string; peligro: boolea
 /**
  * Botón que abre una confirmación antes de ejecutar una acción del servidor.
  * Con `palabra`, hay que escribirla para habilitar el botón (el servidor también la verifica).
+ * Con `reforzada`, la operación es sensible: con la política de segundo factor encendida pide además el
+ * código actual de la app autenticadora (lo verifica el servidor; la base exige que sea reciente y de un uso).
  */
 export function ConfirmarAccion(props: {
   accion: (datos: FormData) => void | Promise<void>;
@@ -38,14 +41,18 @@ export function ConfirmarAccion(props: {
   palabra?: string;
   peligro?: boolean;
   estilo?: keyof typeof estilos;
+  reforzada?: boolean;
 }) {
   const dialogo = useRef<HTMLDialogElement>(null);
   const [escrito, setEscrito] = useState('');
+  const [codigo, setCodigo] = useState('');
   const id = useId();
-  const habilitado = !props.palabra || escrito.trim().toUpperCase() === props.palabra;
+  const pideCodigo = useReforzadaActiva() && Boolean(props.reforzada);
+  const habilitado = (!props.palabra || escrito.trim().toUpperCase() === props.palabra)
+    && (!pideCodigo || /^\d{6}$/.test(codigo.replace(/[\s-]/g, '')));
   return (
     <>
-      <button type="button" onClick={() => { setEscrito(''); dialogo.current?.showModal(); }} className={estilos[props.estilo ?? 'secundario']}>
+      <button type="button" onClick={() => { setEscrito(''); setCodigo(''); dialogo.current?.showModal(); }} className={estilos[props.estilo ?? 'secundario']}>
         {props.textoBoton}
       </button>
       <dialog
@@ -66,6 +73,7 @@ export function ConfirmarAccion(props: {
               />
             </div>
           )}
+          {props.reforzada && <CampoCodigoReforzado onCambio={setCodigo} />}
           <div className="mt-1 flex flex-wrap justify-end gap-2.5">
             <button type="button" onClick={() => dialogo.current?.close()} className="min-h-[46px] rounded-md border-2 border-oliva-profundo bg-blanco-calido px-5 font-bold text-oliva-profundo">
               Volver sin cambios

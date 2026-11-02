@@ -4,10 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { exigirAdminAccion } from '@/datos/sesion';
+import { clienteOperacionSensible } from '@/datos/mfa';
 import { clienteSesion } from '@/datos/supabase';
 import { precioACentavos, slugDesde, SLUG_VALIDO, UUID } from '@/dominio/cursos-admin';
 import { instanteEnZona, ZONAS_TALLER } from '@/dominio/talleres';
-import { codigoErrorTaller } from '@/dominio/talleres-admin';
+import { codigoErrorTaller, mensajeErrorTaller } from '@/dominio/talleres-admin';
 
 /**
  * Acciones del panel de talleres. Todas empiezan con exigirAdminAccion() y escriben con la sesión de la
@@ -110,7 +111,11 @@ export async function guardarTaller(_: EstadoForm, datos: FormData): Promise<Est
     cambios.inicia_en = h.inicio.toISOString();
     cambios.termina_en = h.fin.toISOString();
   }
-  const { error } = await (await clienteSesion()).from('talleres').update(cambios).eq('id', d.id);
+  const { data: actual } = await (await clienteSesion()).from('talleres').select('precio_centavos').eq('id', d.id).maybeSingle();
+  // Cambiar el precio es una operación sensible: pide el código del momento (con la política encendida).
+  const op = !actual || actual.precio_centavos !== precio ? await clienteOperacionSensible(datos) : { s: await clienteSesion() };
+  if (!op.s) return { error: mensajeErrorTaller(op.error), campo: 'codigo_reforzado' };
+  const { error } = await op.s.from('talleres').update(cambios).eq('id', d.id);
   if (error) return { error: mensaje(error.message), campo: campoDeError(error.message) };
   refrescar(d.id);
   return { ok: 'Cambios guardados.' };
@@ -124,7 +129,9 @@ export async function cambiarEstadoTaller(datos: FormData) {
   const palabras = { publicado: null, archivado: 'ARCHIVAR', borrador: null } as const;
   const palabra = palabras[r.data.estado];
   if (palabra && String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== palabra) ir(ruta, { error: 'confirmacion' });
-  const { error } = await (await clienteSesion()).from('talleres').update({ estado: r.data.estado }).eq('id', r.data.id);
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.from('talleres').update({ estado: r.data.estado }).eq('id', r.data.id);
   if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
   refrescar(r.data.id);
   ir(ruta, { ok: r.data.estado });
@@ -136,7 +143,9 @@ export async function eliminarTaller(datos: FormData) {
   const id = uuid.safeParse(datos.get('id'));
   if (!id.success) redirect('/admin/talleres');
   if (String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== 'ELIMINAR') ir(`${base(id.data)}/estado`, { error: 'confirmacion' });
-  const { error } = await (await clienteSesion()).from('talleres').delete().eq('id', id.data);
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(`${base(id.data)}/estado`, { error: op.error });
+  const { error } = await op.s.from('talleres').delete().eq('id', id.data);
   if (error) ir(`${base(id.data)}/estado`, { error: codigoErrorTaller(error.message) });
   refrescar();
   ir('/admin/talleres', { ok: 'eliminado' });
@@ -177,7 +186,9 @@ export async function cancelarTaller(datos: FormData) {
   if (!r.success) redirect('/admin/talleres');
   const ruta = `${base(r.data.id)}/estado`;
   if (String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== 'CANCELAR') ir(ruta, { error: 'confirmacion' });
-  const { error } = await (await clienteSesion()).rpc('cancelar_taller', { p_taller: r.data.id, p_motivo: r.data.motivo });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.rpc('cancelar_taller', { p_taller: r.data.id, p_motivo: r.data.motivo });
   if (error) ir(ruta, { error: codigoErrorTaller(error.message) });
   refrescar(r.data.id);
   ir(ruta, { ok: 'cancelado' });
@@ -278,7 +289,9 @@ export async function guardarCondicionesGrabacion(datos: FormData) {
   const precioTexto = String(datos.get('precio') ?? '').trim();
   const precio = precioTexto ? precioACentavos(precioTexto) : null;
   if (precioTexto && (precio === null || precio <= 0)) ir(ruta, { error: 'condiciones_invalidas' });
-  const { error } = await (await clienteSesion()).rpc('guardar_condiciones_grabacion', {
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.rpc('guardar_condiciones_grabacion', {
     p_grabacion: d.grabacion,
     p_incluido_dias: d.incluido === 'dias' ? Number(d.incluidoDias) : null, p_incluido_sin_venc: d.incluido === 'sin_vencimiento',
     p_compra_dias: d.compra === 'dias' ? Number(d.compraDias) : null, p_compra_sin_venc: d.compra === 'sin_vencimiento',
@@ -307,7 +320,9 @@ export async function resolverReembolsoParcial(datos: FormData) {
   await exigirAdminAccion();
   const r = z.object({ id: uuid, resolucion: texto(1000) }).safeParse({ id: datos.get('id'), resolucion: datos.get('resolucion') ?? '' });
   if (!r.success) redirect('/admin/talleres/incidencias');
-  const { error } = await (await clienteSesion()).rpc('resolver_reembolso_parcial', { p_incidencia: r.data.id, p_resolucion: r.data.resolucion });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir('/admin/talleres/incidencias', { error: op.error });
+  const { error } = await op.s.rpc('resolver_reembolso_parcial', { p_incidencia: r.data.id, p_resolucion: r.data.resolucion });
   if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
   revalidatePath('/admin/talleres/incidencias');
   ir('/admin/talleres/incidencias', { ok: 'reembolso_parcial_resuelto' });
@@ -318,7 +333,9 @@ export async function reintentarOtorgamiento(datos: FormData) {
   await exigirAdminAccion();
   const r = z.object({ id: uuid, nota: texto(1000) }).safeParse({ id: datos.get('id'), nota: datos.get('nota') ?? '' });
   if (!r.success) redirect('/admin/talleres/incidencias');
-  const { data, error } = await (await clienteSesion()).rpc('reintentar_otorgamiento', { p_incidencia: r.data.id, p_nota: r.data.nota });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir('/admin/talleres/incidencias', { error: op.error });
+  const { data, error } = await op.s.rpc('reintentar_otorgamiento', { p_incidencia: r.data.id, p_nota: r.data.nota });
   if (error) ir('/admin/talleres/incidencias', { error: codigoErrorTaller(error.message) });
   revalidatePath('/admin/talleres/incidencias');
   revalidatePath('/campus', 'layout');

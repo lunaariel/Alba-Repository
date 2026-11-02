@@ -41,11 +41,11 @@ type FilaTemario = { modulo_id: string; modulo_titulo: string; modulo_orden: num
 type FilaProgreso = { leccion_id: string; completada_en: string | null; ultima_visita_en: string };
 
 /** Lecciones de la versión de cada curso del alumno (versionado académico), con su avance. */
-async function leccionesConProgreso(versiones: { cursoId: string; versionId: string }[]): Promise<Map<string, LeccionCampus[]>> {
+async function leccionesConProgreso(perfilId: string, versiones: { cursoId: string; versionId: string }[]): Promise<Map<string, LeccionCampus[]>> {
   const supabase = await clienteSesion();
   const [temarios, { data: progreso, error: e2 }] = await Promise.all([
     Promise.all(versiones.map((v) => supabase.rpc('temario_version', { p_version: v.versionId }))),
-    supabase.from('progreso_leccion').select('leccion_id, completada_en, ultima_visita_en'),
+    supabase.from('progreso_leccion').select('leccion_id, completada_en, ultima_visita_en').eq('perfil_id', perfilId),
   ]);
   const e1 = temarios.find((t) => t.error)?.error;
   if (e1 || e2) throw new Error(`No se pudo leer el avance: ${(e1 ?? e2)?.message}`);
@@ -80,10 +80,12 @@ const coberturas = cache(async (): Promise<Map<string, { vigente: boolean; proxi
 
 /** Cursos con acceso vigente, con su avance según la versión de cada uno. Los vencidos van aparte (misCursosVencidos). */
 export const misCursos = cache(async (): Promise<CursoCampus[]> => {
-  await exigirSesion('/campus');
+  // Cada lectura del campus filtra por la propia persona: RLS deja leer todo a la admin, y su campus
+  // no debe mezclar accesos, avances ni certificados de otras alumnas (D14, claves duplicadas).
+  const { id: yo } = await exigirSesion('/campus');
   const supabase = await clienteSesion();
   const { data: accesos, error } = await supabase
-    .from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo').order('creado_en');
+    .from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('perfil_id', yo).eq('estado', 'activo').order('creado_en');
   if (error) throw new Error(`No se pudieron leer sus cursos: ${error.message}`);
   // La base protege el contenido al vencer (tiene_acceso, version_de); aquí solo se ordena la vista.
   const cobertura = await coberturas();
@@ -91,8 +93,8 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
   if (filas.length === 0) return [];
   const ids = filas.map((a) => a.curso_id);
   const [lecciones, { data: certs }, { data: versiones }] = await Promise.all([
-    leccionesConProgreso(filas.map((f) => ({ cursoId: f.curso_id, versionId: f.version_id }))),
-    supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion, emitido_en').in('curso_id', ids).order('emitido_en', { ascending: false }),
+    leccionesConProgreso(yo, filas.map((f) => ({ cursoId: f.curso_id, versionId: f.version_id }))),
+    supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion, emitido_en').eq('perfil_id', yo).in('curso_id', ids).order('emitido_en', { ascending: false }),
     supabase.from('versiones_curso').select('id, numero, publicada_en').in('id', filas.map((f) => f.version_id)),
   ]);
   type Cert = { id: string; curso_id: string; version_id: string; codigo_verificacion: string };
@@ -133,13 +135,13 @@ export interface CursoVencido {
 
 /** Cursos cuyo acceso venció: sin contenido, pero con sus certificados (siguen siendo válidos). */
 export const misCursosVencidos = cache(async (): Promise<CursoVencido[]> => {
-  await exigirSesion('/campus');
+  const { id: yo } = await exigirSesion('/campus');
   const supabase = await clienteSesion();
-  const { data } = await supabase.from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('estado', 'activo');
+  const { data } = await supabase.from('accesos_curso').select('curso_id, version_id, vence_en, cursos(id, slug, titulo, resumen)').eq('perfil_id', yo).eq('estado', 'activo').order('creado_en');
   const cobertura = await coberturas();
   const filas = ((data ?? []) as unknown as FilaAcceso[]).filter((a) => a.cursos && cobertura.get(a.curso_id)?.vigente !== true);
   if (!filas.length) return [];
-  const { data: certs } = await supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion').in('curso_id', filas.map((f) => f.curso_id));
+  const { data: certs } = await supabase.from('certificados').select('id, curso_id, version_id, codigo_verificacion').eq('perfil_id', yo).in('curso_id', filas.map((f) => f.curso_id));
   const certificados = (certs ?? []) as { id: string; curso_id: string; version_id: string | null; codigo_verificacion: string }[];
   // Estado de finalización (versión histórica) y oferta de renovación, con la sesión de la persona.
   const extras = await Promise.all(filas.map(async (f) => {
@@ -310,14 +312,14 @@ type FilaInscripcion = {
 };
 
 export async function misTalleres(): Promise<TallerInscripto[]> {
-  await exigirSesion('/campus/talleres');
+  const { id: yo } = await exigirSesion('/campus/talleres');
   const supabase = await clienteSesion();
   const [{ data, error }, { data: avisos }, { data: grabaciones }] = await Promise.all([
     supabase.from('inscripciones_taller')
       .select('estado, origen, creado_en, item_orden_id, cancelada_por, respuesta_reprogramacion, cancelacion_horas, talleres(id, slug, titulo, inicia_en, termina_en, zona_horaria, estado, motivo_cancelacion)')
-      .in('estado', ['confirmada', 'reembolso_pendiente', 'reembolsada', 'cancelada'])
+      .eq('perfil_id', yo).in('estado', ['confirmada', 'reembolso_pendiente', 'reembolsada', 'cancelada'])
       .order('creado_en', { ascending: false }),
-    supabase.from('notificaciones').select('taller_id, detalle, creado_en').eq('tipo', 'taller_reprogramado').order('creado_en', { ascending: false }),
+    supabase.from('notificaciones').select('taller_id, detalle, creado_en').eq('perfil_id', yo).eq('tipo', 'taller_reprogramado').order('creado_en', { ascending: false }),
     supabase.rpc('mis_grabaciones'),
   ]);
   if (error) throw new Error(`No se pudieron leer sus talleres: ${error.message}`);
@@ -345,10 +347,10 @@ export async function misTalleres(): Promise<TallerInscripto[]> {
 
 /** Avisos del campus sin leer. No hay proveedor de correo: estos avisos son el único canal por ahora. */
 export async function misAvisos(): Promise<AvisoCampus[]> {
-  await exigirSesion('/campus/talleres');
+  const { id: yo } = await exigirSesion('/campus/talleres');
   const { data } = await (await clienteSesion()).from('notificaciones')
     .select('id, tipo, taller_id, detalle, creado_en')
-    .is('leida_en', null).neq('estado', 'descartada')
+    .eq('perfil_id', yo).is('leida_en', null).neq('estado', 'descartada')
     .in('tipo', ['taller_reprogramado', 'reprogramacion_pendiente', 'taller_cancelado', 'grabacion_disponible', 'recordatorio_taller'])
     .order('creado_en', { ascending: false }).limit(20);
   return ((data ?? []) as { id: string; tipo: string; taller_id: string | null; detalle: Record<string, unknown> | null; creado_en: string }[])
@@ -374,12 +376,12 @@ type FilaOrden = {
 const ESTADOS_VISIBLES = ['aprobada', 'reembolsada', 'contracargo'];
 
 export async function misCompras(): Promise<Compra[]> {
-  await exigirSesion('/campus/compras');
+  const { id: yo } = await exigirSesion('/campus/compras');
   const supabase = await clienteSesion();
   const { data, error } = await supabase
     .from('ordenes')
     .select('id, creado_en, aprobada_en, estado, total_centavos, items_orden(descripcion, precio_centavos), documentos_fiscales(tipo, estado, serie, numero)')
-    .in('estado', ESTADOS_VISIBLES)
+    .eq('perfil_id', yo).in('estado', ESTADOS_VISIBLES)
     .order('creado_en', { ascending: false });
   if (error) throw new Error(`No se pudieron leer sus compras: ${error.message}`);
   return ((data ?? []) as FilaOrden[]).map((o) => {

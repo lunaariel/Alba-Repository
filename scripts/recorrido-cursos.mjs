@@ -56,8 +56,8 @@ const errores = [];
 let p;
 try {
   p = await ingresar(contexto, ADMIN_CORREO, ADMIN_CLAVE);
-  p.on('pageerror', (e) => errores.push(String(e)));
-  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errores.push(m.text()); });
+  p.on('pageerror', (e) => errores.push(`${String(e)} (en ${new URL(p.url()).pathname})`));
+  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errores.push(`${m.text()} (en ${new URL(p.url()).pathname})`); });
 
   // 1. Crear un curso: nace en borrador.
   await p.goto(`${BASE}/admin/cursos`, { waitUntil: 'networkidle' });

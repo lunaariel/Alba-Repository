@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { entornoPublico } from '@/config/entorno';
 import { clienteSesion } from '@/datos/supabase';
+import { pasoSegundoFactor } from '@/dominio/mfa';
 
 export type EstadoFormulario = { error?: string; campo?: string; ok?: string } | undefined;
 
@@ -25,7 +26,22 @@ export async function ingresar(_: EstadoFormulario, datos: FormData): Promise<Es
   const { error } = await supabase.auth.signInWithPassword({ email: r.data.correo, password: r.data.contrasena });
   // Mensaje único para no revelar si el correo existe.
   if (error) return { error: 'El correo o la contraseña no coinciden. Revíselos e intente de nuevo.' };
-  redirect(destinoSeguro(datos.get('siguiente')));
+  const destino = destinoSeguro(datos.get('siguiente'));
+  // Segundo paso: quien registró un factor lo verifica; una admin sin factor, con la política encendida, lo activa.
+  const [{ data: nivel }, { data: rolAdmin }, { data: politica }] = await Promise.all([
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    supabase.rpc('tiene_rol_admin'),
+    supabase.rpc('politica_seguridad_vigente'),
+  ]);
+  const paso = pasoSegundoFactor({
+    actual: nivel?.currentLevel === 'aal2' ? 'aal2' : 'aal1',
+    siguiente: nivel?.nextLevel === 'aal2' ? 'aal2' : 'aal1',
+    esAdmin: rolAdmin === true,
+    politicaActiva: process.env.ADMIN_MFA_OBLIGATORIO === 'si' || (politica as { mfa_admin_obligatorio?: boolean } | null)?.mfa_admin_obligatorio !== false,
+  });
+  if (paso === 'verificar') redirect(`/segundo-factor?siguiente=${encodeURIComponent(destino)}`);
+  if (paso === 'activar') redirect(`/segundo-factor/activar?siguiente=${encodeURIComponent(destino === '/campus' ? '/admin' : destino)}`);
+  redirect(destino);
 }
 
 export async function registrarse(_: EstadoFormulario, datos: FormData): Promise<EstadoFormulario> {

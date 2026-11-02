@@ -21,9 +21,9 @@ const errores = [];
 async function sesion(correo, clave, viewport = { width: 1440, height: 900 }) {
   const contexto = await navegador.newContext({ viewport });
   const p = await contexto.newPage();
-  p.on('pageerror', (e) => { if (!/Failed to fetch/.test(String(e))) errores.push(String(e)); });
+  p.on('pageerror', (e) => { if (!/Failed to fetch/.test(String(e))) errores.push(`${String(e)} (en ${new URL(p.url()).pathname})`); });
   // «Failed to fetch»: la solicitud que la prueba intercepta y cancela a propósito (capturar).
-  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|Failed to fetch/.test(m.text())) errores.push(m.text()); });
+  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|Failed to fetch/.test(m.text())) errores.push(`${m.text()} (en ${new URL(p.url()).pathname})`); });
   if (correo) {
     await p.goto(`${BASE}/ingresar`, { waitUntil: 'networkidle' });
     await p.fill('#correo', correo);

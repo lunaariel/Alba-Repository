@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { exigirAdminAccion } from '@/datos/sesion';
+import { clienteOperacionSensible } from '@/datos/mfa';
 import { clienteServicio, clienteSesion } from '@/datos/supabase';
 import { codigoError, mensajeError, precioACentavos, slugDesde, SLUG_VALIDO, UUID, volverSeguro } from '@/dominio/cursos-admin';
 import { instanteGuatemala } from '@/dominio/accesos';
@@ -86,14 +87,20 @@ export async function guardarDatosCurso(_: Estado, datos: FormData): Promise<Est
   const precio = precioACentavos(String(datos.get('precio') ?? ''));
   if (precio === null) return { error: 'Escriba el precio en dólares, por ejemplo 49 o 49.50.', campo: 'precio' };
   const d = r.data;
-  const s = await clienteSesion();
+  const duracion = d.duracionComercial ? Number(d.duracionComercial) : null;
+  const { data: actual } = await (await clienteSesion()).from('cursos').select('precio_centavos, duracion_comercial_meses').eq('id', d.id).maybeSingle();
+  // Precio y duración comercial son operaciones sensibles: piden el código del momento (con la política encendida).
+  const sensible = !actual || actual.precio_centavos !== precio || actual.duracion_comercial_meses !== duracion;
+  const op = sensible ? await clienteOperacionSensible(datos) : { s: await clienteSesion() };
+  if (!op.s) return { error: mensajeError(op.error), campo: 'codigo_reforzado' };
+  const s = op.s;
   const { error } = await s.from('cursos').update({
     titulo: d.titulo, slug: d.slug, resumen: d.resumen, descripcion: d.descripcion, requisitos: d.requisitos,
     objetivos: d.objetivos.split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 12),
     publico: d.publico, edad_desde_meses: d.edadDesde * 12, edad_hasta_meses: d.edadHasta * 12,
     duracion_minutos: d.duracionHoras ? Math.round(Number(d.duracionHoras.replace(',', '.')) * 60) || null : null,
     precio_centavos: precio, video_presentacion_id: d.video || null,
-    duracion_comercial_meses: d.duracionComercial ? Number(d.duracionComercial) : null,
+    duracion_comercial_meses: duracion,
   }).eq('id', d.id);
   if (error) return { error: mensajeError(error.message), campo: error.message.includes('slug') ? 'slug' : undefined };
   refrescar(d.id);
@@ -110,7 +117,9 @@ export async function cambiarEstadoCurso(datos: FormData) {
   const ruta = `/admin/cursos/${r.data.id}/publicacion`;
   const palabra = PALABRAS[r.data.estado];
   if (palabra && r.data.confirmacion?.trim().toUpperCase() !== palabra) ir(ruta, { error: 'confirmacion' });
-  const { error } = await (await clienteSesion()).from('cursos').update({ estado: r.data.estado }).eq('id', r.data.id);
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.from('cursos').update({ estado: r.data.estado }).eq('id', r.data.id);
   if (error) ir(ruta, { error: codigoError(error.message) });
   refrescar(r.data.id);
   ir(ruta, { ok: r.data.estado });
@@ -122,7 +131,9 @@ export async function eliminarCurso(datos: FormData) {
   if (!id.success) redirect('/admin/cursos');
   const ruta = `/admin/cursos/${id.data}/publicacion`;
   if (String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== 'ELIMINAR') ir(ruta, { error: 'confirmacion' });
-  const s = await clienteSesion();
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const s = op.s;
   const rutas = await rutasDeMateriales({ curso: id.data });
   const { error } = await s.from('cursos').delete().eq('id', id.data);
   if (error) ir(ruta, { error: codigoError(error.message) });
@@ -400,10 +411,22 @@ export async function guardarCriterios(_: Estado, datos: FormData): Promise<Esta
     intentos: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) > 0), 'Los intentos van de 1 a 99, o vacío para no limitar.'),
     aprobado: texto(300).min(2, 'Escriba el mensaje para quien aprueba.'),
     desaprobado: texto(300).min(2, 'Escriba el mensaje para quien no aprueba.'),
-  }).safeParse({
-    curso: datos.get('curso'), modalidad: datos.get('modalidad') ?? 'sumativa', puntaje: datos.get('puntaje'), intentos: datos.get('intentos') ?? '',
-    aprobado: datos.get('aprobado'), desaprobado: datos.get('desaprobado'),
-  });
+  }).safeParse((() => {
+    // D11: en la formativa, puntaje, intentos y mensajes están ocultos y no se usan; un valor vacío o inválido ahí
+    // no puede impedir guardar con un error que la maestra no ve. Se conservan valores válidos predeterminados.
+    const formativaEnviada = datos.get('modalidad') === 'formativa';
+    const valor = (k: string, porDefecto: string, valido: (v: string) => boolean) => {
+      const v = String(datos.get(k) ?? '').trim();
+      return formativaEnviada && !valido(v) ? porDefecto : datos.get(k);
+    };
+    return {
+      curso: datos.get('curso'), modalidad: datos.get('modalidad') ?? 'sumativa',
+      puntaje: valor('puntaje', '70', (v) => /^\d{1,3}$/.test(v) && Number(v) <= 100),
+      intentos: valor('intentos', '', (v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) > 0)) ?? '',
+      aprobado: valor('aprobado', 'Aprobó la evaluación.', (v) => v.length >= 2 && v.length <= 300),
+      desaprobado: valor('desaprobado', 'Todavía no alcanzó el puntaje mínimo.', (v) => v.length >= 2 && v.length <= 300),
+    };
+  })());
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
   // La sumativa no usa requisitos formativos (la base lo exige con una restricción).
@@ -471,7 +494,9 @@ export async function publicarVersion(datos: FormData) {
   if (!r.success) redirect('/admin/cursos');
   const ruta = `/admin/cursos/${r.data.id}/publicacion`;
   if (r.data.confirmacion.trim().toUpperCase() !== 'PUBLICAR') ir(ruta, { error: 'confirmacion' });
-  const { error } = await (await clienteSesion()).rpc('publicar_version', { p_curso: r.data.id, p_resumen: r.data.resumen });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.rpc('publicar_version', { p_curso: r.data.id, p_resumen: r.data.resumen });
   if (error) ir(ruta, { error: codigoError(error.message) });
   refrescar(r.data.id);
   ir(ruta, { ok: 'version_publicada' });
@@ -499,7 +524,9 @@ export async function aplicarRevision(datos: FormData) {
     .safeParse({ curso: datos.get('curso'), pregunta: datos.get('pregunta'), revision: datos.get('revision'), confirmacion: datos.get('confirmacion') ?? '' });
   if (!r.success) redirect('/admin/cursos');
   const base = `/admin/cursos/${r.data.curso}/evaluacion/${r.data.pregunta}/revision`;
-  const { data, error } = await (await clienteSesion()).rpc('aplicar_revision', { p_revision: r.data.revision, p_confirmacion: r.data.confirmacion });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) redirect(`${base}?calculo=${r.data.revision}&error=${op.error}`);
+  const { data, error } = await op.s.rpc('aplicar_revision', { p_revision: r.data.revision, p_confirmacion: r.data.confirmacion });
   if (error) redirect(`${base}?calculo=${r.data.revision}&error=${codigoError(error.message)}`);
   refrescar(r.data.curso);
   const estado = (data as { estado?: string } | null)?.estado;
@@ -515,7 +542,9 @@ export async function bloquearContenido(datos: FormData) {
   if (!r.success) ir(ruta, { error: 'invalido' });
   const palabra = r.data.bloquear === 'si' ? 'BLOQUEAR' : 'DESBLOQUEAR';
   if (String(datos.get('confirmacion') ?? '').trim().toUpperCase() !== palabra) ir(ruta, { error: 'confirmacion' });
-  const { error } = await (await clienteSesion()).rpc('bloquear_contenido', {
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.rpc('bloquear_contenido', {
     p_tabla: r.data.tabla, p_id: r.data.id, p_bloquear: r.data.bloquear === 'si', p_motivo: r.data.motivo,
   });
   if (error) ir(ruta, { error: codigoError(error.message) });
@@ -545,7 +574,9 @@ export async function anularValidacion(datos: FormData) {
     .safeParse({ curso: datos.get('curso'), validacion: datos.get('validacion'), motivo: datos.get('motivo') ?? '' });
   if (!r.success) redirect('/admin/cursos');
   const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
-  const { error } = await (await clienteSesion()).rpc('anular_validacion', { p_validacion: r.data.validacion, p_motivo: r.data.motivo });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.rpc('anular_validacion', { p_validacion: r.data.validacion, p_motivo: r.data.motivo });
   if (error) ir(ruta, { error: codigoError(error.message) });
   refrescar(r.data.curso);
   ir(ruta, { ok: 'validacion_anulada' });
@@ -618,7 +649,9 @@ export async function otorgarBeca(datos: FormData) {
   const inicio = r.data.inicio ? instanteGuatemala(r.data.inicio, 'inicio') : null;
   const fin = r.data.duracion === 'fecha' ? instanteGuatemala(r.data.fin, 'fin') : null;
   if ((r.data.inicio && !inicio) || (r.data.duracion === 'fecha' && !fin)) ir(ruta, { error: 'fecha_invalida' });
-  const s = await clienteSesion();
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const s = op.s;
   const { data: personas, error: e1 } = await s.rpc('buscar_perfil_por_correo', { p_correo: r.data.correo });
   if (e1) ir(ruta, { error: codigoError(e1.message) });
   const persona = (personas as { perfil_id: string }[] | null)?.[0];
@@ -639,7 +672,9 @@ export async function revocarBeca(datos: FormData) {
     .safeParse({ curso: datos.get('curso'), periodo: datos.get('periodo'), motivo: datos.get('motivo') ?? '' });
   if (!r.success) redirect('/admin/cursos');
   const ruta = `/admin/cursos/${r.data.curso}/alumnos`;
-  const { error } = await (await clienteSesion()).rpc('revocar_beca', { p_periodo: r.data.periodo, p_motivo: r.data.motivo });
+  const op = await clienteOperacionSensible(datos);
+  if (!op.s) ir(ruta, { error: op.error });
+  const { error } = await op.s.rpc('revocar_beca', { p_periodo: r.data.periodo, p_motivo: r.data.motivo });
   if (error) ir(ruta, { error: codigoError(error.message) });
   refrescar(r.data.curso);
   ir(ruta, { ok: 'beca_revocada' });

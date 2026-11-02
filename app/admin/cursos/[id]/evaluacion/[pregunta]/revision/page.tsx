@@ -7,6 +7,7 @@ import { UUID } from '@/dominio/cursos-admin';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { aplicarRevision, calcularRevision, descartarRevision } from '../../../../acciones';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
+import { CampoCodigoReforzado } from '@/ui/admin/reforzada';
 
 export const metadata: Metadata = { title: 'Revisión favorable' };
 
@@ -107,6 +108,7 @@ export default async function RevisionFavorable({ params, searchParams }: Props)
             <input id="confirmar-revision" name="confirmacion" required autoComplete="off"
               className="min-h-[50px] max-w-[320px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-4 uppercase text-marron" />
             <div className="flex flex-wrap gap-3">
+              <CampoCodigoReforzado />
               <button type="submit" className="min-h-[48px] rounded-md bg-oliva-profundo px-5 font-bold text-marfil hover:bg-marron">Aplicar la revisión favorable</button>
               <Link href={`${base}/revision`} className="inline-flex min-h-[48px] items-center rounded-md border-2 border-oliva-profundo px-5 font-bold text-oliva-profundo no-underline">Volver sin aplicar</Link>
             </div>

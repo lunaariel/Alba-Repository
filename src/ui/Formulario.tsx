@@ -14,6 +14,9 @@ export function Campo(props: {
   valorInicial?: string;
   /** Muestra «(opcional)» junto a la etiqueta. */
   opcional?: boolean;
+  /** Teclado sugerido en el celular (por ejemplo, numeric para códigos). */
+  modoEntrada?: 'numeric' | 'text' | 'email';
+  largoMaximo?: number;
 }) {
   const idError = `${props.nombre}-error`;
   const idAyuda = `${props.nombre}-ayuda`;
@@ -27,6 +30,8 @@ export function Campo(props: {
         defaultValue={props.valorInicial}
         type={props.tipo ?? 'text'}
         autoComplete={props.autoComplete}
+        inputMode={props.modoEntrada}
+        maxLength={props.largoMaximo}
         aria-invalid={props.error ? true : undefined}
         aria-describedby={describe}
         className={`min-h-[52px] rounded-md border-[1.5px] bg-blanco-calido px-4 text-marron ${props.error ? 'border-error' : 'border-borde-control'}`}

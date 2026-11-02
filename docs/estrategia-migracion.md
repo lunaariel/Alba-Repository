@@ -18,18 +18,21 @@
 | 0023 | Responsable de roles, permisos | Ninguno; no quita roles | Ensayada |
 | 0024 | Períodos de acceso, becas, talleres no ofrecidos | Un período histórico por acceso, con sus mismas fechas y condiciones. Órdenes de curso pendientes sin condiciones: vencidas con incidencia. Talleres apagados para el público | Ensayada sobre datos representativos; exacta (incluida la orden clasificada); se niega después de cualquier uso |
 | 0025 | Renovaciones futuras (acceso por cobertura) y reembolsos parciales a revisión | Ninguno: con datos sin intervalos, el acceso calculado es el mismo (verificado) | Ensayada; se niega si ya hay reembolsos parciales registrados o resueltos |
+| 0026 | Política de segundo factor (apagada), verificación reforzada, D8, D9, D12 | Ninguno: la política nace apagada y nadie pierde acceso. Los envíos formativos dejan de ser legibles por la alumna vía API | Archivo de reversión; se niega con la política encendida o con verificaciones registradas |
 
 **Ensayos automáticos:**
 
 - `tests/db/migracion_0014.sh`;
 - `tests/db/reversion_posteriores.sh` (0015 a 0025);
-- `tests/db/migracion_0024.sh` (datos históricos, conciliación y negativa; también 0025).
+- `tests/db/migracion_0024.sh` (datos históricos, conciliación y negativa; también 0025);
+- `tests/db/migrar.sh` (ejecutor: orden, registro, falla sin aplicación parcial, huella, concurrencia, base existente, bloqueo remoto);
+- `tests/db/respaldo.sh` (respaldo coherente y restauración verificada, paso 3).
 
 Comprueban que los datos previos quedan idénticos, que las migraciones se pueden volver a aplicar después de revertir y que la reversión se niega cuando perdería información.
 
 ## Dependencias y orden
 
-Orden obligatorio: **0014 → 0015 → … → 0025**, de a una.
+Orden obligatorio: **0014 → 0015 → … → 0026**, de a una.
 
 - 0015 a 0019 dependen de las versiones de 0014.
 - 0018 redefine funciones de 0014 y 0016.
@@ -38,12 +41,26 @@ Orden obligatorio: **0014 → 0015 → … → 0025**, de a una.
 - 0023 depende del panel de 0012.
 - 0024 depende de 0019 (condiciones y vencimientos), 0016 y 0017 (incidencias y talleres) y 0014 (versiones).
 - 0025 depende de 0024 (períodos) y redefine funciones de 0019 y 0024.
+- 0026 depende de 0024 (períodos), 0018 (envíos formativos) y 0023 (responsable de roles), cuyas funciones redefine.
 
-## Estrategia transaccional
+## Estrategia transaccional: `scripts/migrar.sh` (Fase 6A, D13)
 
-- **Las migraciones no son idempotentes**: crean tablas, columnas y disparadores. Cada archivo se aplica con `psql -v ON_ERROR_STOP=1 --single-transaction -f <archivo>`. Si algo falla, ese archivo no deja nada a medias.
-- **Después de cada archivo** se registra su verificación antes de pasar al siguiente. No se encadena todo en una sola transacción, para poder detenerse en un punto conocido.
-- **0024 verifica su propia conciliación al final**: si un acceso no coincide con sus períodos, aborta (`conciliacion_fallida`) y no aplica nada.
+Las migraciones no son idempotentes (crean tablas, columnas y disparadores). En lugar de aplicarlas a mano, el ejecutor `scripts/migrar.sh`:
+
+| Riesgo | Control del ejecutor |
+| --- | --- |
+| Aplicación parcial | Cada archivo y su fila de registro (`albor_control.migraciones`) en **una sola transacción** (`psql --single-transaction`): o queda aplicada y registrada, o nada |
+| Seguir después de un error | Se detiene en la primera falla; las siguientes no se aplican |
+| Aplicar dos veces | El registro por versión lo impide; repetir no hace nada |
+| Archivo modificado después de aplicarse | Huella SHA-256 registrada; si cambia, se niega a seguir |
+| Dos ejecuciones simultáneas | Bloqueo consultivo dentro de cada transacción y verificación del registro |
+| Base que ya tiene 0001–0013 | `--registrar-existentes-hasta 0013` las registra sin reaplicarlas |
+| Saber qué hará | `--simular` lista lo pendiente sin tocar nada; `--hasta 00NN` se detiene en un punto conocido |
+| Base equivocada | Se niega con cualquier host que no sea local: aplicar a una base real **no está autorizado** |
+
+No se encadena todo en una sola transacción: cada archivo es un punto de control conocido para verificar antes de seguir. **0024 verifica su propia conciliación al final** y aborta si no coincide.
+
+**Incompatibilidades conocidas:** Supabase CLI registra sus migraciones en `supabase_migrations.schema_migrations`; el ejecutor usa su propio registro. Para un proyecto real hay que elegir **uno** de los dos caminos y no mezclarlos (recomendado: el ejecutor, por la huella y el bloqueo; registrar también en la tabla de la CLI si se sigue usando `supabase db push`). Decisión pendiente para el momento de la autorización.
 
 ## Procedimiento (no ejecutar sin autorización)
 
@@ -52,14 +69,14 @@ Orden obligatorio: **0014 → 0015 → … → 0025**, de a una.
 2. **Congelar.** Ventas cerradas (ya lo están), aviso en el campus, sin escrituras de la admin.
    - *Verificación:* no hay órdenes pendientes recientes ni sesiones admin activas.
 3. **Respaldar.**
-   - `pg_dump` completo en formato personalizado, con su suma SHA-256.
+   - `scripts/respaldo.sh` (instantánea exportada y huella por tabla; docs/respaldos.md), con su suma SHA-256.
    - Punto de respaldo del proveedor.
    - *Verificación:* restaurar en una base temporal y comparar los conteos por tabla.
 4. **Registrar la línea de base.**
    - Conteos por tabla y suma de `items_orden.precio_centavos`.
    - Certificados; accesos por estado.
    - Órdenes de curso pendientes con y sin condiciones (las segundas serán clasificadas por 0024).
-5. **Ensayar en una copia.** Restaurar el respaldo en un proyecto de prueba y aplicar 0014 a 0025 con `--single-transaction`. Después:
+5. **Ensayar en una copia.** Restaurar el respaldo en una base nueva (`scripts/restaurar.sh`, que verifica huella y conciliación) y aplicar 0014 a 0026 con `scripts/migrar.sh --registrar-existentes-hasta 0013`. Después:
    - `select public.conciliar_versionado();`, tras 0014;
    - `select count(*) from public.conciliar_periodos();`, tras 0024, que debe dar 0;
    - las pruebas SQL adaptadas a esos datos;

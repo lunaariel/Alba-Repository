@@ -57,8 +57,8 @@ try {
   const admin = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
   const p = await ingresar(admin, ADMIN_CORREO, ADMIN_CLAVE);
   const errores = [];
-  p.on('pageerror', (e) => errores.push(String(e)));
-  p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
+  p.on('pageerror', (e) => errores.push(`${String(e)} (en ${new URL(p.url()).pathname})`));
+  p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} (en ${new URL(p.url()).pathname})`); });
   await Promise.all([p.waitForURL((u) => u.pathname === '/admin'), p.getByRole('link', { name: 'Panel' }).first().click()]);
   comprobar(await p.getByRole('heading', { name: 'Hoy' }).isVisible(), 'la administradora entra al panel desde el campus');
   for (const ruta of SECCIONES) {

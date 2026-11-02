@@ -62,7 +62,9 @@ export function FormCriterios({ curso, criterios, config, vigente, conIntentos, 
 
           <div hidden={modalidad !== 'sumativa'} className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
-              <Entrada nombre="puntaje" etiqueta="Puntaje mínimo (0 a 100)" inputMode="numeric" value={puntaje} onChange={(e) => setPuntaje(e.target.value)} required error={err('puntaje')} />
+              <Entrada nombre="puntaje" etiqueta="Puntaje mínimo (0 a 100)" inputMode="numeric" value={puntaje} onChange={(e) => setPuntaje(e.target.value)}
+                // D11: obligatorio solo si el bloque está visible (en la formativa no existe puntaje mínimo).
+                required={modalidad === 'sumativa'} error={err('puntaje')} />
               <Entrada nombre="intentos" etiqueta="Intentos permitidos" inputMode="numeric" value={intentos} onChange={(e) => setIntentos(e.target.value)} placeholder="Sin límite" error={err('intentos')} />
             </div>
             <AreaTexto nombre="aprobado" etiqueta="Mensaje al aprobar" defaultValue={criterios.aprobado} rows={2} maxLength={300} error={err('aprobado')} />
@@ -93,7 +95,8 @@ export function FormCriterios({ curso, criterios, config, vigente, conIntentos, 
 
           {versionado
             ? <p className="m-0 text-[14px] text-tinta-suave">Configuración del borrador: rige desde la próxima versión publicada. Cada versión conserva la suya.</p>
-            : conIntentos && <p className="m-0 text-[14px] text-tinta-suave">Los cambios valen desde el próximo intento; los anteriores no se recalculan.</p>}
+            // D11: la nota sigue la modalidad que se está editando, no la guardada.
+            : conIntentos && modalidad === 'sumativa' && <p className="m-0 text-[14px] text-tinta-suave">Los cambios valen desde el próximo intento; los anteriores no se recalculan.</p>}
           <div><BotonEnviar>Guardar criterios</BotonEnviar></div>
         </form>
       </div>

@@ -1,6 +1,9 @@
 /** Textos del panel de talleres: códigos de la base → mensajes para la maestra (solo códigos conocidos). */
 
+import { ERRORES_MFA } from './mfa';
+
 const ERRORES: Record<string, string> = {
+  ...ERRORES_MFA,
   taller_incompleto: 'Todavía no se puede publicar: revise la lista de requisitos (título, descripción, fecha futura y duración).',
   taller_nace_borrador: 'Un taller nuevo se crea como borrador.',
   transicion_invalida: 'Ese cambio de estado no está permitido para este taller.',

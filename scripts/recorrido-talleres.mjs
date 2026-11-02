@@ -22,8 +22,8 @@ const errores = [];
 async function sesion(correo, clave, viewport = { width: 1440, height: 900 }) {
   const contexto = await navegador.newContext({ viewport });
   const p = await contexto.newPage();
-  p.on('pageerror', (e) => errores.push(String(e)));
-  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errores.push(m.text()); });
+  p.on('pageerror', (e) => errores.push(`${String(e)} (en ${new URL(p.url()).pathname})`));
+  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errores.push(`${m.text()} (en ${new URL(p.url()).pathname})`); });
   if (correo) {
     await p.goto(`${BASE}/ingresar`, { waitUntil: 'networkidle' });
     await p.fill('#correo', correo);

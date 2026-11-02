@@ -4,6 +4,7 @@ import { useActionState, useState } from 'react';
 import { Aviso, BotonEnviar } from '@/ui/Formulario';
 import { AreaTexto, Entrada, Selector } from '@/ui/admin/campos';
 import { GuardiaCambios } from '@/ui/admin/GuardiaCambios';
+import { CampoCodigoReforzado } from '@/ui/admin/reforzada';
 import { centavosATexto } from '@/dominio/cursos-admin';
 import { guardarDatosCurso, type Estado } from '../acciones';
 
@@ -77,6 +78,7 @@ export function FormDatosCurso({ curso, alumnos }: { curso: Datos; alumnos: numb
           ayuda="Opcional. Es el video que ve cualquiera en la ficha del curso. La subida desde el panel llega al conectar Bunny." />
       </fieldset>
 
+      <CampoCodigoReforzado cuando="si cambia el precio o la duración comercial" />
       <div className="sticky bottom-0 -mx-2 border-t border-borde-bandeja bg-marfil/95 px-2 py-4">
         <BotonEnviar>Guardar cambios</BotonEnviar>
       </div>

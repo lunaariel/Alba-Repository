@@ -72,7 +72,7 @@ export default async function EditarLeccion({ params, searchParams }: Props) {
                     {m.bloqueado && <> <EstadoChip estado="pendiente" texto="Bloqueado en todas las versiones" /></>}
                     {m.bloqueado && m.bloqueoMotivo && <span className="block text-[13.5px] text-tinta-suave">Motivo: {m.bloqueoMotivo}</span>}</span>
                   {(m.enVersion || m.complementoDe.length > 0) && (
-                    <ConfirmarAccion accion={bloquearContenido} campos={{ tabla: 'recursos_leccion', id: m.id, volver, bloquear: m.bloqueado ? 'no' : 'si' }}
+                    <ConfirmarAccion reforzada accion={bloquearContenido} campos={{ tabla: 'recursos_leccion', id: m.id, volver, bloquear: m.bloqueado ? 'no' : 'si' }}
                       textoBoton={m.bloqueado ? 'Desbloquear' : 'Bloquear'} estilo={m.bloqueado ? 'enlace' : 'enlacePeligro'} peligro={!m.bloqueado}
                       titulo={m.bloqueado ? '¿Desbloquear el material?' : '¿Bloquear el material en todas las versiones?'} palabra={m.bloqueado ? 'DESBLOQUEAR' : 'BLOQUEAR'}>
                       <p className="m-0">{m.bloqueado

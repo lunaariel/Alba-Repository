@@ -70,7 +70,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
               <p className="m-0 mt-2">En borrador: nadie lo ve en el sitio.</p>
               <div className="mt-4">
                 {listo ? (
-                  <ConfirmarAccion accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'publicado' }} textoBoton="Publicar el curso" titulo="¿Publicar el curso?" estilo="primario">
+                  <ConfirmarAccion reforzada accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'publicado' }} textoBoton="Publicar el curso" titulo="¿Publicar el curso?" estilo="primario">
                     <p className="m-0">«{c.titulo}» aparecerá en el sitio con precio {formatearUSD(c.precioCentavos)}, {e.leccionesVigentes === 1 ? '1 lección' : `${e.leccionesVigentes} lecciones`} y {e.evaluacion?.modalidad === 'formativa'
                       ? 'evaluación formativa'
                       : `una evaluación de ${e.preguntasVigentes === 1 ? '1 pregunta' : `${e.preguntasVigentes} preguntas`}`}.</p>
@@ -86,12 +86,12 @@ export default async function Publicacion({ params, searchParams }: Props) {
             <>
               <p className="m-0 mt-2">Publicado{c.publicadoEn ? ` desde el ${new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'America/Guatemala' }).format(c.publicadoEn)}` : ''}. <Link href={`/cursos/${c.slug}`} className="font-bold text-oliva-profundo">Ver en el sitio</Link></p>
               <div className="mt-4 flex flex-wrap gap-2.5">
-                <ConfirmarAccion accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'archivado' }} textoBoton="Archivar" titulo="¿Archivar el curso?" palabra="ARCHIVAR">
+                <ConfirmarAccion reforzada accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'archivado' }} textoBoton="Archivar" titulo="¿Archivar el curso?" palabra="ARCHIVAR">
                   <p className="m-0">Deja de mostrarse en el sitio y no se puede comprar.</p>
                   <p className="m-0"><b>{h.alumnos === 0 ? 'Nadie lo compró todavía.' : `${h.alumnos === 1 ? 'La persona que lo compró conserva' : `Las ${h.alumnos} personas que lo compraron conservan`} el acceso`}</b>{h.alumnos > 0 ? ', su avance y sus certificados.' : ''}</p>
                 </ConfirmarAccion>
                 {h.alumnos === 0 && (
-                  <ConfirmarAccion accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'borrador' }} textoBoton="Volver a borrador" titulo="¿Volver a borrador?" palabra="BORRADOR">
+                  <ConfirmarAccion reforzada accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'borrador' }} textoBoton="Volver a borrador" titulo="¿Volver a borrador?" palabra="BORRADOR">
                     <p className="m-0">Deja de mostrarse en el sitio. Como nadie lo compró, puede seguir editándolo como borrador.</p>
                   </ConfirmarAccion>
                 )}
@@ -103,7 +103,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
               <p className="m-0 mt-2">Archivado: no se muestra ni se vende. {h.alumnos > 0 && `${h.alumnos === 1 ? 'Su alumno conserva' : `Sus ${h.alumnos} alumnos conservan`} el acceso.`}</p>
               <div className="mt-4">
                 {listo ? (
-                  <ConfirmarAccion accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'publicado' }} textoBoton="Volver a publicar" titulo="¿Volver a publicar?" estilo="primario">
+                  <ConfirmarAccion reforzada accion={cambiarEstadoCurso} campos={{ id: c.id, estado: 'publicado' }} textoBoton="Volver a publicar" titulo="¿Volver a publicar?" estilo="primario">
                     <p className="m-0">«{c.titulo}» vuelve a mostrarse en el sitio.</p>
                   </ConfirmarAccion>
                 ) : <p className="m-0 text-[15px]">Para volver a publicarlo, complete los requisitos.</p>}
@@ -124,7 +124,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
             {conHistorial ? (
               <p className="m-0 text-[14px] text-tinta-suave">Este curso tiene alumnos, compras o certificados: no se puede eliminar. Su historial se conserva.</p>
             ) : (
-              <ConfirmarAccion accion={eliminarCurso} campos={{ id: c.id }} textoBoton="Eliminar el curso" titulo="¿Eliminar el curso?" palabra="ELIMINAR" peligro estilo="peligro">
+              <ConfirmarAccion reforzada accion={eliminarCurso} campos={{ id: c.id }} textoBoton="Eliminar el curso" titulo="¿Eliminar el curso?" palabra="ELIMINAR" peligro estilo="peligro">
                 <p className="m-0">«{c.titulo}» se borra definitivamente con su temario, materiales y evaluación. Nadie lo compró, así que no se pierde historial de alumnos.</p>
               </ConfirmarAccion>
             )}
@@ -166,7 +166,7 @@ export default async function Publicacion({ params, searchParams }: Props) {
               {c.estado === 'publicado' && (
                 <div className="mt-4">
                   {listo ? (
-                    <ConfirmarAccion accion={publicarVersion} campos={{ id: c.id }} textoBoton={`Publicar la versión ${cambios.vigente.numero + 1}`}
+                    <ConfirmarAccion reforzada accion={publicarVersion} campos={{ id: c.id }} textoBoton={`Publicar la versión ${cambios.vigente.numero + 1}`}
                       titulo={`¿Publicar la versión ${cambios.vigente.numero + 1}?`} palabra="PUBLICAR" estilo="primario">
                       <p className="m-0">Quienes compren desde ahora seguirán la versión {cambios.vigente.numero + 1}.</p>
                       <p className="m-0"><b>{h.alumnos === 0 ? 'Todavía nadie tiene acceso.' : `${plural(h.alumnos, 'persona sigue', 'personas siguen')} en su versión actual`}</b>{h.alumnos > 0 ? ': conservan su avance, intentos y certificados, y podrán decidir si se pasan.' : ''}</p>

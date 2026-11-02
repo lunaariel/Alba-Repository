@@ -4,6 +4,7 @@ import { startTransition, useActionState, useState } from 'react';
 import { Aviso } from '@/ui/Formulario';
 import { AreaTexto, Entrada, Selector } from '@/ui/admin/campos';
 import { GuardiaCambios } from '@/ui/admin/GuardiaCambios';
+import { CampoCodigoReforzado } from '@/ui/admin/reforzada';
 import { ZONAS_TALLER } from '@/dominio/talleres';
 import { guardarTaller, type EstadoForm } from '../acciones';
 
@@ -90,6 +91,7 @@ export function FormTaller({ t, vistaPrevia }: { t: DatosFormTaller; vistaPrevia
         <Selector nombre="plataforma" etiqueta="Plataforma" defaultValue={t.plataforma} opciones={[{ valor: 'zoom', texto: 'Zoom' }, { valor: 'meet', texto: 'Google Meet' }]} />
         <p className="m-0 text-[14px] text-tinta-suave">El enlace lo ven solo las personas con inscripción confirmada, desde que se confirma; lo controla el servidor.</p>
       </fieldset>
+      <CampoCodigoReforzado cuando="si cambia el precio" />
       <div>
         <button type="submit" disabled={enviando} className="min-h-[54px] rounded-md bg-oliva-profundo px-7 text-[17px] font-bold text-marfil transition-colors hover:bg-marron disabled:opacity-55">
           {enviando ? 'Un momento…' : 'Guardar cambios'}

@@ -62,7 +62,7 @@ export default async function EstadoTaller({ params, searchParams }: Props) {
               {t.sinEnlace && <p className="m-0 mt-3 text-[15px] text-tinta-suave">Puede publicarlo sin enlace de videollamada; acuérdese de cargarlo antes del encuentro.</p>}
               <div className="mt-4">
                 {listo ? (
-                  <ConfirmarAccion accion={cambiarEstadoTaller} campos={{ id: t.id, estado: 'publicado' }} textoBoton="Publicar el taller" titulo="¿Publicar el taller?" estilo="primario">
+                  <ConfirmarAccion reforzada accion={cambiarEstadoTaller} campos={{ id: t.id, estado: 'publicado' }} textoBoton="Publicar el taller" titulo="¿Publicar el taller?" estilo="primario">
                     <p className="m-0">«{t.titulo}» aparecerá en el sitio: {formatearHorario(t.iniciaEn, t.zonaHoraria)}.</p>
                     <p className="m-0 text-[15px] text-tinta-suave">{t.precioCentavos > 0 ? 'La venta abre al conectar la pasarela de pago (Fase 6).' : 'Es gratuito: las personas con cuenta pueden inscribirse desde ya.'}</p>
                   </ConfirmarAccion>
@@ -79,7 +79,7 @@ export default async function EstadoTaller({ params, searchParams }: Props) {
 
           {(t.estado === 'cancelado' || t.estado === 'finalizado' || (t.estado === 'publicado' && terminado)) && (
             <div className="mt-4">
-              <ConfirmarAccion accion={cambiarEstadoTaller} campos={{ id: t.id, estado: 'archivado' }} textoBoton="Archivar" titulo="¿Archivar el taller?" palabra="ARCHIVAR">
+              <ConfirmarAccion reforzada accion={cambiarEstadoTaller} campos={{ id: t.id, estado: 'archivado' }} textoBoton="Archivar" titulo="¿Archivar el taller?" palabra="ARCHIVAR">
                 <p className="m-0">Deja de mostrarse en el sitio. Las inscripciones, pagos y asistencia se conservan, y quienes se inscribieron lo siguen viendo en su campus.</p>
               </ConfirmarAccion>
             </div>
@@ -89,7 +89,7 @@ export default async function EstadoTaller({ params, searchParams }: Props) {
               {t.tieneHistorial ? (
                 <p className="m-0 text-[14px] text-tinta-suave">Tiene inscripciones u órdenes: no se puede eliminar.</p>
               ) : (
-                <ConfirmarAccion accion={eliminarTaller} campos={{ id: t.id }} textoBoton="Eliminar el taller" titulo="¿Eliminar el taller?" palabra="ELIMINAR" peligro estilo="peligro">
+                <ConfirmarAccion reforzada accion={eliminarTaller} campos={{ id: t.id }} textoBoton="Eliminar el taller" titulo="¿Eliminar el taller?" palabra="ELIMINAR" peligro estilo="peligro">
                   <p className="m-0">«{t.titulo}» se borra definitivamente. Nadie se inscribió ni pagó.</p>
                 </ConfirmarAccion>
               )}
@@ -132,7 +132,7 @@ export default async function EstadoTaller({ params, searchParams }: Props) {
             <h2 id="cancelar" className="m-0 text-[22px]">Cancelar</h2>
             <p className="m-0 mt-1 text-[15px] text-tinta-suave">No se elimina: queda cancelado con su historial. Se liberan las reservas, el enlace deja de mostrarse y se registran los avisos.</p>
             <div className="mt-4">
-              <ConfirmarAccion accion={cancelarTaller} campos={{ id: t.id }} textoBoton="Cancelar el taller" titulo="¿Cancelar el taller?" palabra="CANCELAR" peligro estilo="peligro">
+              <ConfirmarAccion reforzada accion={cancelarTaller} campos={{ id: t.id }} textoBoton="Cancelar el taller" titulo="¿Cancelar el taller?" palabra="CANCELAR" peligro estilo="peligro">
                 <p className="m-0">
                   {n === 0 ? 'No hay inscriptos.' : <><b>Afecta a {n === 1 ? '1 persona' : `${n} personas`}.</b> {pagas > 0 && `${pagas === 1 ? 'La inscripción paga queda' : `Las ${pagas} inscripciones pagas quedan`} en «reembolso pendiente» (se gestiona en la Fase 6). `}Las gratuitas y de cortesía se cancelan.</>}
                   {t.reservas > 0 && ` Se liberan ${t.reservas === 1 ? '1 reserva' : `${t.reservas} reservas`} en curso.`}

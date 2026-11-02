@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Atkinson_Hyperlegible, Fraunces } from 'next/font/google';
 import './globals.css';
 
@@ -23,7 +24,10 @@ export const metadata: Metadata = {
   icons: { icon: '/marca/albor-favicon.svg' },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// Toda página se genera en cada solicitud: así Next pone en sus scripts el nonce de la CSP de esa respuesta
+// (middleware.ts). Una página estática llevaría scripts sin nonce y la política los bloquearía.
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await headers();
   return (
     <html lang="es" className={`${fraunces.variable} ${atkinson.variable}`}>
       <body>{children}</body>

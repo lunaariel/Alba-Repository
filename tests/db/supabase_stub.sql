@@ -14,10 +14,14 @@ create table if not exists auth.users (
   raw_user_meta_data jsonb not null default '{}'::jsonb
 );
 
+-- Factores y sesiones de Auth (en Supabase los gestiona Auth; aquí, lo mínimo para la recuperación de 0027).
+create table if not exists auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, factor_type text, status text);
+create table if not exists auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade);
+
 -- Igual que en Supabase: el usuario sale del claim "sub" del JWT de la solicitud.
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(
-    coalesce(current_setting('request.jwt.claim.sub', true),
+    coalesce(nullif(current_setting('request.jwt.claim.sub', true), ''),
              (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')),
     '')::uuid
 $$;

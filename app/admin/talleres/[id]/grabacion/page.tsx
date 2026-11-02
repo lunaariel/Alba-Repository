@@ -5,6 +5,7 @@ import { centavosATexto } from '@/dominio/cursos-admin';
 import { ESTADOS_GRABACION_TEXTO, SIGUIENTES_GRABACION } from '@/dominio/talleres-admin';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { ConfirmarAccion } from '@/ui/admin/ConfirmarAccion';
+import { CampoCodigoReforzado } from '@/ui/admin/reforzada';
 import { EstadoChip } from '@/ui/admin/estructura';
 import { TEXTOS_TALLER } from '@/ui/admin/talleres';
 import { cambiarEstadoGrabacion, guardarCondicionesGrabacion, guardarRevisionGrabacion } from '../../acciones';
@@ -118,6 +119,7 @@ export default async function Grabacion({ params, searchParams }: Props) {
               <label className="flex flex-col gap-1 text-[15px]">Días<input name="compraDias" inputMode="numeric" defaultValue={c.compraDias ?? ''} className={campo} /></label>
               <p className="m-0 text-[14px] text-tinta-suave">La venta no está habilitada: requiere pasarela de pago y alojamiento de video.</p>
             </fieldset>
+            <div className="md:col-span-2"><CampoCodigoReforzado /></div>
             <div className="md:col-span-2"><button type="submit" className="min-h-[46px] rounded-md bg-oliva-profundo px-5 font-bold text-marfil hover:bg-marron">Guardar condiciones</button></div>
           </form>
         </section>
