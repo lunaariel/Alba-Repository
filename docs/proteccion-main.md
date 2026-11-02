@@ -1,6 +1,8 @@
-# Propuesta: protección de `main`
+# Protección de `main`
 
-Fase 6A (02/11/2026). **Propuesta preparada, no aplicada.** Modificar la configuración del repositorio requiere autorización expresa de la titular.
+Fase 6A (02/11/2026). **Autorizada por la titular el 02/11/2026** (sin aprobaciones obligatorias de revisores, por ahora).
+
+**Estado: autorizada, NO aplicada desde esta sesión.** Las herramientas de GitHub disponibles en la sesión de trabajo permiten leer ramas, ejecutar CI, abrir e integrar Pull Requests, pero **no configurar protecciones de rama ni *rulesets***, y no se usaron otros medios para eludir esa restricción. La titular (dueña del repositorio) debe aplicarla con los pasos de abajo; tarda unos minutos. Después de aplicarla, `list_branches` debe mostrar `main` con `protected: true`.
 
 ## Estado verificado
 
@@ -33,7 +35,21 @@ Regla de protección de rama (Settings › Branches › Add rule, o *ruleset*) p
 - Los nombres de las verificaciones obligatorias deben coincidir con los trabajos (`base-de-datos`, `aplicacion`).
 - Con 0 aprobaciones obligatorias, la titular puede integrar su propio Pull Request después de revisarlo; con 1, necesitaría otra persona con permisos.
 
-## Cómo aplicarla (cuando se autorice)
+## Cómo aplicarla (autorizado; pendiente de que la titular lo haga)
+
+### Desde la interfaz de GitHub (recomendado)
+
+1. Repositorio `lunaariel/Alba-Repository` › **Settings** › **Branches** › **Add branch protection rule** (o **Add classic branch protection rule**).
+2. *Branch name pattern*: `main`.
+3. Marcar **Require a pull request before merging**; *Required approvals*: **0**; marcar *Dismiss stale pull request approvals when new commits are pushed*.
+4. Marcar **Require status checks to pass before merging** y *Require branches to be up to date before merging*. En el buscador de verificaciones, agregar **`base-de-datos`** y **`aplicacion`** (aparecen porque ya corrieron en el Pull Request de la Fase 6A). No agregar `capturas` (no corre en Pull Request).
+5. Marcar **Require conversation resolution before merging**.
+6. Marcar **Do not allow bypassing the above settings**.
+7. Dejar **sin marcar** *Allow force pushes* y *Allow deletions*.
+8. **Create** / **Save changes**.
+9. Verificación: en *Branches*, `main` aparece con el candado; un `git push` directo a `main` debe ser rechazado.
+
+### Con la API (equivalente)
 
 Desde la interfaz (Settings › Branches) o con la API:
 

@@ -47,6 +47,8 @@ await mkdir(SALIDA, { recursive: true });
 const navegador = await navegadorNuevo();
 const ADMIN_ID = sql(`select id from auth.users where email = '${ADMIN_CORREO}'`);
 let secreto = '';
+let secretoRespaldo = '';
+let rolesCreados = false;
 const auditoriaAntes = Number(sql('select count(*) from public.auditoria'));
 const INICIO = sql('select now()');
 
@@ -138,6 +140,15 @@ try {
   comprobar(r200?.status() === 200 && new URL(admin.url()).pathname === '/admin', 'admin con segundo factor: entra al panel');
   await admin.goto(`${BASE}/admin/configuracion`, { waitUntil: 'networkidle' });
   comprobar(await admin.getByText('Segundo factor exigido').isVisible() && await admin.getByText('Principal').isVisible(), 'configuración muestra la política y el factor registrado');
+  // Factor de respaldo (segundo dispositivo), desde Configuración.
+  await Promise.all([admin.waitForURL(/\/segundo-factor\/activar/), admin.getByRole('link', { name: 'Agregar un factor de respaldo' }).click()]);
+  await admin.getByRole('button', { name: 'Generar el código QR' }).click();
+  await admin.locator('[data-secreto-totp]').waitFor({ state: 'attached', timeout: 15000 });
+  secretoRespaldo = (await admin.locator('[data-secreto-totp]').textContent())?.trim() ?? '';
+  await admin.fill('#codigo', await codigo(secretoRespaldo));
+  await Promise.all([admin.waitForURL(/ok=1/, { timeout: 20000 }), admin.getByRole('button', { name: 'Confirmar y activar' }).click()]);
+  comprobar(secretoRespaldo !== secreto && sql(`select count(*) from auth.mfa_factors where user_id = '${ADMIN_ID}' and status = 'verified'`) === '2',
+    'se registra un factor de respaldo con su propia clave');
 
   // Reingreso: contraseña y código.
   await ctxAdmin.clearCookies();
@@ -150,6 +161,15 @@ try {
   await Promise.all([admin.waitForURL((u) => u.pathname === '/campus', { timeout: 20000 }), admin.getByRole('button', { name: 'Verificar' }).click()]);
   const panel = await admin.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
   comprobar(panel?.status() === 200 && new URL(admin.url()).pathname === '/admin', 'reingreso: con el código correcto entra al panel');
+  // Pérdida del teléfono principal: se ingresa con el factor de respaldo (primer paso de la recuperación).
+  const ctxRespaldo = await navegador.newContext();
+  const pr = await ctxRespaldo.newPage();
+  vigilar(pr);
+  comprobar(await ingresar(pr, ADMIN_CORREO, ADMIN_CLAVE) === '/segundo-factor', 'respaldo: tras la contraseña se pide el código');
+  await pr.fill('#codigo', await codigo(secretoRespaldo));
+  await Promise.all([pr.waitForURL((u) => u.pathname === '/campus', { timeout: 20000 }), pr.getByRole('button', { name: 'Verificar' }).click()]);
+  comprobar((await pr.goto(`${BASE}/admin`, { waitUntil: 'networkidle' }))?.status() === 200, 'respaldo: con el código del segundo dispositivo entra al panel, sin procedimiento excepcional');
+  await ctxRespaldo.close();
 
   // ------------------------------------------------------------ 6. Operaciones sensibles en el panel
   await admin.goto(`${BASE}/admin/cursos/${C3}`, { waitUntil: 'networkidle' });
@@ -201,7 +221,7 @@ try {
   politica(true, 1);
   const sApi = cliente();
   await sApi.auth.signInWithPassword({ email: ADMIN_CORREO, password: ADMIN_CLAVE });
-  const factores = (await sApi.auth.mfa.listFactors()).data.totp;
+  const factores = (await sApi.auth.mfa.listFactors()).data.totp.filter((f) => f.friendly_name === 'Principal');
   await sApi.auth.mfa.challengeAndVerify({ factorId: factores[0].id, code: await codigo(secreto) });
   const tokenAal2 = (await sApi.auth.getSession()).data.session?.access_token;
   const r1 = await rest(tokenAal2, `cursos?id=eq.${C3}`, { method: 'PATCH', body: JSON.stringify({ precio_centavos: 7200 }) });
@@ -231,29 +251,50 @@ try {
     await ctx.close();
   }
 
-  // ------------------------------------------------------------ 9. Recuperación de acceso (pérdida del teléfono)
+  // ------------------------------------------------------------ 9. Recuperación excepcional con dos personas (perdió todos los factores)
+  // Dos usuarios de base de datos de prueba (solo en esta base local), designados con el script del procedimiento.
+  sql(`create role ci_tecnico login password 'clave-ci-tecnico'; create role ci_aprobador login password 'clave-ci-aprobador'`);
+  rolesCreados = true;
+  sqlArchivo('scripts/recuperacion-designar.sql', { usuario_bd: "'ci_tecnico'", rol: "'albor_recuperacion_tecnico'", accion: "'designar'", responsable: RESPONSABLE });
+  sqlArchivo('scripts/recuperacion-designar.sql', { usuario_bd: "'ci_aprobador'", rol: "'albor_recuperacion_aprobador'", accion: "'designar'", responsable: RESPONSABLE });
+  const comoTecnico = DB.replace('postgres:postgres@', 'ci_tecnico:clave-ci-tecnico@');
+  const comoAprobador = DB.replace('postgres:postgres@', 'ci_aprobador:clave-ci-aprobador@');
   let rechazo = '';
-  try { sqlArchivo('scripts/recuperar-mfa.sql', { correo: `'${ADMIN_CORREO}'`, confirmacion: `'otra@cuenta.invalid'`, responsable: RESPONSABLE, motivo: "'Prueba sin confirmación válida del correo.'" }); }
+  try { sqlArchivo('scripts/recuperacion-solicitar.sql', { correo: `'${ADMIN_CORREO}'`, motivo: "'Pérdida de los dos dispositivos.'", canal: "'Canal de prueba (CI)'" }); }
   catch (e) { rechazo = String(e.stderr ?? e); }
-  comprobar(/confirmacion_incorrecta/.test(rechazo) && sql(`select count(*) from auth.mfa_factors where user_id = '${ADMIN_ID}'`) === '1',
-    'recuperación: sin confirmación exacta no se quita nada');
-  sqlArchivo('scripts/recuperar-mfa.sql', { correo: `'${ADMIN_CORREO}'`, confirmacion: `'${ADMIN_CORREO}'`, responsable: RESPONSABLE,
-    motivo: "'Prueba: pérdida del teléfono; identidad verificada por otra vía.'" });
+  comprobar(/no_autorizado/.test(rechazo), 'recuperación: el dueño de la base sin designación no puede iniciarla');
+  const solicitud = sqlArchivo('scripts/recuperacion-solicitar.sql', { correo: `'${ADMIN_CORREO}'`, motivo: "'Prueba: pérdida de los dos dispositivos.'",
+    canal: "'Canal de prueba previamente acordado (CI)'" }, comoTecnico).split('\n').pop();
+  comprobar(/^[0-9a-f-]{36}$/.test(solicitud) && sql(`select count(*) from auth.mfa_factors where user_id = '${ADMIN_ID}'`) === '2',
+    'recuperación: el responsable técnico registra la solicitud; todavía no se quita nada');
+  rechazo = '';
+  try { sqlArchivo('scripts/recuperacion-aprobar.sql', { solicitud: `'${solicitud}'`, verificacion: "'Intento unilateral del técnico.'" }, comoTecnico); }
+  catch (e) { rechazo = String(e.stderr ?? e); }
+  comprobar(/permission denied/.test(rechazo) && sql(`select count(*) from auth.mfa_factors where user_id = '${ADMIN_ID}'`) === '2',
+    'recuperación: el técnico no puede aprobarla por decisión unilateral');
+  sqlArchivo('scripts/recuperacion-aprobar.sql', { solicitud: `'${solicitud}'`, verificacion: "'Verificación independiente de prueba (CI).'" }, comoAprobador);
   comprobar(sql(`select count(*) from auth.mfa_factors where user_id = '${ADMIN_ID}'`) === '0' && sql(`select count(*) from auth.sessions where user_id = '${ADMIN_ID}'`) === '0',
-    'recuperación: se quitan los factores y se cierran todas las sesiones');
-  comprobar(sql(`select count(*) from public.auditoria where accion = 'segundo_factor_recuperacion' and entidad_id = '${ADMIN_ID}' and creado_en >= '${INICIO}' and despues ->> 'responsable' = 'Recorrido de seguridad (CI)'`) === '1',
-    'recuperación: queda auditada con responsable y motivo');
+    'recuperación: con la aprobación independiente se quitan los factores comprometidos y se cierran todas las sesiones');
+  comprobar(sql(`select count(*) from public.auditoria where accion = 'recuperacion_mfa_ejecutada' and entidad_id = '${solicitud}' and despues ->> 'solicitada_por' = 'ci_tecnico' and despues ->> 'aprobada_por' = 'ci_aprobador'`) === '1',
+    'recuperación: queda auditada con las dos personas');
   const tras = await admin.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
   comprobar(tras?.status() === 404 || !new URL(admin.url()).pathname.startsWith('/admin'), 'tras la recuperación, la sesión anterior ya no entra al panel');
   comprobar(await ingresar(admin, ADMIN_CORREO, ADMIN_CLAVE) === '/segundo-factor/activar', 'tras la recuperación, el próximo ingreso exige activar un factor nuevo');
 
   // ------------------------------------------------------------ 10. Secretos y códigos fuera de registros y tablas
   const log = await readFile('servidor.log', 'utf8').catch(() => '');
-  comprobar(!log.includes(secreto) && !usados.some((c) => log.includes(c)), 'el registro del servidor no contiene la clave ni los códigos');
-  comprobar(sql(`select count(*) from public.auditoria where despues::text like '%${secreto}%' or antes::text like '%${secreto}%'`) === '0', 'la auditoría no contiene la clave TOTP');
+  comprobar(!log.includes(secreto) && !log.includes(secretoRespaldo) && !usados.some((c) => log.includes(c)), 'el registro del servidor no contiene la clave ni los códigos');
+  comprobar([secreto, secretoRespaldo].every((k) => sql(`select count(*) from public.auditoria where despues::text like '%${k}%' or antes::text like '%${k}%'`) === '0'
+    && sql(`select count(*) from public.recuperaciones_mfa where row_to_json(recuperaciones_mfa)::text like '%${k}%'`) === '0'), 'la auditoría y la recuperación no contienen las claves TOTP');
   comprobar(Number(sql('select count(*) from public.auditoria')) > auditoriaAntes, 'las acciones críticas del recorrido quedaron en la auditoría');
 } finally {
   politica(false, 5);
+  if (rolesCreados) {
+    for (const [u, r] of [['ci_tecnico', 'albor_recuperacion_tecnico'], ['ci_aprobador', 'albor_recuperacion_aprobador']]) {
+      try { sqlArchivo('scripts/recuperacion-designar.sql', { usuario_bd: `'${u}'`, rol: `'${r}'`, accion: "'retirar'", responsable: RESPONSABLE }); } catch { /* ya retirado */ }
+    }
+    sql('drop role if exists ci_tecnico; drop role if exists ci_aprobador');
+  }
   // Deja las cuentas como estaban (sin factores de prueba).
   sql(`delete from auth.mfa_factors where user_id in (select id from auth.users where email in ('${CORREO}', '${ADMIN_CORREO}'))`);
   comprobar(sql('select mfa_admin_obligatorio from public.politica_seguridad') === 'f', 'al terminar, la política queda apagada como estaba');

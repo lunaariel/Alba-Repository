@@ -1,48 +1,88 @@
-# Recuperación de acceso de la administradora
+# Recuperación de acceso administrativo
 
-Fase 6A (02/11/2026). **Procedimiento preparado y probado en local y CI. La elección operativa queda pendiente antes del lanzamiento.**
+Actualizado al cierre de la Fase 6A (02/11/2026, migración 0027). **Procedimiento implementado y probado en local y en CI. No está habilitado en producción**: faltan las designaciones de la titular (abajo) y la autorización para aplicar las migraciones.
 
-## Principio
+## Decisión aprobada por la titular (02/11/2026)
 
-Perder el teléfono no puede dejar el panel abierto a quien solo controla el correo. Por eso **no existe recuperación por correo** del segundo factor, ni autoservicio, ni un atajo activado para las pruebas.
+La recuperación excepcional involucra a **la maestra** (titular y administradora principal), **el responsable técnico** y **una verificación independiente de identidad**. Ninguna persona sola puede desactivar el segundo factor ni apropiarse de la cuenta.
 
-## Prevención (recomendada, sin costo)
+## Designaciones pendientes
 
-1. **Factor de respaldo**: al activar el segundo factor, registrar también un segundo dispositivo (tablet, teléfono viejo o gestor de contraseñas con TOTP) y guardarlo en un lugar seguro. Supabase admite varios factores por cuenta; la pantalla de Configuración › Seguridad lo ofrece.
-2. Con la política encendida, la aplicación impide quitar el único factor.
+No se inventan nombres ni canales. Hasta completar esta tabla, el procedimiento está **bloqueado en la base**: nadie es miembro de los roles que permiten solicitarlo o aprobarlo.
 
-## Si se perdieron todos los factores
+| Campo | Valor |
+| --- | --- |
+| Responsable técnico (persona) | **PENDIENTE de designación por la titular** |
+| Usuario de base de datos del responsable técnico | **PENDIENTE** |
+| Persona o autoridad independiente que aprueba | **PENDIENTE de designación por la titular** |
+| Usuario de base de datos de quien aprueba | **PENDIENTE** |
+| Canal confiable previamente acordado para verificar la identidad de la titular | **PENDIENTE** (debe ser distinto del correo de la cuenta) |
+| Canal propio de la persona aprobadora para su verificación independiente | **PENDIENTE** |
+| Dónde guarda la maestra su factor de respaldo | **PENDIENTE** |
 
-Procedimiento con **dos personas** y **otra vía de identidad**:
+Cada persona necesita su **propio usuario de base de datos** con su propia contraseña. Así la solicitud y la aprobación quedan hechas por dos identidades distintas, y la base lo comprueba.
 
-1. La administradora avisa por un canal acordado de antemano (no por un correo nuevo).
-2. Una segunda persona de confianza, con acceso de dueño a la base (por ejemplo, el responsable técnico), **verifica la identidad** por otra vía: videollamada con documento, llamada a un número registrado previamente o presencialmente. Registra cómo lo verificó.
-3. Si hay sospecha de que también conocen la contraseña: restablecer la contraseña primero.
-4. Ejecuta, con su nombre como responsable:
+## Procedimiento
+
+1. **Factor de respaldo primero.** La maestra intenta ingresar con su segundo dispositivo (Configuración › Seguridad permite registrarlo). Si funciona, no hay procedimiento excepcional. Después, quita el factor perdido y registra uno nuevo.
+2. **Si perdió todos los factores**, avisa por el canal previamente acordado (nunca solo por correo).
+3. **Responsable técnico: verificar y solicitar.** Verifica la identidad de la titular por el canal acordado y registra la solicitud con **su** usuario de base de datos:
 
    ```bash
-   psql "$URL_BASE" -v ON_ERROR_STOP=1 -v correo="'maestra@…'" -v confirmacion="'maestra@…'" \
-        -v responsable="'Nombre de quien lo ejecuta'" -v motivo="'Pérdida del teléfono; identidad verificada por …'" \
-        -f scripts/recuperar-mfa.sql
+   psql "postgresql://USUARIO_TECNICO@HOST/BASE" -v ON_ERROR_STOP=1 \
+        -v correo="'…'" -v motivo="'…'" -v canal="'…'" -f scripts/recuperacion-solicitar.sql
    ```
 
-   Exige el correo dos veces, responsable y un motivo de 20 caracteres o más. Quita los factores, **cierra todas las sesiones** de esa cuenta y deja el registro `segundo_factor_recuperacion` en la auditoría. No cambia la contraseña ni el rol.
-5. En el siguiente ingreso, con la política encendida, la administradora **debe activar un factor nuevo** antes de entrar al panel.
+   La solicitud no quita nada. Vence en 24 horas y queda en la auditoría.
+4. **Persona o autoridad independiente: verificar y aprobar.** Verifica por su cuenta la identidad de la titular, por su propio canal, y aprueba con **su** usuario de base de datos:
 
-Probado en `scripts/recorrido-mfa.mjs`: sin confirmación exacta no quita nada; con ella quita factores y sesiones, la sesión anterior deja de entrar y el próximo ingreso exige activar un factor nuevo.
+   ```bash
+   psql "postgresql://USUARIO_APROBADOR@HOST/BASE" -v ON_ERROR_STOP=1 \
+        -v solicitud="'…'" -v verificacion="'…'" -f scripts/recuperacion-aprobar.sql
+   ```
 
-## Alternativas evaluadas (decisión pendiente)
+5. **Efecto.**
+   - Se **invalidan todos los factores** de la cuenta (los comprometidos incluidos).
+   - Se **cierran todas sus sesiones**.
+   - Queda en la auditoría con las dos personas.
+   - No cambia la contraseña ni el rol.
+6. **Privilegios.** Con la política de segundo factor encendida, la maestra no entra al panel hasta **registrar factores nuevos**: el principal y, de nuevo, uno de respaldo.
+7. **Contraseña.** Si se sospecha que también conocen la contraseña, restablecerla antes del paso 4.
 
-| Opción | Estado | Comentario |
-| --- | --- | --- |
-| A. Factor de respaldo en un segundo dispositivo | **Implementada** | Sin costo; depende de que la administradora lo registre y lo guarde |
-| B. Script con dos personas y verificación de identidad (arriba) | **Implementada** | Requiere designar a la segunda persona y el canal de verificación |
-| C. Códigos de recuperación de Supabase Auth | **No activada** | En `@supabase/auth-js` 2.118 están marcados como *experimentales* (`mfa.recoveryCodes`, requiere habilitarlos expresamente). No se usa una función experimental para la cuenta más sensible; reevaluar cuando sea estable |
-| D. Segundo factor por SMS | Descartada | Más débil (SIM swapping) y con costo por mensaje |
-| E. Llaves de seguridad (WebAuthn) | Futuro | Supabase la ofrece; requiere comprar llaves |
+## Controles que la base impone (probados)
 
-**Decisión que falta (titular):** quién es la segunda persona con acceso de dueño, qué canal de verificación se usa y dónde se guarda el factor de respaldo.
+| Control | Prueba |
+| --- | --- |
+| Solo un miembro **directo** del rol `albor_recuperacion_tecnico` solicita; ser dueño o superusuario de la base no alcanza | `99l`, `recorrido-mfa.mjs` |
+| Solo un miembro directo de `albor_recuperacion_aprobador` aprueba; el técnico ni siquiera puede ejecutar la aprobación | `99l`, `recorrido-mfa.mjs` |
+| Quien solicitó no puede aprobar, aunque después cambie de rol; nadie puede tener los dos roles | `99l` |
+| La aprobación exige su propia descripción de verificación | `99l` |
+| Una solicitud pendiente por cuenta; vence a las 24 horas | `99l` |
+| Solo para cuentas administrativas; otras cuentas no se tocan | `99l` |
+| Factores y sesiones de esa cuenta eliminados; auditoría con solicitante y aprobador | `99l`, `recorrido-mfa.mjs` |
+| La aplicación, las sesiones y la clave de servicio no pueden ejecutarla | `99l` |
+| No se guarda ningún código ni secreto | `recorrido-mfa.mjs` |
 
-## Producción
+## Designar o retirar personas (cuando la titular lo decida)
 
-En el proyecto real, el script se ejecuta con la conexión de dueño de la base (Supabase › Database › Connection string). Alternativa equivalente: el panel de Supabase permite quitar factores de un usuario y cerrar sus sesiones; en ese caso, registrar manualmente la acción en la auditoría. **Nada de esto está autorizado hoy**: no se tocaron cuentas ni credenciales reales.
+Lo hace quien tiene acceso de dueño, con autorización de la titular. Queda en la auditoría.
+
+```bash
+psql "$URL_BASE" -v ON_ERROR_STOP=1 -v usuario_bd="'…'" -v rol="'albor_recuperacion_tecnico'" \
+     -v accion="'designar'" -v responsable="'…'" -f scripts/recuperacion-designar.sql
+```
+
+Para la persona aprobadora se usa `rol="'albor_recuperacion_aprobador'"`; para quitar una designación, `accion="'retirar'"`.
+
+## Límite residual
+
+Quien tenga acceso de dueño a la base puede crear usuarios de base de datos y designarlos. Por eso la credencial de dueño del proyecto real **no debe quedar en manos de una sola de las personas del procedimiento**: guardarla bajo control de la titular. Hay que decidirlo al contratar el hosting.
+
+## Alternativas evaluadas
+
+| Opción | Estado |
+| --- | --- |
+| Códigos de recuperación de Supabase Auth | No activados: son experimentales en `@supabase/auth-js` 2.118 |
+| Segundo factor por SMS | Descartado: más débil (SIM swapping) |
+| Llaves de seguridad (WebAuthn) | Futuro: requiere comprar llaves |
+| Script de recuperación de una sola persona (Fase 6A inicial) | **Eliminado**: reemplazado por este procedimiento |

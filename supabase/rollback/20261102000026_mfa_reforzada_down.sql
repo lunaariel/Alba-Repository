@@ -35,7 +35,10 @@ drop table public.verificaciones_reforzadas;
 -- es_admin() vuelve a su definición original (0002).
 create or replace function public.es_admin()
 returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.roles_usuario where perfil_id = auth.uid() and rol = 'admin');
+  select exists (
+    select 1 from public.roles_usuario
+    where perfil_id = auth.uid() and rol = 'admin'
+  );
 $$;
 drop function public.registrar_evento_segundo_factor(text);
 drop function public.tiene_rol_admin();
@@ -80,6 +83,7 @@ begin
   end loop;
   if v_total = 0 then raise exception 'evaluacion_sin_preguntas' using errcode = 'P0001'; end if;
   v_completo := v_respondidas = v_total;
+  -- El puntaje queda para el seguimiento de la maestra; al alumno no se le muestra como nota.
   update public.intentos_evaluacion set puntaje = round(100.0 * v_correctas / v_total), completo = v_completo where id = v_intento;
   return jsonb_build_object('completo', v_completo, 'respondidas', v_respondidas, 'total', v_total, 'temas_a_reforzar', to_jsonb(v_temas));
 end; $$;
@@ -99,6 +103,7 @@ create or replace function public.exigir_responsable_rol()
 returns trigger language plpgsql security definer set search_path = public as $$
 declare v_rol text := coalesce(new.rol, old.rol); v_responsable text := btrim(coalesce(current_setting('albor.responsable', true), ''));
 begin
+  -- El rol alumno automático de cada registro no requiere responsable.
   if v_rol <> 'admin' then return coalesce(new, old); end if;
   if auth.uid() is null and char_length(v_responsable) < 3 then
     raise exception 'responsable_requerido' using errcode = 'P0001',

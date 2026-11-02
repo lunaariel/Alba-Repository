@@ -13,8 +13,9 @@ export function sql(q) {
   return execFileSync('psql', [DB, '-q', '-v', 'ON_ERROR_STOP=1', '-tA', '-c', q], { encoding: 'utf8' }).trim();
 }
 /** Ejecuta un archivo SQL con variables psql (-v nombre=valor). */
-export function sqlArchivo(archivo, variables = {}) {
-  const args = [DB, '-q', '-v', 'ON_ERROR_STOP=1', '-tA'];
+export function sqlArchivo(archivo, variables = {}, url = DB) {
+  if (!/@(127\.0\.0\.1|localhost)[:/]/.test(url)) throw new Error('Los recorridos solo usan la base local');
+  const args = [url, '-q', '-v', 'ON_ERROR_STOP=1', '-tA'];
   for (const [k, v] of Object.entries(variables)) args.push('-v', `${k}=${v}`);
   return execFileSync('psql', [...args, '-f', archivo], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }

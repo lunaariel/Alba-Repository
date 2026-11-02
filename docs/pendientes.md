@@ -118,13 +118,13 @@ Implementado y probado **solo en local y en CI**. Nada integrado a `main`, nada 
 | Pendiente | Estado | Qué falta | Quién decide |
 | --- | --- | --- | --- |
 | Encender la política de segundo factor en producción | Lista y probada; apagada | Migrar 0026 (autorización), habilitar TOTP en Supabase, factor principal y de respaldo de la maestra, `scripts/politica-mfa.sql` | Titular |
-| Procedimiento de recuperación del segundo factor | Factor de respaldo y script con dos personas implementados | Designar segunda persona y canal de verificación de identidad | Titular |
+| Procedimiento de recuperación del segundo factor | **Aprobado** (maestra + responsable técnico + verificación independiente); implementado y probado (0027) | Designar responsable técnico, persona o autoridad independiente, sus usuarios de base de datos y los canales (tabla en `docs/recuperacion-acceso.md`); bloqueado hasta entonces | Titular |
 | Cifrado en reposo de los secretos TOTP en Supabase | Gestionado por Supabase Auth | Confirmarlo en el proyecto real | Técnico |
 | CSP en el despliegue | Aplicada en CI | Primer despliegue en modo observación (`CSP_MODO=observacion`) y luego aplicar | Técnico |
 | Error de hidratación #418 (D14) | Investigado; ver `docs/fase6a-informe.md` | Seguir observando en CI con la ruta registrada | Técnico |
 | Respaldos del entorno real | Procedimiento local probado | Plan del proveedor (Pro/PITR), copia del bucket, cifrado y retención | Titular (costos) |
-| Migraciones 0014 a 0026 en producción | Ejecutor transaccional ensayado | Autorización; elegir registro (ejecutor o CLI de Supabase) | Titular |
-| Protección de `main` | Propuesta exacta en `docs/proteccion-main.md` | Autorización para aplicarla | Titular |
+| Migraciones 0014 a 0027 en producción | Ejecutor transaccional ensayado; reversión de 0026 y 0027 ensayada | Autorización; elegir registro (ejecutor o CLI de Supabase) | Titular |
+| Protección de `main` | **Autorizada**; no aplicable desde la sesión de trabajo (sin herramienta para configurar ramas) | Aplicarla desde Settings › Branches con los pasos de `docs/proteccion-main.md` | Titular |
 | D10 `seguimiento_curso` | Medido: 0,85 s con 5000 alumnas | Paginación si supera ~10 000 por curso | Técnico |
 | Ayudantes E2E (D15) | Módulo compartido usado por el recorrido nuevo | Migrar los recorridos anteriores cuando se modifiquen | Técnico |
 | El formulario de datos del curso vuelve a los valores guardados tras un error | Comportamiento previo de React 19 con acciones de formulario | Conservar lo escrito tras un error (mejora de interfaz) | Técnico |
