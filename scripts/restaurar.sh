@@ -24,7 +24,15 @@ psql "$URL" -X -q -v ON_ERROR_STOP=1 -c "do \$\$ begin
   if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
   if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
   if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if; end \$\$;"
-if ! pg_restore --dbname "$URL" --no-owner --no-privileges --single-transaction --exit-on-error "$ARCHIVO" 2>/tmp/albor_restaurar.log; then
+# Primero se lee el respaldo completo a SQL (si está dañado, se detiene antes de tocar la base); luego psql lo
+# aplica en una sola transacción. Se quita «SET transaction_timeout», que emiten clientes de Postgres 17+ y un
+# servidor 16 no reconoce.
+SQL_TMP=$(mktemp); trap 'rm -f "$SQL_TMP"' EXIT
+if ! pg_restore --no-owner --no-privileges -f "$SQL_TMP" "$ARCHIVO" 2>/tmp/albor_restaurar.log; then
+  echo "FALLA: el respaldo está dañado o es ilegible; la base nueva quedó vacía"; head -3 /tmp/albor_restaurar.log; exit 1
+fi
+sed -i '/^SET transaction_timeout/d' "$SQL_TMP"
+if ! psql "$URL" -X -q -v ON_ERROR_STOP=1 --single-transaction -f "$SQL_TMP" >/dev/null 2>/tmp/albor_restaurar.log; then
   echo "FALLA: la restauración se deshizo completa"; head -5 /tmp/albor_restaurar.log; exit 1
 fi
 # Verificación: misma huella que el respaldo, claves foráneas validadas y conciliación en cero.

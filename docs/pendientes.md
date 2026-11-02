@@ -106,18 +106,36 @@ Implementado y probado **solo en local y en CI**. Nada integrado a `main` ni apl
 | Workspace Standard o Plus | Comparado (asistencia automática solo en Plus) | Decisión; no se contrata nada sin autorización | Maestra |
 | Presupuesto de Q500 | El conjunto mínimo queda en ≈ Q487 a Q562 al mes (detalle en la investigación) | Aceptar el límite o ampliarlo | Maestra |
 | Presentación de la maestra | Editable, con la trayectoria informada; **no publicada** hasta su aprobación | Revisión y aprobación; foto real | Maestra |
-| MFA de la administradora | Preparado (`ADMIN_MFA_OBLIGATORIO`), **no activo** | Pantallas de enrolamiento y verificación TOTP; registrar su factor; procedimiento de recuperación | Técnico, antes del lanzamiento |
-| CSP (política de seguridad de contenidos) | No configurada | Definirla y probarla en el despliegue | Técnico |
+| MFA de la administradora | **Implementado y probado en local y CI (Fase 6A)**; política apagada | Activar en producción (ver Fase 6A) | Titular |
+| CSP (política de seguridad de contenidos) | **Implementada y probada en CI (Fase 6A)** | Primer despliegue en modo observación | Técnico |
 | Error de hidratación de React (#418) visto una vez en las capturas públicas | Intermitente: apareció en 1 de 5 ejecuciones y no se reprodujo en las siguientes | Investigar la página que lo produce (el informe no la identifica) | Técnico |
 | Migraciones 0014 a 0023 en producción | Probadas en local y CI, con reversión ensayada. **No autorizadas** | Plan de ejecución (`docs/estrategia-migracion.md`) y autorización específica | Titular |
+
+## Fase 6A: seguridad y preparación técnica (02/11/2026 · migración 0026)
+
+Implementado y probado **solo en local y en CI**. Nada integrado a `main`, nada aplicado en bases reales, ninguna cuenta real modificada.
+
+| Pendiente | Estado | Qué falta | Quién decide |
+| --- | --- | --- | --- |
+| Encender la política de segundo factor en producción | Lista y probada; apagada | Migrar 0026 (autorización), habilitar TOTP en Supabase, factor principal y de respaldo de la maestra, `scripts/politica-mfa.sql` | Titular |
+| Procedimiento de recuperación del segundo factor | Factor de respaldo y script con dos personas implementados | Designar segunda persona y canal de verificación de identidad | Titular |
+| Cifrado en reposo de los secretos TOTP en Supabase | Gestionado por Supabase Auth | Confirmarlo en el proyecto real | Técnico |
+| CSP en el despliegue | Aplicada en CI | Primer despliegue en modo observación (`CSP_MODO=observacion`) y luego aplicar | Técnico |
+| Error de hidratación #418 (D14) | Investigado; ver `docs/fase6a-informe.md` | Seguir observando en CI con la ruta registrada | Técnico |
+| Respaldos del entorno real | Procedimiento local probado | Plan del proveedor (Pro/PITR), copia del bucket, cifrado y retención | Titular (costos) |
+| Migraciones 0014 a 0026 en producción | Ejecutor transaccional ensayado | Autorización; elegir registro (ejecutor o CLI de Supabase) | Titular |
+| Protección de `main` | Propuesta exacta en `docs/proteccion-main.md` | Autorización para aplicarla | Titular |
+| D10 `seguimiento_curso` | Medido: 0,85 s con 5000 alumnas | Paginación si supera ~10 000 por curso | Técnico |
+| Ayudantes E2E (D15) | Módulo compartido usado por el recorrido nuevo | Migrar los recorridos anteriores cuando se modifiquen | Técnico |
+| El formulario de datos del curso vuelve a los valores guardados tras un error | Comportamiento previo de React 19 con acciones de formulario | Conservar lo escrito tras un error (mejora de interfaz) | Técnico |
 
 ## Seguridad requerida por la titular (30/10/2026)
 
 | Requisito | Estado | Qué falta | Cuándo |
 | --- | --- | --- | --- |
 | Trazabilidad completa de roles: fecha, cuenta afectada, rol anterior, rol nuevo y responsable (persona o servicio) | Parcial: el disparador registra alta y baja del rol admin con fecha, cuenta y autor; si lo ejecuta un script, el autor figura como "Sistema" | Exigir que el script identifique a la persona que lo ejecuta y rechazar cambios de rol sin responsable identificado | Antes del lanzamiento (Fase 7), o antes si se necesita una segunda cuenta admin |
-| Autenticación multifactor (MFA) para la administradora | No implementado | Activar MFA en Supabase Auth (TOTP) y exigir nivel `aal2` en `exigirAdmin()` | Requisito previo al lanzamiento comercial |
-| Nueva verificación de identidad para operaciones muy sensibles (revocar certificados, eliminar cuentas, reembolsos, cambios de rol) | En evaluación | Definir la lista y pedir una nueva verificación (contraseña o MFA) si la sesión tiene más de N minutos | Evaluación en la entrega 4; implementación antes del lanzamiento |
+| Autenticación multifactor (MFA) para la administradora | **Implementado (0026, Fase 6A)**, política apagada | Encenderla en producción | Requisito previo al lanzamiento comercial |
+| Nueva verificación de identidad para operaciones muy sensibles | **Implementada (0026, Fase 6A)**: código del momento, ≤ 5 min, un solo uso | Activa con la política | Antes del lanzamiento |
 
 ## Decisiones tomadas por la titular (30/10/2026), a implementar
 
@@ -133,8 +151,8 @@ Ninguna de estas medidas se considera implementada hasta que exista una prueba q
 
 | Medida | Estado | Prueba que la demostrará |
 | --- | --- | --- |
-| MFA obligatorio para la administradora antes del lanzamiento | No implementado | Recorrido: sin segundo factor, `/admin` responde 404 |
-| Nueva verificación de identidad para operaciones muy sensibles | En evaluación | Recorrido: una operación sensible con sesión antigua pide verificar |
+| MFA obligatorio para la administradora antes del lanzamiento | **Implementado, apagado** | `recorrido-mfa.mjs`: sin segundo factor no hay panel ni API de admin |
+| Nueva verificación de identidad para operaciones muy sensibles | **Implementada** | `recorrido-mfa.mjs` y `99k_mfa_reforzada.sql`: sesión antigua rechazada sin cambios |
 | Responsable real de los cambios de rol, incluidos los hechos por scripts | **Implementado (0023)**: sin responsable se rechaza | `90_panel_base.sql` |
 | Validación de permisos en todas las acciones nuevas del panel | Vigente para las 19 acciones actuales (prueba estática + 404 + SQL) | Cada entrega nueva amplía la prueba; falta invocar una acción directamente con sesión de alumna |
 | Registro de auditoría de operaciones críticas | Vigente para cursos, temario, evaluaciones, talleres, roles, cupones, configuración | Cada operación crítica nueva suma su prueba SQL |

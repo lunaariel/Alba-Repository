@@ -34,6 +34,8 @@ case "$host" in 127.0.0.1|localhost|"") ;; *) echo "BLOQUEADO: $host no es una b
 export PGOPTIONS="${PGOPTIONS:-} -c client_min_messages=warning"
 PSQL=(psql "$URL" -X -q -v ON_ERROR_STOP=1 -tA)
 "${PSQL[@]}" >/dev/null <<'SQL'
+begin;
+select pg_advisory_xact_lock(hashtext('albor_migraciones'));  -- dos ejecuciones a la vez no chocan al crear el registro
 create schema if not exists albor_control;
 create table if not exists albor_control.migraciones (
   version text primary key,
@@ -44,6 +46,7 @@ create table if not exists albor_control.migraciones (
   modo text not null default 'aplicada' check (modo in ('aplicada', 'registrada_existente'))
 );
 revoke all on schema albor_control from public;
+commit;
 SQL
 
 version_de() { basename "$1" | sed -E 's/^[0-9]{8}([0-9]{6})_.*/\1/' | sed -E 's/^0+([0-9]{4})$/\1/'; }
