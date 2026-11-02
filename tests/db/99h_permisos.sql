@@ -40,7 +40,8 @@ select pruebas.afirmar(not has_function_privilege('authenticated', p.oid, 'execu
    'agregar_periodo', 'recalcular_vencimiento_acceso', 'revocar_periodo_interno', 'otorgar_compra_curso', 'reintentar_otorgamiento_orden',
    'revocar_periodos_orden', 'talleres_publicos', 'conciliar_periodos', 'acceso_cubierto', 'proximo_inicio_acceso',
    'exigir_verificacion_reforzada', 'mfa_admin_activo', 'claims_sesion',
-   'autorizar_video_leccion', 'encolar_correo', 'tomar_correos', 'registrar_envio_correo', 'recuperar_correos_trabados', 'encolar_avisos_vencimiento');
+   'autorizar_video_leccion', 'encolar_correo', 'tomar_correos', 'registrar_envio_correo', 'recuperar_correos_trabados', 'encolar_avisos_vencimiento',
+   'fin_cobertura_continua');
 
 -- 5. Columnas secretas que ningún cliente lee.
 select pruebas.afirmar(not has_column_privilege(r, t::regclass, c, 'select'), format('%s no lee %s.%s', r, t, c))

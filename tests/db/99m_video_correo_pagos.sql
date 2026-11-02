@@ -106,7 +106,7 @@ end $$;
 select pruebas.afirmar(not has_function_privilege(r, f, 'execute'), 'Solo el servidor maneja la cola: ' || f || ' (' || r || ')')
   from unnest(array['anon', 'authenticated']) r,
        unnest(array['public.encolar_correo(text, text, uuid, jsonb, text)', 'public.tomar_correos(int)',
-                    'public.registrar_envio_correo(uuid, text, text, text, text)', 'public.encolar_avisos_vencimiento(int)']) f;
+                    'public.registrar_envio_correo(uuid, text, text, text, text)', 'public.encolar_avisos_vencimiento(timestamptz)']) f;
 
 -- ------------------------------------------------------------ 3. Confirmación de compra, pago repetido y reembolso
 do $$
@@ -139,29 +139,26 @@ begin
   perform pruebas.afirmar((select count(*) from public.envios_correo where clave_idempotencia like 'confirmacion_compra:%' and perfil_id = P) = 2, 'Cada compra aprobada, un correo');
 end $$;
 
--- ------------------------------------------------------------ 4. Avisos de vencimiento (no programados)
+-- ------------------------------------------------------------ 4. Avisos de vencimiento (umbrales en 99n)
 do $$
 declare
   V constant uuid := '6b000000-0000-0000-0000-000000000004';
   C constant uuid := 'c0000000-0000-0000-0000-000000000001';
-  e text; o uuid;
+  o uuid;
 begin
   insert into auth.users (id, email, raw_user_meta_data) values (V, 'aviso@prueba.test', '{"nombre_completo": "Rosa Aviso", "confirma_mayoria_edad": true}');
   o := public.crear_orden(V, 'curso', C);
   perform public.procesar_evento_pago('simulado', '6b-evt-aviso', 'pago', '{}'::jsonb, o, '6b-pago-aviso', 'aprobado', 4900);
-  -- Su acceso vigente vence en ~8 meses (3 + 5 adicionales): con 7 días de anticipación no le corresponde aviso.
-  perform public.encolar_avisos_vencimiento(7);
+  -- Su acceso vence en ~8 meses (3 + 5 adicionales): hoy no corresponde ningún aviso (detalle de umbrales en 99n).
+  perform public.encolar_avisos_vencimiento();
   perform pruebas.afirmar(not exists (select 1 from public.envios_correo where perfil_id = V and plantilla_clave = 'aviso_vencimiento'), 'Sin vencimiento próximo, no hay aviso');
-  -- Siete meses después, vence dentro de 60 días: un aviso, y repetir no lo duplica.
-  perform pruebas.envejecer6b(V, C, 7);  -- de 8 meses (3 + 5 adicionales) queda menos de uno
-  perform public.encolar_avisos_vencimiento(60);
-  perform public.encolar_avisos_vencimiento(60);
+  -- 20 días antes del fin: un aviso (umbral de 30 días), y repetir no lo duplica.
+  perform public.encolar_avisos_vencimiento(public.fin_cobertura_continua((select id from public.accesos_curso where perfil_id = V and curso_id = C)) - interval '20 days');
+  perform public.encolar_avisos_vencimiento(public.fin_cobertura_continua((select id from public.accesos_curso where perfil_id = V and curso_id = C)) - interval '20 days');
   perform pruebas.afirmar((select count(*) from public.envios_correo where perfil_id = V and plantilla_clave = 'aviso_vencimiento' and estado = 'pendiente') = 1,
     'Un aviso de vencimiento, pendiente, sin duplicados');
   perform pruebas.afirmar((select variables ? 'fecha' and variables ->> 'curso' = 'Montessori en casa' from public.envios_correo where perfil_id = V and plantilla_clave = 'aviso_vencimiento'),
     'El aviso lleva curso y fecha');
-  begin perform public.encolar_avisos_vencimiento(0); e := 'no falló'; exception when others then e := sqlerrm; end;
-  perform pruebas.afirmar(e = 'dias_invalidos', 'La anticipación se valida: ' || e);
 end $$;
 
 -- Ningún correo de esta prueba quedó como «enviado»: no hay proveedor real.

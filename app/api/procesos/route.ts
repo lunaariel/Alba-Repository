@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic';
  * Procesos programados: vencer reservas de cupo, finalizar talleres terminados y registrar los
  * recordatorios que correspondan. Lo llamará la tarea programada del hosting (Vercel Cron o pg_cron),
  * que se elige al definir el hosting. Exige la clave PROCESOS_CLAVE; sin ella configurada, no corre.
- * Los correos de la cola se procesan con el proveedor configurado; hoy solo el simulado, que los deja «simulado»
- * (nunca «enviado»). Los avisos de vencimiento no se generan aquí: su anticipación está pendiente de decisión.
+ * Registra los avisos de vencimiento que correspondan hoy (30, 7 y 1 día antes, sobre la cobertura continua, en
+ * días de Guatemala) y procesa la cola de correos con el proveedor configurado; hoy solo el simulado, que los deja
+ * «simulado» (nunca «enviado»). La tarea programada que la llame una vez al día se configura con el hosting.
  */
 export async function POST(request: NextRequest) {
   const clave = process.env.PROCESOS_CLAVE;
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
   ];
   const error = reservas.error ?? finalizados.error ?? recordatorios.error;
   if (error) return NextResponse.json({ error: 'fallo_proceso' }, { status: 500 });
+  const avisos = await db.rpc('encolar_avisos_vencimiento', {});
   const proveedor = proveedorCorreo();
   const correos = proveedor
     ? await procesarCola({
@@ -33,5 +35,6 @@ export async function POST(request: NextRequest) {
           .map((p: { clave: string; asunto: string; cuerpo: string }) => [p.clave, { asunto: p.asunto, cuerpo: p.cuerpo }])),
       }, proveedor).catch(() => ({ error: 'cola_no_disponible' }))
     : { sin_proveedor: true };
-  return NextResponse.json({ reservas_vencidas: reservas.data, talleres_finalizados: finalizados.data, recordatorios_registrados: recordatorios.data, correos });
+  return NextResponse.json({ reservas_vencidas: reservas.data, talleres_finalizados: finalizados.data, recordatorios_registrados: recordatorios.data,
+    avisos_vencimiento: avisos.error ? { error: 'fallo_avisos' } : avisos.data, correos });
 }

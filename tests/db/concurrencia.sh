@@ -169,3 +169,30 @@ else
   echo "FALLA      concurrencia de reembolsos parciales: reembolsos=$reembolsos incidencia=$incid acceso=$acceso pago=$pago"
   cat /tmp/albor_parcial_*; exit 1
 fi
+
+# Avisos de vencimiento (0029): dos ejecuciones simultáneas registran un solo aviso por acceso y umbral.
+MOM=$("${PSQL[@]}" -c "select public.fin_cobertura_continua(id) - interval '20 days' from public.accesos_curso where perfil_id = '$Z2' and estado = 'activo'")
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select public.encolar_avisos_vencimiento('$MOM'); select pg_sleep(0.8); commit;" > /tmp/albor_avisos_$n 2>&1 ) &
+done
+wait
+avisos=$("${PSQL[@]}" -c "select count(*) from public.envios_correo where perfil_id = '$Z2' and plantilla_clave = 'aviso_vencimiento'")
+if [ "$avisos" = "1" ] && ! grep -q ERROR /tmp/albor_avisos_1 /tmp/albor_avisos_2; then
+  echo "ok         concurrencia: avisos de vencimiento en paralelo, un solo aviso"
+else
+  echo "FALLA      concurrencia de avisos de vencimiento: avisos=$avisos"; cat /tmp/albor_avisos_*; exit 1
+fi
+
+# Cola de correos (0028): dos procesos toman lotes a la vez y nunca el mismo correo.
+"${PSQL[@]}" -c "select public.encolar_correo('comunicacion_importante', 'cola' || g || '@prueba.test', null, '{\"nombre\": \"N\", \"titulo\": \"T\", \"mensaje\": \"M\"}', 'conc-cola-' || g) from generate_series(1, 20) g" >/dev/null
+for n in 1 2; do
+  ( "${PSQL[@]}" -c "begin; select id from public.tomar_correos(15); select pg_sleep(0.8); commit;" > /tmp/albor_cola_$n 2>&1 ) &
+done
+wait
+total=$(cat /tmp/albor_cola_1 /tmp/albor_cola_2 | grep -cE '^[0-9a-f-]{36}$')
+unicos=$(cat /tmp/albor_cola_1 /tmp/albor_cola_2 | grep -E '^[0-9a-f-]{36}$' | sort -u | wc -l)
+if [ "$total" = "$unicos" ] && [ "$total" -ge 20 ]; then
+  echo "ok         concurrencia: dos procesos de la cola de correos, sin tomar el mismo correo ($total tomados)"
+else
+  echo "FALLA      concurrencia de la cola de correos: tomados=$total únicos=$unicos"; cat /tmp/albor_cola_*; exit 1
+fi
