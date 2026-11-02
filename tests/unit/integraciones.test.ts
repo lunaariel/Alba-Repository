@@ -61,7 +61,7 @@ test('config: entorno desconocido cae en desarrollo y se informa', () => {
 test('config: el servidor no arranca en producción con configuración inválida', () => {
   const i = readFileSync('instrumentation.ts', 'utf8');
   assert.match(i, /r\.errores\.length && r\.entorno === 'produccion'/);
-  assert.match(i, /throw new Error/);
+  assert.match(i, /process\.exit\(1\)/);
   assert.doesNotMatch(i, /process\.env\[/, 'no imprime valores');
 });
 

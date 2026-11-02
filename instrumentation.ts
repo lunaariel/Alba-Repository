@@ -8,7 +8,9 @@ export async function register() {
   const { validarConfiguracion } = await import('./src/config/validacion');
   const r = validarConfiguracion(process.env);
   if (r.errores.length && r.entorno === 'produccion') {
-    throw new Error(`Configuración de producción incompleta o insegura:\n- ${r.errores.join('\n- ')}`);
+    console.error(`Configuración de producción incompleta o insegura:\n- ${r.errores.join('\n- ')}`);
+    // Termina el proceso (código 1) para que el hosting marque el arranque como fallido; no atiende solicitudes.
+    process.exit(1);
   }
   for (const e of r.errores) console.error(`configuración (${r.entorno}): ${e}`);
 }

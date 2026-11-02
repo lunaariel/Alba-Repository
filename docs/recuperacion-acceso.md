@@ -6,6 +6,27 @@ Actualizado al cierre de la Fase 6A (02/11/2026, migración 0027). **Procedimien
 
 La recuperación excepcional involucra a **la maestra** (titular y administradora principal), **el responsable técnico** y **una verificación independiente de identidad**. Ninguna persona sola puede desactivar el segundo factor ni apropiarse de la cuenta.
 
+## Estado al 03/11/2026: inactivo hasta la designación
+
+La titular confirmó que **todavía no hay responsable técnico ni aprobador independiente designados**. Por lo tanto:
+
+- el procedimiento de la migración 0027 se conserva, pero **no está habilitado en ningún entorno real**;
+- no se asignó el rol a ningún usuario del sistema;
+- no se crearon usuarios permanentes de recuperación ni identidades ficticias fuera de las pruebas;
+- la titular no puede cumplir sola los dos roles: la base exige dos identidades distintas, y ser dueño de la base no alcanza;
+- la aprobación independiente no se reemplaza por una confirmación de correo.
+
+Las simulaciones con identidades ficticias existen **solo** dentro de las pruebas locales y de CI. Sus roles se crean y se borran en cada prueba.
+
+### Pendientes antes de activar
+
+1. Identidad del responsable técnico.
+2. Identidad del aprobador independiente.
+3. Canal de verificación de identidad de la titular.
+4. Procedimiento de custodia de credenciales: decidido en principio (la titular custodia; `docs/infraestructura.md`); falta el gestor de contraseñas y la creación de cuentas reales.
+5. Procedimiento de emergencia: qué hacer si la titular no está disponible y quién decide.
+6. Prueba supervisada en un entorno de pruebas con las personas designadas, antes de habilitarlo en producción.
+
 ## Designaciones pendientes
 
 No se inventan nombres ni canales. Hasta completar esta tabla, el procedimiento está **bloqueado en la base**: nadie es miembro de los roles que permiten solicitarlo o aprobarlo.

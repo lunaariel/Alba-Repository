@@ -136,7 +136,6 @@ begin
   perform pruebas.afirmar((select count(*) from public.periodos_acceso where perfil_id = P and curso_id = C and estado <> 'revocado') = 1
     and (select count(*) from public.periodos_acceso where perfil_id = P and curso_id = C and item_orden_id in (select id from public.items_orden where orden_id = o1) and estado <> 'revocado') = 1,
     'Un reembolso revoca solo el período de su compra: el de la primera compra se conserva');
-  -- Un aviso con importe distinto del de la orden no da acceso nuevo (la base compara el monto).
   perform pruebas.afirmar((select count(*) from public.envios_correo where clave_idempotencia like 'confirmacion_compra:%' and perfil_id = P) = 2, 'Cada compra aprobada, un correo');
 end $$;
 

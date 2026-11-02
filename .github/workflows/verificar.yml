@@ -83,6 +83,8 @@ jobs:
           export NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
           export NEXT_PUBLIC_URL_SITIO=http://localhost:3000
           export PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789
+          # Entorno de pruebas: reproductor de video simulado (nunca en producción; ver src/config/validacion.ts).
+          export APP_ENTORNO=pruebas VIDEO_PROVEEDOR=simulado VIDEO_SIMULADO_SECRETO=secreto-de-video-simulado-solo-para-pruebas
           npm run build
           (npm start > servidor.log 2>&1 &)
           npx wait-on -t 60000 http://localhost:3000
@@ -97,6 +99,8 @@ jobs:
           DESCARGAR="$CERTIFICADO" npm run -s capturas -- $RUTAS_CAMPUS 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- recorrido del campus" | tee -a capturas/informe.txt
           node scripts/recorrido-campus.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- integraciones simuladas: video, correo y secretos" | tee -a capturas/informe.txt
+          (set -a; . ./supabase.env; set +a; PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789 VIDEO_SIMULADO_SECRETO=secreto-de-video-simulado-solo-para-pruebas node scripts/recorrido-integraciones.mjs) 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- panel" | tee -a capturas/informe.txt
           CORREO="$ADMIN_CORREO" CLAVE="$ADMIN_CLAVE" npm run -s capturas -- $RUTAS_ADMIN 2>&1 | tee -a capturas/informe.txt || fallo=1
           node scripts/recorrido-admin.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1

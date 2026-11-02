@@ -18,6 +18,7 @@ set -a; . ./supabase.env; set +a
 export NEXT_PUBLIC_SUPABASE_URL="$API_URL" NEXT_PUBLIC_SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
 export NEXT_PUBLIC_URL_SITIO=http://localhost:3000
 export PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789
+export APP_ENTORNO=pruebas VIDEO_PROVEEDOR=simulado VIDEO_SIMULADO_SECRETO=secreto-de-video-simulado-solo-para-pruebas
 MODO="${1:-}"
 pkill -f "next-server|next start|next dev" 2>/dev/null; sleep 1
 if [ "$MODO" = "--dev" ]; then
@@ -36,6 +37,7 @@ correr() { echo "--- $1" | tee -a capturas/informe.txt; shift; "$@" 2>&1 | tee -
 correr "sitio público" env -u CORREO -u CLAVE npm run -s capturas -- / /cursos /cursos/demo-montessori-en-casa /talleres /talleres/demo-taller-ambiente /la-maestra /contacto /ingresar /registro $RUTAS_VERIFICAR
 correr "campus" env DESCARGAR="$CERTIFICADO" npm run -s capturas -- $RUTAS_CAMPUS
 correr "recorrido del campus" node scripts/recorrido-campus.mjs
+correr "integraciones simuladas: video, correo y secretos" node scripts/recorrido-integraciones.mjs
 correr "panel" env CORREO="$ADMIN_CORREO" CLAVE="$ADMIN_CLAVE" npm run -s capturas -- $RUTAS_ADMIN
 correr "recorrido del panel" node scripts/recorrido-admin.mjs
 correr "cursos en el panel" node scripts/recorrido-cursos.mjs

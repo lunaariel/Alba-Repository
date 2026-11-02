@@ -27,6 +27,9 @@ begin
     insert into public.opciones (pregunta_id, texto, es_correcta, orden) values (p, 'Correcta', true, 0), (p, 'Incorrecta', false, 1);
     -- El material de ejemplo se agrega antes de publicar para que forme parte de la versión 1.
     if c = 'c1000000-0000-0000-0000-000000000001' then
+      -- Ids de video de ejemplo (no existen en ningún proveedor): con VIDEO_PROVEEDOR=simulado el campus muestra el
+      -- reproductor simulado; sin proveedor, «video pendiente».
+      update public.lecciones set video_id = gen_random_uuid()::text where modulo_id in (select id from public.modulos where curso_id = c);
       insert into public.recursos_leccion (leccion_id, titulo, ruta_almacenamiento, tipo_mime, tamano_bytes)
       select l.id, 'Guía para observar en casa', 'demo/guia.pdf', 'application/pdf', 480000
         from public.lecciones l join public.modulos m2 on m2.id = l.modulo_id where m2.curso_id = c and m2.orden = 0 and l.orden = 0;
