@@ -23,8 +23,8 @@ for (const ancho of anchos) {
   const contexto = await navegador.newContext({ viewport: { width: ancho, height: 900 }, deviceScaleFactor: 1 });
   const pagina = await contexto.newPage();
   const errores = [];
-  pagina.on('pageerror', (e) => errores.push(String(e)));
-  pagina.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
+  pagina.on('pageerror', (e) => errores.push(`${String(e)} (en ${new URL(pagina.url()).pathname})`));
+  pagina.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} (en ${new URL(pagina.url()).pathname})`); });
 
   if (CORREO && CLAVE) {
     await pagina.goto(`${BASE}/ingresar`, { waitUntil: 'networkidle' });

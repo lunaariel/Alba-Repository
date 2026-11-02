@@ -14,3 +14,12 @@ supabase/.branches/
 supabase/.temp/
 
 .DS_Store
+
+# Salidas de la verificación E2E local (scripts/verificar-e2e.sh)
+supabase.env
+campus.env
+capturas/
+build.log
+servidor.log
+supabase/config.toml
+supabase/.gitignore

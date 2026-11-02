@@ -29,8 +29,8 @@ const contexto = await navegador.newContext({ viewport: { width: 1440, height: 9
 const p = await contexto.newPage();
 console.log(`lección de partida: ${LECCION}`);
 const errores = [];
-p.on('pageerror', (e) => errores.push(String(e)));
-p.on('console', (m) => { if (m.type() === 'error') errores.push(m.text()); });
+p.on('pageerror', (e) => errores.push(`${String(e)} (en ${new URL(p.url()).pathname})`));
+p.on('console', (m) => { if (m.type() === 'error') errores.push(`${m.text()} (en ${new URL(p.url()).pathname})`); });
 const foto = (nombre) => p.screenshot({ path: `${SALIDA}/recorrido-${nombre}.png`, fullPage: true });
 
 try {
