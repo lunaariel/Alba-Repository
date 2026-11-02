@@ -5,7 +5,7 @@ import { cambioDeVersion, cursoCampus } from '@/datos/campus';
 import { estadoCertificado, textoAvance } from '@/dominio/aprendizaje';
 import { requisitosParaAlumno, textoPendientes } from '@/dominio/evaluacion';
 import { Contenedor } from '@/ui/estructura';
-import { BarraAvance, EncabezadoCampus, TemarioCampus } from '@/ui/campus';
+import { AccesoVigente, BarraAvance, EncabezadoCampus, TemarioCampus } from '@/ui/campus';
 import { EnlaceAccion, EnlaceBoton } from '@/ui/acciones';
 import { Aviso } from '@/ui/Formulario';
 import { obtenerCertificado } from '../../acciones';
@@ -87,9 +87,7 @@ export default async function CursoCampus({ params, searchParams }: Props) {
           <Tarjeta titulo="Su avance">
             <BarraAvance valor={curso.avance} etiqueta="Avance del curso" />
             <p className="m-0 mt-2 text-[15px] text-tinta-suave">{textoAvance(hechas, curso.lecciones.length)} · {curso.avance} %</p>
-            {curso.venceEn && (
-              <p className="m-0 mt-1 text-[15px] text-tinta-suave">Acceso hasta el <span className="font-bold text-marron">{new Intl.DateTimeFormat('es-GT', { dateStyle: 'long', timeZone: 'America/Guatemala' }).format(curso.venceEn)}</span>.</p>
-            )}
+            <div className="mt-1"><AccesoVigente fin={curso.venceEn} /></div>
             {curso.continuar && (
               <div className="mt-4">
                 <EnlaceBoton href={`/campus/cursos/${curso.slug}/lecciones/${curso.continuar.id}`} tamano="compacto">

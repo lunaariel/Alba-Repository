@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CursoCampus, LeccionCampus } from '@/datos/campus';
 import { textoAvance } from '@/dominio/aprendizaje';
+import { textoAccesoVigente } from '@/dominio/accesos';
 import { EnlaceBoton } from './acciones';
 
 /** Barra de avance accesible: el porcentaje también se lee en texto. */
@@ -56,9 +57,7 @@ export function TarjetaCursoCampus({ curso }: { curso: CursoCampus }) {
           {textoAvance(hechas, curso.lecciones.length)} · {curso.avance} %
         </p>
       </div>
-      {curso.venceEn && (
-        <p className="m-0 text-[15px] text-tinta-suave">Acceso hasta el <span className="font-bold text-marron">{fechaLarga(curso.venceEn)}</span></p>
-      )}
+      <AccesoVigente fin={curso.venceEn} />
       {curso.continuar && hechas > 0 && (
         <p className="m-0 text-[15px]">
           <span className="text-tinta-suave">Sigue con: </span>
@@ -120,5 +119,15 @@ export function EncabezadoCampus({ titulo, bajada, volver }: { titulo: string; b
         {bajada && <div className="m-0 mt-3 max-w-[40em] text-lg text-tinta-suave">{bajada}</div>}
       </div>
     </div>
+  );
+}
+
+/** «Acceso hasta…», «sin vencimiento» o, con 30 días o menos, un aviso destacado (texto, no solo color). */
+export function AccesoVigente({ fin }: { fin: Date | null }) {
+  const a = textoAccesoVigente(fin);
+  return (
+    <p className={`m-0 text-[15px] ${a.urgente ? 'rounded-lg bg-[#F5EBCF] px-3 py-2 text-[#6B5420]' : 'text-tinta-suave'}`} data-acceso={a.urgente ? 'termina-pronto' : 'vigente'}>
+      {a.texto}{a.fecha && <> <span className="font-bold text-marron">{fechaLarga(a.fecha)}</span></>}{a.urgente ? '. Su avance y sus certificados se conservan.' : ''}
+    </p>
   );
 }

@@ -73,10 +73,13 @@ type FilaAcceso = { curso_id: string; version_id: string; vence_en: string | nul
  * momento. Un derecho futuro ya concedido (por ejemplo, una renovación después de un período revocado)
  * no da acceso hasta su fecha: se informa como «programado».
  */
-const coberturas = cache(async (): Promise<Map<string, { vigente: boolean; proximoInicio: Date | null }>> => {
-  const { data } = await (await clienteSesion()).rpc('mis_accesos');
+const coberturas = cache(async (): Promise<Map<string, { vigente: boolean; proximoInicio: Date | null; finContinuo: Date | null | undefined }>> => {
+  const s = await clienteSesion();
+  const [{ data }, { data: fines, error: errorFines }] = await Promise.all([s.rpc('mis_accesos'), s.rpc('mis_fines_cobertura')]);
+  // Fin de la cobertura continua (renovaciones encadenadas incluidas; un intervalo sin acceso la corta). null: sin vencimiento.
+  const fin = new Map(((fines ?? []) as { curso_id: string; fin: string | null }[]).map((f) => [f.curso_id, f.fin ? new Date(f.fin) : null]));
   return new Map(((data ?? []) as { curso_id: string; vigente: boolean; proximo_inicio: string | null }[])
-    .map((f) => [f.curso_id, { vigente: f.vigente === true, proximoInicio: f.proximo_inicio ? new Date(f.proximo_inicio) : null }]));
+    .map((f) => [f.curso_id, { vigente: f.vigente === true, proximoInicio: f.proximo_inicio ? new Date(f.proximo_inicio) : null, finContinuo: errorFines ? undefined : (fin.get(f.curso_id) ?? null) }]));
 });
 
 /** Cursos con acceso vigente, con su avance según la versión de cada uno. Los vencidos van aparte (misCursosVencidos). */
@@ -113,7 +116,9 @@ export const misCursos = cache(async (): Promise<CursoCampus[]> => {
       certificado: cert ? { id: cert.id, codigo: cert.codigo_verificacion } : null,
       certificadoAnterior: anterior ? { id: anterior.id, codigo: anterior.codigo_verificacion } : null,
       version: v ? { id: version_id, numero: v.numero, publicadaEn: new Date(v.publicada_en) } : null,
-      venceEn: vence_en ? new Date(vence_en) : null,
+      // Lo que se muestra es el fin de la cobertura continua, no el del último período (que puede tener un intervalo antes).
+      // Si no se pudo calcular (undefined), se muestra el vencimiento guardado del acceso.
+      venceEn: cobertura.get(c!.id)?.finContinuo !== undefined ? cobertura.get(c!.id)!.finContinuo! : (vence_en ? new Date(vence_en) : null),
     };
   });
 });

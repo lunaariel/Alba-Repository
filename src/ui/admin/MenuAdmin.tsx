@@ -13,6 +13,8 @@ export const SECCIONES_ADMIN = [
   ] },
   { grupo: 'Administración', enlaces: [
     { href: '/admin/ventas', texto: 'Ventas' },
+    // Las incidencias incluyen pagos y accesos de cursos: no solo de talleres.
+    { href: '/admin/talleres/incidencias', texto: 'Incidencias' },
     { href: '/admin/contenido', texto: 'Contenido' },
     { href: '/admin/comunicaciones', texto: 'Comunicaciones' },
     { href: '/admin/configuracion', texto: 'Configuración' },
@@ -20,6 +22,7 @@ export const SECCIONES_ADMIN = [
 ] as const;
 
 function activo(ruta: string, href: string) {
+  if (href === '/admin/talleres' && ruta.startsWith('/admin/talleres/incidencias')) return false;
   return href === '/admin' ? ruta === '/admin' : ruta === href || ruta.startsWith(`${href}/`);
 }
 

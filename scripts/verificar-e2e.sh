@@ -38,6 +38,7 @@ correr "sitio público" env -u CORREO -u CLAVE npm run -s capturas -- / /cursos 
 correr "campus" env DESCARGAR="$CERTIFICADO" npm run -s capturas -- $RUTAS_CAMPUS
 correr "recorrido del campus" node scripts/recorrido-campus.mjs
 correr "integraciones simuladas: video, correo y secretos" node scripts/recorrido-integraciones.mjs
+correr "panel: hoy, alumnos, ventas y certificados" node scripts/recorrido-panel-consultas.mjs
 correr "panel" env CORREO="$ADMIN_CORREO" CLAVE="$ADMIN_CLAVE" npm run -s capturas -- $RUTAS_ADMIN
 correr "recorrido del panel" node scripts/recorrido-admin.mjs
 correr "cursos en el panel" node scripts/recorrido-cursos.mjs

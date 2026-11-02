@@ -101,6 +101,8 @@ jobs:
           node scripts/recorrido-campus.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- integraciones simuladas: video, correo y secretos" | tee -a capturas/informe.txt
           (set -a; . ./supabase.env; set +a; PROCESOS_CLAVE=clave-de-procesos-solo-para-ci-0123456789 VIDEO_SIMULADO_SECRETO=secreto-de-video-simulado-solo-para-pruebas node scripts/recorrido-integraciones.mjs) 2>&1 | tee -a capturas/informe.txt || fallo=1
+          echo "--- panel: hoy, alumnos, ventas y certificados" | tee -a capturas/informe.txt
+          node scripts/recorrido-panel-consultas.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
           echo "--- panel" | tee -a capturas/informe.txt
           CORREO="$ADMIN_CORREO" CLAVE="$ADMIN_CLAVE" npm run -s capturas -- $RUTAS_ADMIN 2>&1 | tee -a capturas/informe.txt || fallo=1
           node scripts/recorrido-admin.mjs 2>&1 | tee -a capturas/informe.txt || fallo=1
