@@ -60,3 +60,16 @@ Ninguna prueba se borró ni se cambió su resultado esperado. Cambios en pruebas
 - CSP no probada en un despliegue real (primero en modo observación).
 
 **Albor no está lista para producción.**
+
+## Cierre (02/11/2026, autorización condicionada de integración)
+
+| Pedido de la titular | Resultado |
+| --- | --- |
+| Aislamiento entre administradora, alumna A, alumna B y visitante | `scripts/recorrido-aislamiento.mjs` (CI): por la API con cada token (cursos, compras, certificados, avisos, avance, intentos, inscripciones, pagos, perfiles, períodos), respuestas del servidor (Mis cursos sin repetidos y con exactamente los cursos propios, Mis compras, PDF y detalle de compras ajenas con 404, sin nombres ni códigos ajenos), campus propio de la admin solo con sus registros, panel de gestión intacto, y nueve acciones rechazadas verificadas con una huella de la base |
+| MFA: registro, verificación, activación, ingreso, rechazo sin MFA, reforzada, vencimiento, un solo uso, reutilización, respaldo, alumna sin privilegios | `recorrido-mfa.mjs` y `99k`; se agregó el ingreso con el factor de respaldo |
+| Recuperación con la maestra, el responsable técnico y verificación independiente | Migración 0027 y `99l`: dos identidades de base de datos distintas, nadie la ejecuta solo (ni siendo superusuario), vence a las 24 h, invalida factores y sesiones, auditada. Designaciones **pendientes** de la titular; bloqueada hasta entonces. Se eliminó el script de una sola persona |
+| Protección de `main` | Autorizada; **no aplicable desde la sesión de trabajo** (sus herramientas de GitHub no configuran ramas). Pasos manuales en `docs/proteccion-main.md` |
+| Migraciones | Solo locales y en CI; agregado el ensayo de reversión de 0026 y 0027 |
+| Despliegues | El único workflow (`verificar.yml`) prueba y publica capturas en ramas `capturas*`; no hay automatización de despliegue |
+
+El estado de la CI del commit integrado y del merge se informa en el Pull Request #2 y en la entrega.
