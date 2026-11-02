@@ -1,0 +1,99 @@
+ok    la admin abre /admin/cursos (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001 (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001/temario (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/c551c579-15f4-4a0f-a7e0-1b7a53a7d275 (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000003/evaluacion/d16031b2-0212-4ec5-8524-170e436b377b/revision (200)
+ok    la admin abre /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion (200)
+ok    formularios reales del panel: 40, acciones distintas: 12 (20 descartados por ser también del campus)
+      alumna → 404 · /admin/cursos · ref · titulo=Cambio no autorizado precio=x
+ok    alumna: /admin/cursos · ref · titulo=Cambio no autorizado precio=x → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001 · ref · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Montessori en  slug=demo-montessori-en-casa publico=familias duracionHoras=4 precio=49 duracionComercial=4 video= resumen=Qué cambiar en casa para descripcion=Texto suficiente para pa objetivos=Preparar un rincón de la requisitos=Texto suficiente para pa edadDesde=0 edadHasta=0
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001 · ref · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Montessori en  slug=demo-montessori-en-casa publico=familias duracionHoras=4 precio=49 duracionComercial=4 video= resumen=Qué cambiar en casa para descripcion=Texto suficiente para pa objetivos=Preparar un rincón de la requisitos=Texto suficiente para pa edadDesde=0 edadHasta=0 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4026b46bc9 · id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- titulo=Observar y preparar motivo=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4026b46bc9 · id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- titulo=Observar y preparar motivo=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=modulos id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=modulos id=7f83c7a7-2fb8-45f3-9b7c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=23276616-1e0d-47ce-9662- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=23276616-1e0d-47ce-9662- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=23276616-1e0d-47ce-9662- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=23276616-1e0d-47ce-9662- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=lecciones id=23276616-1e0d-47ce-9662- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=lecciones id=23276616-1e0d-47ce-9662- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=lecciones id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=lecciones id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40811bf3f1 · curso=c1000000-0000-0000-0000- modulo=7f83c7a7-2fb8-45f3-9b7c- titulo=Cambio no autorizado
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40811bf3f1 · curso=c1000000-0000-0000-0000- modulo=7f83c7a7-2fb8-45f3-9b7c- titulo=Cambio no autorizado → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=modulos id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4026b46bc9 · id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- titulo=Vida cotidiana motivo=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 4026b46bc9 · id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- titulo=Vida cotidiana motivo=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=modulos id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=modulos id=ca71ee01-a7ca-49b1-b653- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=39da97e7-edc3-4ca5-987c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=39da97e7-edc3-4ca5-987c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=39da97e7-edc3-4ca5-987c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40f37cf8ee · tabla=lecciones id=39da97e7-edc3-4ca5-987c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=lecciones id=39da97e7-edc3-4ca5-987c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40d0df9d99 · tabla=lecciones id=39da97e7-edc3-4ca5-987c- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40811bf3f1 · curso=c1000000-0000-0000-0000- modulo=ca71ee01-a7ca-49b1-b653- titulo=Cambio no autorizado
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 40811bf3f1 · curso=c1000000-0000-0000-0000- modulo=ca71ee01-a7ca-49b1-b653- titulo=Cambio no autorizado → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 408a5272f1 · curso=c1000000-0000-0000-0000- titulo=Cambio no autorizado
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario · 408a5272f1 · curso=c1000000-0000-0000-0000- titulo=Cambio no autorizado → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f · 4072540f43 · id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- confirmacion=REEMPLAZAR
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f · 4072540f43 · id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- confirmacion=REEMPLAZAR → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f · ref · id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- titulo=Un espacio a su altura duracion=15 video= descripcion=Texto suficiente para pa motivo=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f · ref · id=ce64e392-7759-4306-8004- curso=c1000000-0000-0000-0000- titulo=Un espacio a su altura duracion=15 video= descripcion=Texto suficiente para pa motivo=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f · 4028967b4a · tabla=lecciones id=ce64e392-7759-4306-8004- volver=/admin/cursos/c1000000-0 bloquear=si confirmacion=BLOQUEAR motivo=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/temario/ce64e392-7759-4306-8004-6edf92fcb73f · 4028967b4a · tabla=lecciones id=ce64e392-7759-4306-8004- volver=/admin/cursos/c1000000-0 bloquear=si confirmacion=BLOQUEAR motivo=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 407dcb7e0b · id=c1000000-0000-0000-0000- estado=archivado confirmacion=ARCHIVAR
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 407dcb7e0b · id=c1000000-0000-0000-0000- estado=archivado confirmacion=ARCHIVAR → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 40c0e70055 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Montessori en 
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 40c0e70055 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Montessori en  → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 408a6642a6 · id=c1000000-0000-0000-0000- confirmacion=PUBLICAR resumen=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion · 408a6642a6 · id=c1000000-0000-0000-0000- confirmacion=PUBLICAR resumen=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 407dcb7e0b · id=c1000000-0000-0000-0000- estado=archivado confirmacion=ARCHIVAR
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 407dcb7e0b · id=c1000000-0000-0000-0000- estado=archivado confirmacion=ARCHIVAR → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 40c0e70055 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Desarrollo y a
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 40c0e70055 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] Desarrollo y a → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 408a6642a6 · id=c1000000-0000-0000-0000- confirmacion=PUBLICAR resumen=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/publicacion · 408a6642a6 · id=c1000000-0000-0000-0000- confirmacion=PUBLICAR resumen=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 40f37cf8ee · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 40f37cf8ee · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=-1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 40f37cf8ee · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 40f37cf8ee · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 direccion=1 → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 40d0df9d99 · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · 40d0df9d99 · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- curso=c1000000-0000-0000-0000- volver=/admin/cursos/c1000000-0 retirar=si → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · ref · curso=c1000000-0000-0000-0000- modalidad=sumativa puntaje=70 intentos=2 actividades=si validacion=si certificado=si aprobado=Aprobó la evaluación. desaprobado=Todavía no alcanzó el pu
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion · ref · curso=c1000000-0000-0000-0000- modalidad=sumativa puntaje=70 intentos=2 actividades=si validacion=si certificado=si aprobado=Aprobó la evaluación. desaprobado=Todavía no alcanzó el pu → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/c551c579-15f4-4a0f-a7e0-1b7a53a7d275 · ref · curso=c1000000-0000-0000-0000- pregunta=c551c579-15f4-4a0f-a7e0- opciones=[{"id":"fa8db8ae-308b-4e tipo=unica tema= correcta-visual=x enunciado=Pregunta de ejemplo
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/c551c579-15f4-4a0f-a7e0-1b7a53a7d275 · ref · curso=c1000000-0000-0000-0000- pregunta=c551c579-15f4-4a0f-a7e0- opciones=[{"id":"fa8db8ae-308b-4e tipo=unica tema= correcta-visual=x enunciado=Pregunta de ejemplo → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/c551c579-15f4-4a0f-a7e0-1b7a53a7d275 · 4028967b4a · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- volver=/admin/cursos/c1000000-0 bloquear=si confirmacion=BLOQUEAR motivo=Texto suficiente para pa
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion/c551c579-15f4-4a0f-a7e0-1b7a53a7d275 · 4028967b4a · tabla=preguntas id=c551c579-15f4-4a0f-a7e0- volver=/admin/cursos/c1000000-0 bloquear=si confirmacion=BLOQUEAR motivo=Texto suficiente para pa → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000003/evaluacion/d16031b2-0212-4ec5-8524-170e436b377b/revision · 40befa018e · curso=c1000000-0000-0000-0000- pregunta=d16031b2-0212-4ec5-8524- opciones=201aee4d-10d5-4790-a8be- motivo=Texto suficiente para pa version=7ce1b238-2b27-41cd-8316-
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000003/evaluacion/d16031b2-0212-4ec5-8524-170e436b377b/revision · 40befa018e · curso=c1000000-0000-0000-0000- pregunta=d16031b2-0212-4ec5-8524- opciones=201aee4d-10d5-4790-a8be- motivo=Texto suficiente para pa version=7ce1b238-2b27-41cd-8316- → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion · 407dcb7e0b · id=c1000000-0000-0000-0000- estado=publicado
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion · 407dcb7e0b · id=c1000000-0000-0000-0000- estado=publicado → 404
+      alumna → 404 · /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion · 40c0e70055 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] El ambiente pr
+ok    alumna: /admin/cursos/c1000000-0000-0000-0000-000000000003/publicacion · 40c0e70055 · id=c1000000-0000-0000-0000- titulo=[Ejemplo] El ambiente pr → 404
+ok    la sesión de la alumna siguió activa durante toda la prueba (200)
+ok    la base no cambió tras 40 reenvíos de la alumna (huella 0aa30c1aa55d)
+ok    todas las respuestas a la alumna fueron un 404 controlado ([[404,40]])
+ok    tampoco cambia sin sesión
+ok    se encontró el formulario de bloqueo de la lección
+ok    control positivo: el mismo formulario enviado por la admin bloquea la lección (303)
+ok    control positivo: y la desbloquea
+ok    el bloqueo y el desbloqueo quedaron registrados
