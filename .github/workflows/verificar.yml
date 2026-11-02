@@ -70,6 +70,8 @@ jobs:
       - name: Supabase local
         run: |
           npx supabase init --force >/dev/null
+          # Segundo factor TOTP habilitado en Auth local (Fase 6A); la política de la academia sigue apagada.
+          sed -i '/^\[auth.mfa.totp\]/,/^$/ s/= false/= true/' supabase/config.toml
           npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor
           npx supabase status -o env > supabase.env
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -q -f tests/visual/demo.sql
