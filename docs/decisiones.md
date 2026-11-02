@@ -120,3 +120,7 @@ Registro breve de decisiones técnicas. La fuente completa es el documento «Alb
 | 2026-11-03 | Cola de correos propia con estado «simulado» distinto de «enviado»; la confirmación de cuenta y la recuperación las envía Supabase Auth | Ningún correo simulado se confunde con uno real |
 | 2026-11-03 | Un aviso de pago se registra solo después de verificar la firma, consultar a la pasarela y comparar estado e importe | No aceptar avisos externos como prueba suficiente |
 | 2026-11-03 | Avisos de vencimiento implementados pero no programados | La anticipación es una decisión pendiente de la maestra |
+| 2026-11-03 | Avisos de vencimiento a **30, 7 y 1 día** antes del fin del acceso (aprobado por la titular), calculados sobre la cobertura continua en días calendario de Guatemala; sin avisos para accesos sin vencimiento ni períodos revocados | Migración 0029; `docs/integraciones-6b.md` |
+| 2026-11-03 | Campus personal también para la administradora: su campus y la descarga `/campus/certificados` muestran solo lo propio; la gestión se hace desde el panel | Evita el tipo de defecto de la Fase 6A (mezcla de identidades) |
+| 2026-11-03 | Panel de consulta de solo lectura (Hoy, Alumnos, Ventas, Certificados), sin reglas nuevas | Tareas cotidianas de la maestra; migración 0030 |
+| 2026-11-03 | En el campus, «acceso hasta» muestra el fin de la cobertura continua, no el fin del último período | Un intervalo sin acceso (decisión A) ya no se oculta |

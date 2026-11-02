@@ -84,12 +84,22 @@ try {
   const columna = await fetch(`${API_URL}/rest/v1/lecciones?select=video_id&limit=1`, { headers: { apikey: ANON_KEY, Authorization: `Bearer ${tokenA}` } });
   comprobar(!columna.ok, 'ni leer los ids privados de video');
 
-  // ------------------------------------------------------------ 3. Correo simulado
+  // ------------------------------------------------------------ 3. Correo simulado (y avisos de vencimiento)
+  // Persona de prueba (solo en esta base local) con una beca que termina en 5 días: el proceso le registra el aviso de 7.
+  const P = sql(`insert into auth.users (id, email, raw_user_meta_data, aud, role) values (gen_random_uuid(), 'aviso.e2e@albor.invalid',
+    '{"nombre_completo": "Persona Aviso (ejemplo)", "confirma_mayoria_edad": true}', 'authenticated', 'authenticated') returning id`).split('\n')[0];
+  sql(`select public.agregar_periodo('${P}', '${C1}', 'beca', null, null, now() + interval '5 days', null, false, '{"regla": "beca_con_fin"}'::jsonb, null, 'Beca de prueba de avisos (E2E)', 'Recorrido', null)`);
   const pendientes = Number(sql(`select count(*) from public.envios_correo where estado = 'pendiente'`));
   comprobar(pendientes >= 1, `hay correos en la cola (confirmaciones de compra de los datos de ejemplo: ${pendientes})`);
   const proc = await fetch(`${BASE}/api/procesos`, { method: 'POST', headers: { Authorization: `Bearer ${PROCESOS_CLAVE}` } });
   const cuerpo = await proc.json();
   comprobar(proc.ok && cuerpo.correos?.simulados >= 1 && cuerpo.correos?.enviados === 0, `el proceso programado trata la cola con el simulador (${JSON.stringify(cuerpo.correos)})`);
+  comprobar(cuerpo.avisos_vencimiento?.registrados >= 1, `el proceso programado registra los avisos de vencimiento (${JSON.stringify(cuerpo.avisos_vencimiento)})`);
+  comprobar(sql(`select (variables ->> 'umbral') || ':' || estado from public.envios_correo where perfil_id = '${P}' and plantilla_clave = 'aviso_vencimiento'`) === '7:simulado',
+    'a 5 días del fin: aviso de 7 días, procesado como simulado');
+  const repetir = await (await fetch(`${BASE}/api/procesos`, { method: 'POST', headers: { Authorization: `Bearer ${PROCESOS_CLAVE}` } })).json();
+  comprobar(sql(`select count(*) from public.envios_correo where perfil_id = '${P}' and plantilla_clave = 'aviso_vencimiento'`) === '1' && repetir.avisos_vencimiento?.registrados === 0,
+    'repetir el proceso no duplica el aviso');
   comprobar(sql(`select count(*) from public.envios_correo where estado = 'enviado'`) === '0', 'ningún correo figura como enviado');
   comprobar(sql(`select count(*) from public.envios_correo where estado = 'simulado' and enviado_en is null and proveedor = 'simulado'`) !== '0', 'los procesados quedan «simulado», sin fecha de envío');
   const sinClave = await fetch(`${BASE}/api/procesos`, { method: 'POST' });

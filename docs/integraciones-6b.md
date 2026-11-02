@@ -33,6 +33,16 @@ Fase 6B, preparación local (03/11/2026). Talleres y videoconferencias quedan fu
 
 **Simulador** (`VIDEO_PROVEEDOR=simulado`, solo `desarrollo` y `pruebas`): enlace `/video-simulado/<id>?vence=…&firma=…` con HMAC-SHA256 de una clave del servidor. Un enlace manipulado responde 403 y uno vencido 410. En producción la ruta no existe (404) y la validación de configuración rechaza el simulador.
 
+**Adaptación al proveedor real (Bunny Stream).** El simulador imita la forma de Bunny:
+- *token* SHA-256 de la clave secreta más el id y el vencimiento;
+- URL con `token` y `expires`;
+- 2 horas de validez.
+
+Al activar Bunny no cambia la autorización (la base), ni el campus, ni la CSP: solo `VIDEO_PROVEEDOR=bunny` y sus dos variables. Conviene además:
+- activar en la biblioteca la restricción de dominios (*allowed referrers*) con el dominio definitivo;
+- mantener la biblioteca de lecciones privada (*token authentication*), separada de la pública de presentaciones;
+- verificar con una cuenta real que un enlace alterado o vencido se rechaza, como en el simulador.
+
 **Para activar Bunny (no autorizado):**
 - crear la biblioteca privada con *token authentication*;
 - cargar `BUNNY_BIBLIOTECA_PRIVADA`, `BUNNY_CLAVE_TOKEN` y `VIDEO_PROVEEDOR=bunny`;
@@ -47,7 +57,7 @@ Fase 6B, preparación local (03/11/2026). Talleres y videoconferencias quedan fu
 | Confirmación de cuenta | Supabase Auth | Requiere SMTP propio en producción (el de Supabase es limitado y solo para pruebas) |
 | Recuperación de contraseña | Supabase Auth | Igual que la anterior |
 | Confirmación de compra | Cola de Albor: se registra sola al aprobarse la orden (`confirmacion_compra:<orden>`) | Implementado; simulado |
-| Aviso de vencimiento | Cola de Albor: `encolar_avisos_vencimiento(días)` | Implementado, **no programado**: la anticipación la decide la maestra |
+| Aviso de vencimiento | Cola de Albor: `encolar_avisos_vencimiento()` (migración 0029), llamado por `/api/procesos` | **30, 7 y 1 día antes** (aprobado por la titular), sobre la cobertura continua en días de Guatemala; simulado |
 | Comunicaciones importantes | Cola de Albor (plantilla `comunicacion_importante`) | Plantilla y cola listas; sin pantalla en el panel (no pedida) |
 
 **Estados en `envios_correo`:**
@@ -62,6 +72,19 @@ Fase 6B, preparación local (03/11/2026). Talleres y videoconferencias quedan fu
 | `fallido` | Después de 5 errores, con espera de 2, 4, 8 y 16 minutos |
 
 Un envío trabado vuelve a la cola a los 15 minutos. La misma clave nunca genera dos correos. Las variables con nombre de secreto se rechazan. Los errores guardan un código, no el texto ni los datos de la persona.
+
+### Avisos de vencimiento (0029)
+
+- **Fin de cobertura continua:** períodos activos encadenados; una renovación que empieza al terminar el actual lo continúa. Un período revocado no cuenta (decisión A: el intervalo queda sin acceso). Un acceso sin vencimiento nunca recibe avisos.
+- **Umbral según los días calendario de Guatemala hasta el último día con acceso:**
+  - 30 días, si faltan entre 8 y 30;
+  - 7 días, si faltan entre 2 y 7;
+  - 1 día, si faltan 0 o 1.
+- Un aviso por acceso, fecha de fin y umbral (idempotente).
+- Si llega un umbral más próximo, el anterior sin enviar se cancela.
+- Si la cobertura cambia (renovación, revocación), los pendientes que ya no corresponden se cancelan con el estado `cancelado`.
+- **Paralelo:** dos ejecuciones simultáneas no duplican (bloqueo y clave única; prueba de concurrencia).
+- **Programación:** `/api/procesos`, con su clave, registra los avisos y procesa la cola. Falta solo configurar la tarea diaria en el hosting.
 
 ## Pagos
 

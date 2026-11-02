@@ -111,6 +111,16 @@ Implementado y probado **solo en local y en CI**. Nada integrado a `main` ni apl
 | Error de hidratación de React (#418) visto una vez en las capturas públicas | Intermitente: apareció en 1 de 5 ejecuciones y no se reprodujo en las siguientes | Investigar la página que lo produce (el informe no la identifica) | Técnico |
 | Migraciones 0014 a 0023 en producción | Probadas en local y CI, con reversión ensayada. **No autorizadas** | Plan de ejecución (`docs/estrategia-migracion.md`) y autorización específica | Titular |
 
+## Jornada del 03/11/2026: lanzamiento de cursos (migraciones 0029 y 0030)
+
+| Pendiente | Estado | Qué falta | Quién decide |
+| --- | --- | --- | --- |
+| Revocación de certificados | Sin definir (el panel solo consulta y descarga) | Regla de la maestra: cuándo, quién y qué ve la verificación pública | Maestra |
+| Panel: acciones desde la lista de Alumnos | Solo consulta; las acciones siguen en la pestaña Alumnos de cada curso | — | — |
+| Comunicaciones importantes desde el panel | Plantilla y cola listas; sin pantalla | Decidir si se necesita | Maestra |
+| Hoy: validaciones docentes pendientes | No se muestran en Hoy | Agregar si la maestra lo pide | Maestra |
+| Tipografías del certificado | Fuentes estándar | Incrustar Fraunces y Atkinson | Técnico |
+
 ## Fase 6B: preparación local del lanzamiento de cursos (03/11/2026 · migración 0028)
 
 Implementado y probado **solo en local y en CI**, con simuladores. Ningún servicio real conectado.
@@ -119,7 +129,7 @@ Implementado y probado **solo en local y en CI**, con simuladores. Ningún servi
 | --- | --- | --- | --- |
 | Video privado (Bunny) | Autorización en la base, adaptador y simulador con enlace temporal | Cuenta de Bunny, biblioteca privada, subir videos | Titular (contratación) |
 | Correo transaccional | Cola, plantillas, procesador y simulador; confirmación de compra automática | Proveedor, dominio verificado, SMTP propio para Supabase Auth | Titular |
-| Aviso previo al vencimiento | Implementado, no programado | Anticipación (días) | Maestra |
+| Aviso previo al vencimiento | **Decidido (30, 7 y 1 día) e implementado (0029)**; simulado | Tarea diaria en el hosting y proveedor de correo | Titular (contratación) |
 | Pasarela de pago | Interfaz, simulador y procesamiento verificado de avisos | Elegir Recurrente o Lemon Squeezy; condiciones por escrito; ruta pública de avisos al elegir | Titular |
 | Facturación FEL | Diseño documentado; solo recibo no fiscal | Situación tributaria con contador, NIT, certificador, moneda | Titular con contador |
 | Infraestructura | Entornos y validación de configuración; requisitos de despliegue | Hosting, Supabase de producción, dominio, gestor de contraseñas | Titular |
