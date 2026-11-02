@@ -7,7 +7,7 @@
 import { mkdir, readFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
 import * as OTPAuth from 'otpauth';
-import { BASE, SALIDA, sql, sqlArchivo, crearInforme, navegadorNuevo, sinDesborde, espera } from './lib/recorrido.mjs';
+import { BASE, SALIDA, DB, sql, sqlArchivo, crearInforme, navegadorNuevo, sinDesborde, espera } from './lib/recorrido.mjs';
 
 const { CORREO, CLAVE, CORREO2, CLAVE2, ADMIN_CORREO, ADMIN_CLAVE, API_URL, ANON_KEY, LECCION } = process.env;
 const C1 = 'c1000000-0000-0000-0000-000000000001';

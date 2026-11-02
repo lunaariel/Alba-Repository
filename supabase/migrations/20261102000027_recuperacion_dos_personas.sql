@@ -38,11 +38,14 @@ alter table public.recuperaciones_mfa enable row level security;
 create policy recuperaciones_admin_lee on public.recuperaciones_mfa for select to authenticated using (public.es_admin());
 revoke insert, update, delete on public.recuperaciones_mfa from anon, authenticated;
 
--- Pertenencia DIRECTA de la identidad que se conectó (session_user) a un rol del procedimiento.
+-- Pertenencia DIRECTA de la identidad que se conectó (session_user) a un rol del procedimiento. Una persona
+-- designada es un usuario común: no puede ser superusuario ni poder crear roles. Así no cuenta el dueño de la base
+-- (en Postgres 16, quien crea un rol queda registrado como miembro con opción de administración; en Supabase,
+-- `postgres` crea los roles de esta migración) ni nadie que pueda designarse a sí mismo.
 create or replace function public.miembro_directo(p_rol text)
 returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from pg_auth_members m join pg_roles r on r.oid = m.roleid join pg_roles u on u.oid = m.member
-                  where r.rolname = p_rol and u.rolname = session_user)
+                  where r.rolname = p_rol and u.rolname = session_user and not u.rolsuper and not u.rolcreaterole)
 $$;
 revoke execute on function public.miembro_directo(text) from public, anon, authenticated, service_role;
 

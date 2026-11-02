@@ -18,6 +18,9 @@ begin
   if d.accion not in ('designar', 'retirar') then raise exception 'accion_invalida'; end if;
   if char_length(coalesce(d.responsable, '')) < 3 then raise exception 'responsable_requerido'; end if;
   if not exists (select 1 from pg_roles where rolname = d.usuario and rolcanlogin) then raise exception 'usuario_bd_inexistente: cree primero el usuario individual de base de datos'; end if;
+  if exists (select 1 from pg_roles where rolname = d.usuario and (rolsuper or rolcreaterole)) then
+    raise exception 'usuario_no_apto: la persona designada usa un usuario común (sin superusuario ni creación de roles)';
+  end if;
   otro := case d.rol when 'albor_recuperacion_tecnico' then 'albor_recuperacion_aprobador' else 'albor_recuperacion_tecnico' end;
   if d.accion = 'designar' then
     if pg_has_role(d.usuario, otro, 'MEMBER') and exists (select 1 from pg_auth_members m join pg_roles r on r.oid = m.roleid join pg_roles u on u.oid = m.member where r.rolname = otro and u.rolname = d.usuario) then

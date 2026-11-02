@@ -35,6 +35,12 @@ begin
   perform pruebas.afirmar(f like 'no_autorizado%', 'Superusuario sin designación no solicita: ' || f);
 end $$;
 
+-- 1b. Un usuario con poder de crear roles (como `postgres` en Supabase), aunque figure como miembro, tampoco.
+create role prueba_dueno login createrole;
+grant albor_recuperacion_tecnico to prueba_dueno;
+select pruebas.como('prueba_dueno', 's_dueno', $q$select public.solicitar_recuperacion_mfa('maestra@prueba.test', 'Pérdida del teléfono y del respaldo.', 'Canal acordado previamente')::text$q$);
+select pruebas.afirmar(pruebas.r('s_dueno') like 'no_autorizado%', 'Quien puede crear roles no cuenta como designado: ' || pruebas.r('s_dueno'));
+
 -- 2. El técnico solo solicita para cuentas admin.
 select pruebas.como('prueba_tecnico', 's0', $q$select public.solicitar_recuperacion_mfa('a@prueba.test', 'Pérdida del teléfono y del respaldo.', 'Canal acordado previamente')::text$q$);
 select pruebas.afirmar(pruebas.r('s0') like 'no_es_admin%', 'No se usa para cuentas de alumnas: ' || pruebas.r('s0'));
@@ -92,6 +98,6 @@ select pruebas.afirmar(not has_function_privilege(r, 'public.aprobar_recuperacio
   from unnest(array['anon', 'authenticated', 'service_role']) r;
 select pruebas.afirmar((select count(*) from pg_auth_members m join pg_roles r on r.oid = m.roleid
   where r.rolname in ('albor_recuperacion_tecnico', 'albor_recuperacion_aprobador') and m.member not in
-  (select oid from pg_roles where rolname like 'prueba\_%')) = 0, 'Fuera de la prueba, nadie está designado (pendiente de la titular)');
+  (select oid from pg_roles where rolname like 'prueba\_%') and not m.admin_option) = 0, 'Fuera de la prueba, nadie está designado (pendiente de la titular)');
 
 rollback;
