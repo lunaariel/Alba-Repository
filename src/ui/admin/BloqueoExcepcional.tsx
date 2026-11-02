@@ -25,7 +25,7 @@ export function BloqueoExcepcional(props: {
       )}
       <div className="mt-3">
         <ConfirmarAccion
-          accion={props.accion} campos={campos} estilo={props.bloqueada ? 'secundario' : 'peligro'} peligro={!props.bloqueada}
+          reforzada accion={props.accion} campos={campos} estilo={props.bloqueada ? 'secundario' : 'peligro'} peligro={!props.bloqueada}
           textoBoton={props.bloqueada ? 'Desbloquear' : `Bloquear ${props.tipo}`}
           titulo={props.bloqueada ? `¿Desbloquear ${props.tipo}?` : `¿Bloquear ${props.tipo} en todas las versiones?`}
           palabra={props.bloqueada ? 'DESBLOQUEAR' : 'BLOQUEAR'}

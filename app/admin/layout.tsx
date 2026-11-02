@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { exigirAdmin } from '@/datos/sesion';
+import { exigirAdmin, politicaSeguridad } from '@/datos/sesion';
 import { configuracion } from '@/datos/publico';
 import { clienteSesion } from '@/datos/supabase';
 import { IconoAlbor } from '@/ui/marca';
 import { MenuAdmin } from '@/ui/admin/MenuAdmin';
+import { PoliticaReforzada } from '@/ui/admin/reforzada';
 import { salir } from '../(auth)/acciones';
 
 // Nunca en caché y nunca en buscadores. Quien no es admin recibe "no encontrado".
@@ -16,9 +17,10 @@ export const metadata: Metadata = {
 
 export default async function LayoutAdmin({ children }: { children: React.ReactNode }) {
   const usuario = await exigirAdmin();
-  const [config, { data: perfil }] = await Promise.all([
+  const [config, { data: perfil }, politica] = await Promise.all([
     configuracion(),
     (await clienteSesion()).from('perfiles').select('nombre_completo').eq('id', usuario.id).maybeSingle(),
+    politicaSeguridad(),
   ]);
   const pie = (
     <div className="flex flex-col gap-1 text-[14px]">
@@ -45,7 +47,9 @@ export default async function LayoutAdmin({ children }: { children: React.ReactN
         </Link>
         <MenuAdmin pie={pie} />
       </aside>
-      <main id="contenido" className="min-w-0 px-[clamp(20px,4vw,48px)] pb-16 pt-[clamp(24px,3.5vw,40px)]">{children}</main>
+      <main id="contenido" className="min-w-0 px-[clamp(20px,4vw,48px)] pb-16 pt-[clamp(24px,3.5vw,40px)]">
+        <PoliticaReforzada activa={politica.mfaAdminObligatorio} minutos={politica.reforzadaMinutos}>{children}</PoliticaReforzada>
+      </main>
     </div>
   );
 }

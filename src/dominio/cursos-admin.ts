@@ -1,3 +1,4 @@
+import { ERRORES_MFA } from './mfa';
 import { CONFIG_PREDETERMINADA, faltaCriterioCertificacion, usaPreguntas, type ConfigEvaluacion } from './evaluacion';
 
 /**
@@ -72,6 +73,7 @@ export function temasConUnaPregunta(preguntas: { tema: string | null; retirada: 
 }
 
 const ERRORES: Record<string, string> = {
+  ...ERRORES_MFA,
   curso_incompleto: 'Todavía no se puede publicar: revise la lista de requisitos.',
   curso_con_alumnos: 'Este curso ya tiene alumnos: no puede volver a borrador. Puede archivarlo; quienes lo compraron conservan el acceso.',
   curso_con_historial: 'Este curso tiene alumnos, compras o certificados: no se puede eliminar. Puede archivarlo.',

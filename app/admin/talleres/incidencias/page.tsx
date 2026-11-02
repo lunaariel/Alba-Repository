@@ -5,6 +5,7 @@ import { formatearUSD } from '@/dominio/dinero';
 import { AvisoAccion } from '@/ui/admin/campos';
 import { CabeceraAdmin, EstadoChip } from '@/ui/admin/estructura';
 import { TEXTOS_TALLER } from '@/ui/admin/talleres';
+import { CampoCodigoReforzado } from '@/ui/admin/reforzada';
 import { anotarIncidencia, reintentarOtorgamiento, resolverReembolsoParcial } from '../acciones';
 
 export const metadata: Metadata = { title: 'Incidencias' };
@@ -72,6 +73,7 @@ export default async function Incidencias({ searchParams }: { searchParams: Prom
                       <label className="flex min-w-0 flex-[1_1_280px] flex-col gap-1 text-[14px] font-bold">Resolución (no modifica el acceso)
                         <input name="resolucion" required minLength={20} maxLength={1000} className="min-h-[44px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 font-normal text-marron" />
                       </label>
+                      <CampoCodigoReforzado />
                       <button type="submit" className="min-h-[44px] rounded-md border-2 border-oliva-profundo bg-blanco-calido px-4 font-bold text-oliva-profundo hover:bg-arena">Registrar resolución</button>
                     </form>
                   )}
@@ -83,6 +85,7 @@ export default async function Incidencias({ searchParams }: { searchParams: Prom
                   <label className="flex min-w-0 flex-[1_1_280px] flex-col gap-1 text-[14px] font-bold">Nota del reintento
                     <input name="nota" required minLength={5} maxLength={1000} className="min-h-[44px] rounded-md border-[1.5px] border-borde-control bg-blanco-calido px-3 font-normal text-marron" />
                   </label>
+                  <CampoCodigoReforzado />
                   <button type="submit" className="min-h-[44px] rounded-md bg-oliva-profundo px-4 font-bold text-marfil hover:bg-marron">Reintentar otorgamiento</button>
                 </form>
               )}

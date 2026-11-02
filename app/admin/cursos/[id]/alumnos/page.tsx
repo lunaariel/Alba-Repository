@@ -20,7 +20,7 @@ const campo = 'min-h-[44px] rounded-md border-[1.5px] border-borde-control bg-bl
 /** Formulario de beca: duración elegida por la admin, con fin o «sin vencimiento» expreso. */
 function FormBeca({ cursoId }: { cursoId: string }) {
   return (
-    <ConfirmarAccion accion={otorgarBeca} campos={{ curso: cursoId }} textoBoton="Otorgar una beca" titulo="Otorgar una beca o acceso gratuito" estilo="secundario">
+    <ConfirmarAccion reforzada accion={otorgarBeca} campos={{ curso: cursoId }} textoBoton="Otorgar una beca" titulo="Otorgar una beca o acceso gratuito" estilo="secundario">
       <p className="m-0 text-[15px]">No crea una compra ni un recibo. No usa la duración comercial: usted elige las fechas. Si la persona ya tuvo el curso, conserva su avance, su versión y sus certificados.</p>
       <label className="flex flex-col gap-1 text-[15px] font-bold">Correo de la persona
         <input name="correo" type="email" required maxLength={200} className={campo} />
@@ -58,7 +58,7 @@ function Periodos({ periodos, cursoId }: { periodos: PeriodoAdmin[]; cursoId: st
           {p.estado === 'revocado' && <span className="text-tinta-suave">· revocado{p.revocadoMotivo ? `: ${p.revocadoMotivo}` : ''}</span>}
           {p.origen !== 'compra' && p.motivo && <span className="text-tinta-suave">· {p.motivo}{p.responsable ? ` (${p.responsable})` : ''}</span>}
           {revocableDesdePanel(p) && (
-            <ConfirmarAccion accion={revocarBeca} campos={{ curso: cursoId, periodo: p.id }} textoBoton="Revocar" titulo="¿Revocar esta beca?" estilo="enlacePeligro" peligro>
+            <ConfirmarAccion reforzada accion={revocarBeca} campos={{ curso: cursoId, periodo: p.id }} textoBoton="Revocar" titulo="¿Revocar esta beca?" estilo="enlacePeligro" peligro>
               <p className="m-0">La persona pierde este período de acceso. Su avance, sus resultados y sus certificados se conservan. Queda registrado.</p>
               <label className="flex flex-col gap-1 text-[15px] font-bold">Motivo (obligatorio)
                 <textarea name="motivo" required minLength={10} maxLength={500} rows={2} className={area} />
@@ -141,7 +141,7 @@ export default async function Alumnos({ params, searchParams }: Props) {
                               <>
                                 <EstadoChip estado="publicado" texto="Validada por usted" />
                                 {!a.tieneCertificado && (
-                                  <ConfirmarAccion accion={anularValidacion} campos={{ curso: c.id, validacion: a.validacionId }} textoBoton="Anular" titulo="¿Anular la validación?" estilo="enlacePeligro" peligro>
+                                  <ConfirmarAccion reforzada accion={anularValidacion} campos={{ curso: c.id, validacion: a.validacionId }} textoBoton="Anular" titulo="¿Anular la validación?" estilo="enlacePeligro" peligro>
                                     <p className="m-0">Use esta opción solo si validó por error. Queda registrado.</p>
                                     <label className="flex flex-col gap-1 text-[15px] font-bold">Motivo (obligatorio)
                                       <textarea name="motivo" required minLength={10} maxLength={500} rows={2} className={area} />
