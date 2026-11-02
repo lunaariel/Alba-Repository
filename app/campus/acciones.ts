@@ -87,6 +87,8 @@ export async function enviarActividades(_: ResultadoActividades, datos: FormData
   const { data, error } = await clienteServicio().rpc('registrar_actividad_formativa', {
     p_perfil: usuario.id, p_evaluacion: curso.actividades.evaluacionId, p_respuestas: respuestasDesdeFormulario(datos.entries()),
   });
+  // D8: la base limita los envíos por persona y minuto.
+  if (error?.message.includes('demasiados_envios')) return { error: 'Envió sus respuestas muchas veces seguidas. Espere un minuto y vuelva a intentarlo.' };
   if (error) return { error: 'No pudimos registrar sus respuestas. Intente de nuevo en unos minutos.' };
   const d = data as { completo: boolean; respondidas: number; total: number; temas_a_reforzar: string[] };
   revalidatePath(`/campus/cursos/${cursoSlug.data}`);

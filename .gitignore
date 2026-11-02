@@ -23,3 +23,6 @@ build.log
 servidor.log
 supabase/config.toml
 supabase/.gitignore
+material-prueba.pdf
+no-es-pdf.pdf
+permisos-prueba.pdf

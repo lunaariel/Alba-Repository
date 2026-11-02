@@ -411,10 +411,22 @@ export async function guardarCriterios(_: Estado, datos: FormData): Promise<Esta
     intentos: z.string().trim().refine((v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) > 0), 'Los intentos van de 1 a 99, o vacío para no limitar.'),
     aprobado: texto(300).min(2, 'Escriba el mensaje para quien aprueba.'),
     desaprobado: texto(300).min(2, 'Escriba el mensaje para quien no aprueba.'),
-  }).safeParse({
-    curso: datos.get('curso'), modalidad: datos.get('modalidad') ?? 'sumativa', puntaje: datos.get('puntaje'), intentos: datos.get('intentos') ?? '',
-    aprobado: datos.get('aprobado'), desaprobado: datos.get('desaprobado'),
-  });
+  }).safeParse((() => {
+    // D11: en la formativa, puntaje, intentos y mensajes están ocultos y no se usan; un valor vacío o inválido ahí
+    // no puede impedir guardar con un error que la maestra no ve. Se conservan valores válidos predeterminados.
+    const formativaEnviada = datos.get('modalidad') === 'formativa';
+    const valor = (k: string, porDefecto: string, valido: (v: string) => boolean) => {
+      const v = String(datos.get(k) ?? '').trim();
+      return formativaEnviada && !valido(v) ? porDefecto : datos.get(k);
+    };
+    return {
+      curso: datos.get('curso'), modalidad: datos.get('modalidad') ?? 'sumativa',
+      puntaje: valor('puntaje', '70', (v) => /^\d{1,3}$/.test(v) && Number(v) <= 100),
+      intentos: valor('intentos', '', (v) => v === '' || (/^\d{1,2}$/.test(v) && Number(v) > 0)) ?? '',
+      aprobado: valor('aprobado', 'Aprobó la evaluación.', (v) => v.length >= 2 && v.length <= 300),
+      desaprobado: valor('desaprobado', 'Todavía no alcanzó el puntaje mínimo.', (v) => v.length >= 2 && v.length <= 300),
+    };
+  })());
   if (!r.success) return { error: r.error.issues[0]?.message, campo: String(r.error.issues[0]?.path[0]) };
   const d = r.data;
   // La sumativa no usa requisitos formativos (la base lo exige con una restricción).
