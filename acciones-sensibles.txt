@@ -1,0 +1,185 @@
+ok    se capturó la solicitud real del panel: Eliminar un curso
+ok    se capturó la solicitud real del panel: Eliminar una lección
+ok    se capturó la solicitud real del panel: Eliminar un módulo
+ok    se capturó la solicitud real del panel: Eliminar una pregunta
+ok    se capturó la solicitud real del panel: Quitar un material
+ok    se capturó la solicitud real del panel: Subir un archivo (preparar la subida)
+ok    se capturó la solicitud real del panel: Subir un archivo (registrar lo subido)
+ok    se capturó la solicitud real del panel: Aplicar una revisión favorable
+ok    se capturó la solicitud real del panel: Calcular una revisión favorable
+ok    se capturó la solicitud real del panel: Bloquear contenido
+ok    se capturó la solicitud real del panel: Publicar una versión
+ok    se capturó la solicitud real del panel: Cambiar criterios académicos
+ok    se capturó la solicitud real del panel: Archivar un curso
+ok    se capturó la solicitud real del panel: Corrección menor de una lección publicada
+ok    se capturó la solicitud real del panel: Crear una lección de reemplazo
+ok    se capturó la solicitud real del panel: Asociar un material complementario
+ok    se capturó la solicitud real del panel: Corregir el nombre de un módulo publicado
+ok    se capturó la solicitud real del panel: Crear un taller
+ok    se capturó la solicitud real del panel: Editar un taller
+ok    se capturó la solicitud real del panel: Eliminar un taller
+ok    se capturó la solicitud real del panel: Reprogramar un taller
+ok    se capturó la solicitud real del panel: Cancelar un taller
+ok    se capturó la solicitud real del panel: Duplicar un taller
+ok    se capturó la solicitud real del panel: Cargar el enlace de una videollamada
+ok    se capturó la solicitud real del panel: Cambiar recordatorios
+ok    se capturó la solicitud real del panel: Cambiar el estado de una grabación
+ok    se capturó la solicitud real del panel: Registrar la revisión de una grabación
+ok    se capturó la solicitud real del panel: Guardar condiciones de una grabación
+ok    se capturó la solicitud real del panel: Anotar una incidencia
+ok    se capturó la solicitud real del panel: Crear un curso
+ok    acciones distintas capturadas: 28
+      alumna → 404 · Eliminar un curso
+ok    alumna: «Eliminar un curso» rechazada con 404, sin cambios
+      visitante → 404 · Eliminar un curso
+ok    visitante: «Eliminar un curso» rechazada con 404, sin cambios
+      alumna → 404 · Eliminar una lección
+ok    alumna: «Eliminar una lección» rechazada con 404, sin cambios
+      visitante → 404 · Eliminar una lección
+ok    visitante: «Eliminar una lección» rechazada con 404, sin cambios
+      alumna → 404 · Eliminar un módulo
+ok    alumna: «Eliminar un módulo» rechazada con 404, sin cambios
+      visitante → 404 · Eliminar un módulo
+ok    visitante: «Eliminar un módulo» rechazada con 404, sin cambios
+      alumna → 404 · Eliminar una pregunta
+ok    alumna: «Eliminar una pregunta» rechazada con 404, sin cambios
+      visitante → 404 · Eliminar una pregunta
+ok    visitante: «Eliminar una pregunta» rechazada con 404, sin cambios
+      alumna → 404 · Quitar un material
+ok    alumna: «Quitar un material» rechazada con 404, sin cambios
+      visitante → 404 · Quitar un material
+ok    visitante: «Quitar un material» rechazada con 404, sin cambios
+      alumna → 404 · Subir un archivo (preparar la subida)
+ok    alumna: «Subir un archivo (preparar la subida)» rechazada con 404, sin cambios
+      visitante → 404 · Subir un archivo (preparar la subida)
+ok    visitante: «Subir un archivo (preparar la subida)» rechazada con 404, sin cambios
+      alumna → 404 · Subir un archivo (registrar lo subido)
+ok    alumna: «Subir un archivo (registrar lo subido)» rechazada con 404, sin cambios
+      visitante → 404 · Subir un archivo (registrar lo subido)
+ok    visitante: «Subir un archivo (registrar lo subido)» rechazada con 404, sin cambios
+      alumna → 404 · Aplicar una revisión favorable
+ok    alumna: «Aplicar una revisión favorable» rechazada con 404, sin cambios
+      visitante → 404 · Aplicar una revisión favorable
+ok    visitante: «Aplicar una revisión favorable» rechazada con 404, sin cambios
+      alumna → 404 · Calcular una revisión favorable
+ok    alumna: «Calcular una revisión favorable» rechazada con 404, sin cambios
+      visitante → 404 · Calcular una revisión favorable
+ok    visitante: «Calcular una revisión favorable» rechazada con 404, sin cambios
+      alumna → 404 · Bloquear contenido
+ok    alumna: «Bloquear contenido» rechazada con 404, sin cambios
+      visitante → 404 · Bloquear contenido
+ok    visitante: «Bloquear contenido» rechazada con 404, sin cambios
+      alumna → 404 · Publicar una versión
+ok    alumna: «Publicar una versión» rechazada con 404, sin cambios
+      visitante → 404 · Publicar una versión
+ok    visitante: «Publicar una versión» rechazada con 404, sin cambios
+      alumna → 404 · Cambiar criterios académicos
+ok    alumna: «Cambiar criterios académicos» rechazada con 404, sin cambios
+      visitante → 404 · Cambiar criterios académicos
+ok    visitante: «Cambiar criterios académicos» rechazada con 404, sin cambios
+      alumna → 404 · Archivar un curso
+ok    alumna: «Archivar un curso» rechazada con 404, sin cambios
+      visitante → 404 · Archivar un curso
+ok    visitante: «Archivar un curso» rechazada con 404, sin cambios
+      alumna → 404 · Corrección menor de una lección publicada
+ok    alumna: «Corrección menor de una lección publicada» rechazada con 404, sin cambios
+      visitante → 404 · Corrección menor de una lección publicada
+ok    visitante: «Corrección menor de una lección publicada» rechazada con 404, sin cambios
+      alumna → 404 · Crear una lección de reemplazo
+ok    alumna: «Crear una lección de reemplazo» rechazada con 404, sin cambios
+      visitante → 404 · Crear una lección de reemplazo
+ok    visitante: «Crear una lección de reemplazo» rechazada con 404, sin cambios
+      alumna → 404 · Asociar un material complementario
+ok    alumna: «Asociar un material complementario» rechazada con 404, sin cambios
+      visitante → 404 · Asociar un material complementario
+ok    visitante: «Asociar un material complementario» rechazada con 404, sin cambios
+      alumna → 404 · Corregir el nombre de un módulo publicado
+ok    alumna: «Corregir el nombre de un módulo publicado» rechazada con 404, sin cambios
+      visitante → 404 · Corregir el nombre de un módulo publicado
+ok    visitante: «Corregir el nombre de un módulo publicado» rechazada con 404, sin cambios
+      alumna → 404 · Crear un taller
+ok    alumna: «Crear un taller» rechazada con 404, sin cambios
+      visitante → 404 · Crear un taller
+ok    visitante: «Crear un taller» rechazada con 404, sin cambios
+      alumna → 404 · Editar un taller
+ok    alumna: «Editar un taller» rechazada con 404, sin cambios
+      visitante → 404 · Editar un taller
+ok    visitante: «Editar un taller» rechazada con 404, sin cambios
+      alumna → 404 · Eliminar un taller
+ok    alumna: «Eliminar un taller» rechazada con 404, sin cambios
+      visitante → 404 · Eliminar un taller
+ok    visitante: «Eliminar un taller» rechazada con 404, sin cambios
+      alumna → 404 · Reprogramar un taller
+ok    alumna: «Reprogramar un taller» rechazada con 404, sin cambios
+      visitante → 404 · Reprogramar un taller
+ok    visitante: «Reprogramar un taller» rechazada con 404, sin cambios
+      alumna → 404 · Cancelar un taller
+ok    alumna: «Cancelar un taller» rechazada con 404, sin cambios
+      visitante → 404 · Cancelar un taller
+ok    visitante: «Cancelar un taller» rechazada con 404, sin cambios
+      alumna → 404 · Duplicar un taller
+ok    alumna: «Duplicar un taller» rechazada con 404, sin cambios
+      visitante → 404 · Duplicar un taller
+ok    visitante: «Duplicar un taller» rechazada con 404, sin cambios
+      alumna → 404 · Cargar el enlace de una videollamada
+ok    alumna: «Cargar el enlace de una videollamada» rechazada con 404, sin cambios
+      visitante → 404 · Cargar el enlace de una videollamada
+ok    visitante: «Cargar el enlace de una videollamada» rechazada con 404, sin cambios
+      alumna → 404 · Cambiar recordatorios
+ok    alumna: «Cambiar recordatorios» rechazada con 404, sin cambios
+      visitante → 404 · Cambiar recordatorios
+ok    visitante: «Cambiar recordatorios» rechazada con 404, sin cambios
+      alumna → 404 · Cambiar el estado de una grabación
+ok    alumna: «Cambiar el estado de una grabación» rechazada con 404, sin cambios
+      visitante → 404 · Cambiar el estado de una grabación
+ok    visitante: «Cambiar el estado de una grabación» rechazada con 404, sin cambios
+      alumna → 404 · Registrar la revisión de una grabación
+ok    alumna: «Registrar la revisión de una grabación» rechazada con 404, sin cambios
+      visitante → 404 · Registrar la revisión de una grabación
+ok    visitante: «Registrar la revisión de una grabación» rechazada con 404, sin cambios
+      alumna → 404 · Guardar condiciones de una grabación
+ok    alumna: «Guardar condiciones de una grabación» rechazada con 404, sin cambios
+      visitante → 404 · Guardar condiciones de una grabación
+ok    visitante: «Guardar condiciones de una grabación» rechazada con 404, sin cambios
+      alumna → 404 · Anotar una incidencia
+ok    alumna: «Anotar una incidencia» rechazada con 404, sin cambios
+      visitante → 404 · Anotar una incidencia
+ok    visitante: «Anotar una incidencia» rechazada con 404, sin cambios
+      alumna → 404 · Crear un curso
+ok    alumna: «Crear un curso» rechazada con 404, sin cambios
+      visitante → 404 · Crear un curso
+ok    visitante: «Crear un curso» rechazada con 404, sin cambios
+ok    alumna: desbloquear también se rechaza
+ok    control positivo: la misma solicitud enviada por la admin elimina el curso de prueba
+ok    API: la alumna no lee respuestas correctas (403)
+ok    API: la alumna no lee enlaces de anfitrión (403)
+ok    API: la alumna no lee los id de video privados (403)
+ok    API: funciones administrativas rechazadas para la alumna {"publicar_version":403,"aplicar_revision":403,"bloquear_contenido":403,"reemplazar_leccion":403,"corregir_modulo_publicado":403,"cambiar_version":403,"emitir_certificado":403,"inscribir_cortesia":403,"cambiar_estado_grabacion":403,"guardar_condiciones_grabacion":403,"otorgar_acceso_compra":403}
+ok    API: la alumna no lee grabaciones ni sus referencias (200)
+ok    almacenamiento: la alumna no sube archivos al bucket privado (400)
+ok    almacenamiento: la alumna no lista archivos administrativos (200, borrar → 200)
+ok    la base y el almacenamiento no cambiaron tras los intentos directos (cursos, intentos, certificados, archivos)
+ok    la página de cambio informa que no se puede volver atrás
+ok    se capturó la solicitud de cambio de versión
+      cuerpo capturado del cambio de versión: "------WebKitFormBoundaryOQFAWm3CfSq28vit\r\nContent-Disposition: form-data; name=\"_1_$ACTION_ID_407d6ac0ea97f3e0d0ea6141521404fd4c8a1243a1\"\r\n\r\n\r\n------WebKitFormBoundaryOQFAWm3CfSq28vit\r\nContent-Disposition: form-data; name=\"_1_curso\"\r\n\r\ndemo-montessori-en-casa\r\n------WebKitFormBoundaryOQFAWm3CfSq28vit\r\nContent-Disposition: form-data; name=\"_1_destino\"\r\n\r\n8f9941fe-6dd1-4123-9485-f8d632407bf9\r\n------WebKitFormBoundaryOQFAWm3CfSq28vit\r\nContent-Disposition: form-data; name=\"_1_entiendo\"\r\n\r\nsi\r\n------WebKitFormBoundaryOQFAWm3CfSq28vit\r\nContent-Disposition: form-data; name=\"0\"\r\n\r\n[\"$K1\"]\r\n------WebKitFormBoundaryOQFAWm3CfSq28vit--\r\n"
+ok    la solicitud capturada lleva el destino
+ok    la solicitud capturada lleva la casilla de confirmación
+ok    cambio de versión manipulado (destino anterior (versión 1)): no cambia nada
+ok    cambio de versión manipulado (destino inexistente): no cambia nada
+ok    cambio de versión manipulado (sin la casilla de confirmación): no cambia nada
+ok    cambio de versión sin sesión: rechazado (307)
+ok    la alumna sigue en la versión 1 de c1
+ok    se capturó la solicitud real de la alumna para responder la reprogramación
+ok    responder la reprogramación (segunda alumna (real)): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (visitante): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (la propia alumna sin la casilla): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (la propia alumna con una respuesta inventada): no cambia nada; la alumna sigue pendiente
+ok    responder la reprogramación (la propia alumna pidiendo reembolso de un taller gratuito): no cambia nada; la alumna sigue pendiente
+ok    control positivo: la solicitud de la propia alumna registra su aceptación (una sola vez)
+ok    responder dos veces no registra una segunda decisión
+ok    marcar avisos ajenos como leídos (segunda alumna): sin cambios (10 sin leer)
+ok    se capturó la solicitud de cancelación de un taller gratuito
+ok    el taller pago no ofrece cancelar
+ok    cancelar un taller pago con una solicitud manipulada: no cambia nada (ni orden ni acceso)
+ok    la segunda alumna no cancela la inscripción de la primera
+ok    página de cambio de un curso sin acceso: 404
