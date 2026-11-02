@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ensayo de reversión de 0027 y 0026 sobre una base con datos: los datos previos quedan idénticos, las funciones
+# Ensayo de reversión de 0028, 0027 y 0026 sobre una base con datos: los datos previos quedan idénticos, las funciones
 # vuelven a su definición anterior, se pueden reaplicar, y la reversión se niega cuando perdería información o
 # dejaría sin decidir la política de segundo factor.
 set -euo pipefail
@@ -23,13 +23,16 @@ FUNCIONES="select md5(string_agg(pg_get_functiondef(p.oid), '|' order by p.prona
 antes=$(q "$HUELLA"); fantes=$(q "$FUNCIONES")
 "${PSQL[@]}" -d "$DB" -f "$M/20261102000026_mfa_reforzada.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$M/20261102000027_recuperacion_dos_personas.sql" >/dev/null
-[ "$(q "$HUELLA")" = "$antes" ] || falla "aplicar 0026/0027 cambió datos existentes"
+"${PSQL[@]}" -d "$DB" -f "$M/20261103000028_video_correo.sql" >/dev/null
+[ "$(q "$HUELLA")" = "$antes" ] || falla "aplicar 0026 a 0028 cambió datos existentes"
+"${PSQL[@]}" -d "$DB" -f "$R/20261103000028_video_correo_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$R/20261102000027_recuperacion_dos_personas_down.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$R/20261102000026_mfa_reforzada_down.sql" >/dev/null
 [ "$(q "$HUELLA")" = "$antes" ] || falla "la reversión cambió datos"
 [ "$(q "$FUNCIONES")" = "$fantes" ] || falla "las funciones no volvieron a su definición anterior"
 [ "$(q "select count(*) from pg_tables where tablename in ('politica_seguridad', 'verificaciones_reforzadas', 'recuperaciones_mfa')")" = "0" ] || falla "quedaron tablas"
-[ "$(q "select count(*) from pg_trigger where tgname like 'reforzada_%'")" = "0" ] || falla "quedaron disparadores"
+[ "$(q "select count(*) from pg_trigger where tgname like 'reforzada_%' or tgname = 'ordenes_correo_confirmacion'")" = "0" ] || falla "quedaron disparadores"
+[ "$(q "select count(*) from pg_proc where proname in ('autorizar_video_leccion', 'encolar_correo')")" = "0" ] || falla "quedaron funciones de 0028"
 # Se reaplican; con la política encendida, la reversión de 0026 se niega.
 "${PSQL[@]}" -d "$DB" -f "$M/20261102000026_mfa_reforzada.sql" >/dev/null
 "${PSQL[@]}" -d "$DB" -f "$M/20261102000027_recuperacion_dos_personas.sql" >/dev/null
@@ -38,4 +41,4 @@ q "select set_config('albor.responsable', 'Ensayo', false); update public.politi
 if "${PSQL[@]}" -d "$DB" -f "$R/20261102000026_mfa_reforzada_down.sql" >/dev/null 2>/tmp/albor_rev26.log; then falla "la reversión de 0026 debió negarse con la política encendida"; fi
 grep -q reversion_imposible /tmp/albor_rev26.log || falla "la reversión de 0026 falló por otro motivo"
 "${PSQL[@]}" -d postgres -c "drop database $DB" >/dev/null
-echo "ok         reversión de 0026 y 0027: datos y funciones idénticos, se reaplican, y se niega con la política encendida"
+echo "ok         reversión de 0026, 0027 y 0028: datos y funciones idénticos, se reaplican, y se niega con la política encendida"
