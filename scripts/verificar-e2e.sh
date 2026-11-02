@@ -48,6 +48,7 @@ correr "perfil" node scripts/recorrido-perfil.mjs
 correr "acciones protegidas" node scripts/acciones-protegidas.mjs
 correr "acciones sensibles" node scripts/acciones-sensibles.mjs
 correr "seguridad: segundo factor, verificación reforzada y recuperación" node scripts/recorrido-mfa.mjs
+correr "hidratación: cargas repetidas en escritorio y celular" node scripts/recorrido-hidratacion.mjs
 for extra in ${RECORRIDOS_EXTRA:-}; do correr "$extra" node "scripts/$extra"; done
 pkill -f "next-server|next start|next dev" 2>/dev/null
 echo "comprobaciones ok: $(grep -cE '^ok ' capturas/informe.txt) · fallas: $(grep -cE '^FALLA' capturas/informe.txt)"

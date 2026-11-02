@@ -116,7 +116,7 @@ export async function obtenerCertificadoHistorico(datos: FormData) {
   const usuario = await exigirSesion('/campus');
   const curso = uuid.safeParse(datos.get('curso'));
   if (!curso.success) redirect('/campus');
-  const { data: propio } = await (await clienteSesion()).from('accesos_curso').select('id').eq('curso_id', curso.data).eq('estado', 'activo').maybeSingle();
+  const { data: propio } = await (await clienteSesion()).from('accesos_curso').select('id').eq('perfil_id', usuario.id).eq('curso_id', curso.data).eq('estado', 'activo').maybeSingle();
   if (!propio) redirect('/campus?aviso=certificado-error');
   const { data, error } = await clienteServicio().rpc('emitir_certificado', { p_perfil: usuario.id, p_curso: curso.data });
   if (error || !data) redirect('/campus?aviso=certificado-error');

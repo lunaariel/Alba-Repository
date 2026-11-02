@@ -40,3 +40,13 @@ test('D15: ayudantes E2E compartidos', () => {
   for (const f of ['export function sql', 'export function crearInforme', 'export const sinDesborde']) assert.ok(lib.includes(f), f);
   assert.match(readFileSync('scripts/recorrido-mfa.mjs', 'utf8'), /from '\.\/lib\/recorrido\.mjs'/);
 });
+
+test('D14: cada lectura «mis…» del campus filtra por la propia persona (no solo RLS)', () => {
+  const c = readFileSync('src/datos/campus.ts', 'utf8');
+  for (const tabla of ['accesos_curso', 'certificados', 'progreso_leccion', 'inscripciones_taller', 'ordenes']) {
+    const lecturas = [...c.matchAll(new RegExp(`from\\('${tabla}'\\)[^;]*?(\\.select\\([^;]*?)(;|\\),\\n)`, 'g'))].map((m) => m[0]).filter((t) => t.includes('.select('));
+    assert.ok(lecturas.length > 0, tabla);
+    for (const l of lecturas) assert.match(l, /\.eq\('perfil_id', (yo|perfilId)\)/, `${tabla}: ${l.slice(0, 80)}`);
+  }
+  assert.match(c, /from\('notificaciones'\)[\s\S]{0,80}\.eq\('perfil_id', yo\)/);
+});

@@ -10,6 +10,8 @@ const VUELTAS = Number(process.env.VUELTAS ?? 3);
 const RUTAS = {
   publico: ['/', '/cursos', '/cursos/demo-montessori-en-casa', '/la-maestra', '/contacto', '/ingresar', '/registro', '/verificar', '/legales/privacidad'],
   campus: ['/campus', '/campus/cursos/demo-montessori-en-casa', '/campus/talleres', '/campus/compras', '/campus/cuenta'],
+  // El campus de la admin: antes mezclaba accesos y compras de todas las alumnas (claves duplicadas).
+  campusAdmin: ['/campus', '/campus/compras', '/campus/talleres'],
   admin: ['/admin', '/admin/cursos', '/admin/cursos/c1000000-0000-0000-0000-000000000001', '/admin/cursos/c1000000-0000-0000-0000-000000000001/publicacion',
     '/admin/cursos/c1000000-0000-0000-0000-000000000001/alumnos', '/admin/cursos/c1000000-0000-0000-0000-000000000002/evaluacion',
     '/admin/talleres', '/admin/configuracion', '/admin/configuracion/actividad'],
@@ -34,7 +36,7 @@ async function contexto(ancho, correo, clave) {
 try {
   for (const ancho of [1440, 390]) {
     for (const [grupo, rutas] of Object.entries(RUTAS)) {
-      const cuenta = grupo === 'campus' ? [CORREO, CLAVE] : grupo === 'admin' ? [ADMIN_CORREO, ADMIN_CLAVE] : [];
+      const cuenta = grupo === 'campus' ? [CORREO, CLAVE] : grupo.startsWith('admin') || grupo === 'campusAdmin' ? [ADMIN_CORREO, ADMIN_CLAVE] : [];
       const { ctx, p } = await contexto(ancho, ...cuenta);
       let vuelta = 0;
       const errores = [];
@@ -46,9 +48,9 @@ try {
           await p.goto(`${BASE}${ruta}`, { waitUntil: vuelta % 2 ? 'networkidle' : 'domcontentloaded' });
           if (vuelta % 2 === 0) await p.waitForLoadState('networkidle');
         }
-        // …y recarga rápida de la primera ruta, para cortar una hidratación en curso.
-        await p.goto(`${BASE}${rutas[0]}`, { waitUntil: 'commit' });
-        await p.reload({ waitUntil: 'networkidle' });
+        // …y una navegación que corta otra a medio cargar (hidratación interrumpida).
+        await p.goto(`${BASE}${rutas[0]}`, { waitUntil: 'commit' }).catch(() => {});
+        await p.goto(`${BASE}${rutas[rutas.length - 1]}`, { waitUntil: 'networkidle' });
       }
       for (const e of errores) hallazgos.push({ ...e, ancho, grupo });
       comprobar(errores.length === 0, `hidratación ${grupo} ${ancho}px: ${rutas.length} rutas × ${VUELTAS} vueltas sin errores de consola`);
