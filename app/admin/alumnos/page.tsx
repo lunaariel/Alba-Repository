@@ -55,7 +55,7 @@ export default async function Alumnos({ searchParams }: Props) {
           {alumnos.map((a) => (
             <li key={a.id} className="rounded-2xl border-[1.5px] border-borde-bandeja bg-blanco-calido px-5 py-4">
               <p className="m-0 font-bold">{a.nombre}</p>
-              <p className="m-0 break-all text-[14px] text-tinta-suave">{a.correo} · registrada el {fecha(a.creadoEn)}</p>
+              <p className="m-0 text-[14px] text-tinta-suave"><span className="break-all">{a.correo}</span> · <span className="whitespace-nowrap">registrada el {fecha(a.creadoEn)}</span></p>
               {a.cursos.length === 0 ? (
                 <p className="m-0 mt-2 text-[15px] text-tinta-suave">Sin cursos.</p>
               ) : (
